@@ -1,0 +1,21 @@
+[project]
+name = "quantummdtoolbox"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "bio>=1.7.1",
+    "matplotlib>=3.10.1",
+    "networkx>=3.4.2",
+    "pip>=25.1.1",
+    "pytest>=8.3.5",
+    "qiskit>=2.0.0",
+    "qiskit-algorithms>=0.3.1",
+    "qiskit-qulacs>=0.1.0",
+    "ruff>=0.11.8",
+    "scipy>=1.15.2",
+]
+
+
+

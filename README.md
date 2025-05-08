@@ -1,53 +1,88 @@
+# Simulating Coupled Harmonic Oscillators
 
+### Stucture of code.
 
+<p></p>
 
+**class Molecule()**: This class is essential for formulating the problem. It will hold information about the given molecule to simulate. For example, the class can be initialized by providing the molecule (probably as a .pdb file from (https://www.rcsb.org/)). It can be initialized by whether one wants to use only C-alpha atoms or the whole atomic description, whether the initial positions should be random etc.<br>
 
+The necessary functions it must include are:<br>
+  get_spring_matrix()<br>
+  get_initial_positions()<br>
+  get_initial_velocities()<br>
+  get_masses()<br>
 
+_Responsible for implementing: Ioannis and Adi._
 
+<p></p> 
 
+**class Oracles()**: This class is essential for getting the corresponding quantum circuits for oracles used in the algorithm.<br>
 
+The necessary function it must include are:<br>
+  get_K_oracle()<br>
+  get_S_oracle()<br> 
+  get_M_oracle()<br> 
+  get_V_oracle()<br> 
 
+_Responsible for implementing: Ioannis and Adi_
 
+<p></p>
 
+**class PrepareInitialState()**: This class uses the oracle and molecule class to prepare the initial state. <br>
 
-# Coarse grained Quantum-enhanced Markov Chain Monte Carlo
+The necessary functions in this class are:<br>
+  def inequality_testing()<br>
 
-This is the code that was used for the numerical results in the paper: [Quantum-enhanced Markov Chain Monte Carlo for systems larger than your Quantum Computer](https://arxiv.org/abs/2405.04247)
+_Responsible for implementing: Ioannis and Adi_
 
-It builds upon the numerics in Layden's work on the [Quantum enhanced Markov Chain Monte Carlo (QeMCMC)](https://www.nature.com/articles/s41586-023-06095-4), with the main contribution focussed on applying a "coarse graining" to the quantum proposal in order to analyse the possibility of some dampened quantum speedup remaining while the number of required qubits is lowered. 
+<p></p>
 
-Please see also https://github.com/pafloxy/quMCMC, which was used as a starting point for this code.
+## Development Setup and Guidelines
 
-## Authors and contact
-For questions and suggestions, please contact Stuart Ferguson: S.A.Ferguson-3@sms.ed.ac.uk
+### Initial Setup
 
-This project was created by:
-* Stuart Ferguson
+1.  **Install uv (if you haven't already):**
+    `uv` is an extremely fast Python package installer and resolver, written in Rust, intended as a drop-in replacement for `pip` and `pip-tools`.
+    Follow the official installation instructions for `uv` from [https://github.com/astral-sh/uv](https://github.com/astral-sh/uv). For example, on macOS and Linux:
+    ```bash
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    ```
 
+2.  **Create/Sync Virtual Environment:**
+    Navigate to the project root directory and run:
+    ```bash
+    uv sync
+    ```
+    This will create a `.venv` folder with all the dependencies specified in `pyproject.toml`.
 
-## License
+3.  **Install ProDy:**
+    ProDy can sometimes have build issues with newer packaging tools or specific environments. If `uv sync` doesn't install it correctly or if you encounter issues, try installing it with `pip` within the `uv` managed environment:
+    ```bash
+    # Activate the virtual environment if not already active
+    # source .venv/bin/activate (for Linux/macOS)
+    # .venv\Scripts\activate (for Windows)
+    pip install prody==2.4.1
+    ```
+    *Note: `prody==2.4.1` is not compatible with NumPy 2.0+. If you encounter issues, you might need to adjust your `numpy` version in `pyproject.toml` to `numpy~=1.26.4` and compatible versions for `scipy` and `matplotlib`.*
 
-Distributed under the MIT License. See LICENSE.txt for more information.
+### Development Workflow
 
-
-## Acknowledgements
-
-* https://github.com/pafloxy/quMCMC, an open-source code which was used as a starting point for this code.
-* [QeMCMC by David Layden et al.](https://www.nature.com/articles/s41586-023-06095-4)
-* [Quantum-enhanced Markov Chain Monte Carlo for systems larger than your Quantum Computer by S. Ferguson and P. Wallden](https://arxiv.org/abs/2405.04247)
-* [Qulacs Simulator](https://quantum-journal.org/papers/q-2021-10-06-559/)
-Quantum-enhanced Markov chain Monte Carlo by David Layden et al. https://www.nature.com/articles/s41586-023-06095-4
-
-
-
-## Tutorial
-
-
-An example experiment is given in the folder titled "Experiment", where a Markov Chain Monte Carlo algorithm is run for an example 9 spin instance. Classical "Uniform" and "local" update proposals are compared with a CGQeMCMC implimentation using only 3 simulated qubits. Even though the number of qubits is quadratically reduced from the number requred by the original algorithm of Layden et al, we still see quantum speedup. The following results can be viewed by running Analyse_all.py.
-
-![9_spin_E_example](9_spin_T_1.png)
-
-We also include a tutorial jupyter notebook "tutorial.ipynb"
-
+-   **VS Code Extension:** Please install the "ruff" extension for VS Code. `Ruff` is an extremely fast Python linter and formatter, written in Rust.
+-   **Linting and Formatting:** Before publishing your branch, run:
+    ```bash
+    uv run ruff check --fix
+    uv run ruff format
+    ```
+-   **Branching:** Create a new branch for every feature you develop.
+-   **Testing:**
+    -   Add tests under the `tests/` folder.
+    -   Run your tests with:
+        ```bash
+        uv run pytest tests
+        ```
+-   **Merging to `main`:**
+    1.  Submit a pull request.
+    2.  Assign a review.
+    3.  Reference an issue.
 
 
