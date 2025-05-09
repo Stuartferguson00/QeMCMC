@@ -1,21 +1,18 @@
 [project]
-name = "quantummdtoolbox"
+name = "qemcmc"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "bio>=1.7.1",
-    "matplotlib>=3.10.1",
-    "networkx>=3.4.2",
+    "algorithms>=0.1.4",
+    "collections-extended>=2.0.2",
+    "matplotlib>=3.10.3",
+    "numpy>=2.2.5",
+    "pandas>=2.2.3",
     "pip>=25.1.1",
-    "pytest>=8.3.5",
-    "qiskit>=2.0.0",
-    "qiskit-algorithms>=0.3.1",
+    "qiskit==1.4",
     "qiskit-qulacs>=0.1.0",
-    "ruff>=0.11.8",
-    "scipy>=1.15.2",
+    "tqdm>=4.67.1",
+    "typing-extensions>=4.13.2",
 ]
-
-
-
