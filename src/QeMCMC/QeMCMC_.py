@@ -82,7 +82,8 @@ class QeMCMC:
         initial_state.energy = energy_s
 
 
-        if verbose: print("starting with: ", current_state.bitstring, "with energy:", energy_s)
+        if verbose: 
+            print("starting with: ", current_state.bitstring, "with energy:", energy_s)
 
 
 

@@ -9,6 +9,7 @@ import qiskit
 from qiskit_aer import AerSimulator
 
 
+ 
 
 class CircuitMaker:
 
@@ -77,7 +78,7 @@ class CircuitMaker:
         
         # QISKIT TRANSPILING IS SO SLOW
         
-        simulator = AerSimulator()
+        #simulator = AerSimulator()
         #self.trotter_ckt = qiskit.transpile(self.trotter_ckt, simulator)
         
         #self.trotter_ckt.decompose(16)
@@ -287,7 +288,6 @@ class CircuitMaker:
         qc_for_evol_h2=QuantumCircuit(self.n_spins)
         upper_triag_without_diag=np.triu(self.J,k=1)
         theta_array=(-2*(1-self.gamma)*self.alpha*self.delta_time)*upper_triag_without_diag
-        pauli_z_index=[3,3]# ZZ
         for j in range(0,self.n_spins-1):
             for k in range(j+1,self.n_spins):
                 target_list=[self.n_spins-1-j,self.n_spins-1-k]
