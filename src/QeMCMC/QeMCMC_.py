@@ -6,7 +6,7 @@ from tqdm import tqdm
 from .helpers import MCMCChain, MCMCState, get_random_state, test_accept
 from .energy_models import IsingEnergyFunction
 from typing import Optional, Union, Tuple
-from .Circuit_Maker import Circuit_Maker
+from .CircuitMaker import CircuitMaker
 
 
 
@@ -66,11 +66,15 @@ class QeMCMC:
         """
 
 
+
         # Either get a random state or use initial state given
         if initial_state is None:
-            initial_state = MCMCState(get_random_state(self.n_spins), accepted=True, pos = 0)
+            initial_state = MCMCState(get_random_state(self.n_spins), accepted=True, position = 0)
         else:
-            initial_state = MCMCState(initial_state, accepted=True, pos = 0)
+            initial_state = MCMCState(initial_state, accepted=True, position = 0)
+        
+        if len(initial_state.bitstring) != self.n_spins:
+            raise ValueError(f"Initial state must be of length {self.n_spins}, but got {len(initial_state.bitstring)}")
         
         #set initial state
         current_state: MCMCState = initial_state
@@ -101,12 +105,12 @@ class QeMCMC:
 
             # If accepted, update current_state
             if accepted:
-                current_state = MCMCState(s_prime, accepted, energy_sprime, pos = i)
+                current_state = MCMCState(s_prime, accepted, energy_sprime, position = i)
                 energy_s = energy_sprime
 
             # if time to sample, add state to chain
             if i//sample_frequency == i/sample_frequency and i != 0:
-                mcmc_chain.add_state(MCMCState(current_state.bitstring, True, energy_s, pos = i))
+                mcmc_chain.add_state(MCMCState(current_state.bitstring, True, energy_s, position = i))
             
             
         return mcmc_chain
@@ -139,7 +143,7 @@ class QeMCMC:
         
         
         # Get s_prime
-        CM = Circuit_Maker(self.model, g, t)
+        CM = CircuitMaker(self.model, g, t)
         s_prime = CM.get_state_obtained_binary(current_state)
         
         return s_prime

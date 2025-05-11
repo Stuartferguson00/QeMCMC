@@ -2,11 +2,15 @@ def main():
     print("Hello from qemcmc!")
 
 
-from QeMCMC.QeMCMC import QeMCMC
-from QeMCMC.Model_Maker import Model_Maker
-from QeMCMC.MCMC import MCMC
+
+from qemcmc import *
+
+
+
+import numpy as np
+import scipy as sp
 from matplotlib import pyplot as plt
-from QeMCMC.helpers import MCMCChain
+from joblib import Parallel, delayed
 print(plt.get_backend())
 
 if __name__ == "__main__":
@@ -22,8 +26,8 @@ if __name__ == "__main__":
         plt.plot(pos, avg_energy, color=color, label=f"Average {label}")
     
     
-    n = 10
-    steps = 1000
+    n = 7
+    steps = 50
     reps = 10
     model_type = "Fully Connected Ising"
     name = "Test Ising model"
@@ -31,27 +35,27 @@ if __name__ == "__main__":
     model = Model_Maker(n, model_type, name).model
     
     temp = 0.1
-    initial_state = "0000000000"
+    initial_states = model.initial_state
     
     uni_chains = []
     for rep in range(reps):
         classical_uniform_MCMC = MCMC(model, temp, method = "uniform")
-        uni_chain = classical_uniform_MCMC.run(steps, initial_state = initial_state, name = "classical uniform MCMC", verbose = True, sample_frequency = 1)
+        uni_chain = classical_uniform_MCMC.run(steps, initial_state = initial_states[rep], name = "classical uniform MCMC", verbose = True, sample_frequency = 1)
         uni_chains.append(uni_chain)
     plot_chains(uni_chains, "orange", "classical uniform MCMC")
     
     loc_chains = []
     for rep in range(reps):
         classical_local_MCMC = MCMC(model, temp, method = "local")
-        loc_chain = classical_local_MCMC.run(steps, initial_state = initial_state, name = "classical local MCMC", verbose = True, sample_frequency = 1)
+        loc_chain = classical_local_MCMC.run(steps, initial_state = initial_states[rep], name = "classical local MCMC", verbose = True, sample_frequency = 1)
         loc_chains.append(loc_chain)
     plot_chains(loc_chains, "lightgreen", "classical local MCMC")
     
-    Qe_chains = []
-    for rep in range(reps):
-        qemcmc = QeMCMC(model, gamma = (0.3,0.6), time = (2,20), temp = temp)
-        Qe_chain = qemcmc.run(steps, initial_state = initial_state, name = "QeMCMC", verbose = True, sample_frequency = 1)
-        Qe_chains.append(Qe_chain)
+    def run_qemcmc(rep):
+        qemcmc = QeMCMC(model, gamma=(0.3, 0.6), time=(2, 20), temp=temp)
+        return qemcmc.run(steps, initial_state=initial_states[rep], name="QeMCMC", verbose=True, sample_frequency=1)
+
+    Qe_chains = Parallel(n_jobs=-1)(delayed(run_qemcmc)(rep) for rep in range(reps))
     plot_chains(Qe_chains, "lightblue", "QeMCMC")
     
     plt.xlabel("MCMC step")
@@ -59,7 +63,7 @@ if __name__ == "__main__":
     plt.title("MCMC chains")
     plt.legend()
     plt.show()
-    plt.savefig("plots/MCMC_chains.png")
+    #plt.savefig("plots/MCMC_chains.png")
     
     
 

@@ -30,15 +30,24 @@ import matplotlib.colors as mcolors
 
 @dataclass
 class MCMCState:
-    def __init__(self,bitstring: str,accepted: bool,energy: float = None, pos: int = None):
+    
+    bitstring: str
+    accepted: bool
+    energy: float = None
+    position: int = None
+    
+    """def __init__(self,bitstring: str,accepted: bool,energy: float = None, pos: int = None):
         self.bitstring = bitstring
         self.accepted = accepted
         self.energy = energy
         #integer denoting the position of a state on the chain
-        self.position = pos
+        self.position = pos"""
     
 @dataclass(init=True)
 class MCMCChain:
+    
+    
+    
     def __init__(self, states: Optional[List[MCMCState]] = None, name: Optional[str] = 'MCMC'):
         
         self.name = name 
@@ -164,6 +173,13 @@ class MCMCChain:
         return accepted_dict
 
 
+def plot_chains(chains: list[MCMCChain], color: str, label:str):
+    for chain in chains:
+        energies = chain.get_current_energy_array()
+        pos = chain.get_pos_array()
+        plt.plot(pos, energies, color=color, alpha = 0.1)
+    avg_energy = sum(chain.get_current_energy_array() for chain in chains) / len(chains)
+    plt.plot(pos, avg_energy, color=color, label=f"Average {label}")
 
 def test_accept(
     energy_s: float, energy_sprime: float, temperature: float = 1.
@@ -210,42 +226,7 @@ def get_random_state(num_spins: int) -> str:
     s_prime = f"{next_state:0{num_spins}b}"
     return s_prime
 
-###########################################################################################
-## HELPER FUNCTIONS ##
-###########################################################################################
-def gen_log_space(limit, n):
-    result = [1]
-    if n>1:  # just a check to avoid ZeroDivisionError
-        ratio = (float(limit)/result[-1]) ** (1.0/(n-len(result)))
-    while len(result)<n:
-        next_value = result[-1]*ratio
-        if next_value - result[-1] >= 1:
-            # safe zone. next_value will be a different integer
-            result.append(next_value)
-        else:
-            # problem! same integer. we need to find next_value by artificially incrementing previous value
-            result.append(result[-1]+1)
-            # recalculate the ratio so that the remaining values will scale correctly
-            ratio = (float(limit)/result[-1]) ** (1.0/(n-len(result)))
-    # round, re-adjust to 0 indexing (i.e. minus 1) and return np.uint64 array
-    return np.array(list(map(lambda x: round(x)-1, result)), dtype=np.uint64)
 
-
-def thin_MCMC_chain(chain: MCMCChain) -> List:
-    accepted_energies, accepted_positions = chain.get_accepted_energies()
-    accepted_states = chain.accepted_states
-
-    return [accepted_energies, accepted_positions, accepted_states]
-
-
-def uncommon_els_2_lists(list_1,list_2):
-  return list(set(list_1).symmetric_difference(set(list_2)))
-
-def merge_2_dict(dict1, dict2):
-    return({**dict1,**dict2})
-
-def sort_dict_by_keys(dict_in:dict):
-  return dict(IndexedDict(sorted(dict_in.items())))
 
 
 def states(num_spins: int) -> list:
@@ -631,79 +612,3 @@ def plot_acceptance_prob_statistics(trajectory_stat_list: list, labels: list, fi
     plt.ylabel("Normalized Counts")
     plt.legend()
     plt.show()
-
-###########################################################################################
-## BAS Datasets ##
-###########################################################################################
-
-from itertools import permutations, product
-class bas_dataset:
-    def __init__(self, grid_size:int):
-        self.grid_size=grid_size
-        all_combn=[''.join(p) for p in product('01',repeat=self.grid_size)]
-        all_combn.sort(key=lambda s: s.count('1'))
-        all_combn.pop(0);all_combn.pop(-1)
-        self.__all_combn=all_combn
-        self.bas_dict=self.bars_and_stripes_dataset()
-        self.dataset= self.bas_dict['stripes']+self.bas_dict['bars'] + self.bas_dict.get("both", [])
-    
-    def vertical_stripes(self):
-        vert_stripes=[j*self.grid_size for j in self.__all_combn]
-        return vert_stripes
-
-    def horizontal_bars(self):
-        hor_bars=[]
-        for l in self.__all_combn:
-            st=""
-            for j in l:
-                st=st+j*self.grid_size
-            hor_bars.append(st)
-        return hor_bars
-
-    def bars_and_stripes_dataset(self):
-        bas_dict={'stripes':self.vertical_stripes(),
-                  'bars':self.horizontal_bars(),
-                  # "both": ["0"*self.grid_size*self.grid_size, "1"*self.grid_size*self.grid_size]
-                 }
-        return bas_dict
-
-    ### create matrix of bitstring: meant for plotting
-    def bit_string_to_2d_matrix(self,bitstring, array_shape:int):
-        len_bs=len(bitstring)
-        list_bs_int=[eval(i) for i in list(bitstring)]
-        arr_bs=np.reshape(list_bs_int,(array_shape, array_shape))
-        return arr_bs
-
-    ### plot pixels
-    def draw_pixelplot(self,bitstring:str,array_shape:int):
-        im_array=self.bit_string_to_2d_matrix(bitstring,array_shape)
-        plt.title(f"pixel plot for bitstring: {bitstring}")
-        pixel_plot=plt.imshow(im_array,cmap='Greens',interpolation='nearest')
-        plt.colorbar(pixel_plot)
-        plt.show()
-
-def hebbing_learning(list_bas_state:list):
-    size=len(list_bas_state[0])
-    wts=0
-    for i in list_bas_state:
-        arr=np.array([-1 if elem == "0" else 1 for elem in i])
-        array=np.reshape(arr,(size,1));array_t=np.transpose(array)
-        wts+=array@array_t
-    wts=wts-len(list_bas_state)*np.identity(size)
-    return wts
-
-def get_cardinality_dataset(n_qubits, card=2):
-    def generate_binary_strings(bit_count):
-        binary_strings = []
-        def genbin(n, bs=''):
-            if len(bs) == n:
-                binary_strings.append(bs)
-            else:
-                genbin(n, bs + '0')
-                genbin(n, bs + '1')
-
-        genbin(bit_count)
-        return binary_strings
-
-    binary_strings = generate_binary_strings(n_qubits)
-    return [b for b in binary_strings if b.count("1")==card]

@@ -135,9 +135,9 @@ class MCMC:
 
         # Either get a random state or use initial state given
         if initial_state is None:
-            initial_state = MCMCState(get_random_state(self.n_spins), accepted=True, pos = 0)
+            initial_state = MCMCState(get_random_state(self.n_spins), accepted=True, position = 0)
         else:
-            initial_state = MCMCState(initial_state, accepted=True, pos = 0)
+            initial_state = MCMCState(initial_state, accepted=True, position = 0)
         
         #set initial state
         current_state: MCMCState = initial_state
@@ -166,13 +166,13 @@ class MCMC:
             
             # If accepted, update current_state
             if accepted:
-                current_state = MCMCState(s_prime, accepted, energy_s, pos = i)
+                current_state = MCMCState(s_prime, accepted, energy_s, position = i)
                 energy_s = energy_sprime
                 
                 
             # if time to sample, add state to chain
             if i//sample_frequency == i/sample_frequency and i != 0 :
-                mcmc_chain.add_state(MCMCState(current_state.bitstring, True, energy_s, pos = i))
+                mcmc_chain.add_state(MCMCState(current_state.bitstring, True, energy_s, position = i))
                 
             
 

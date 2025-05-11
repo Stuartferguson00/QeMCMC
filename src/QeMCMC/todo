@@ -1,0 +1,3 @@
+add test for random state (all states accessible?)
+you havent checked this works.. code 14523689 circuit maker
+check input state is same length as number of qubits etc 

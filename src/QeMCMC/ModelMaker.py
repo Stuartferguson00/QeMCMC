@@ -3,7 +3,7 @@ from .energy_models import IsingEnergyFunction
 
 
 
-class Model_Maker:
+class ModelMaker:
     
     # Class to control the initialisation of an energy model. 
     # It might seem a bit convoluted, but will allow for more complex models to be made in future.
@@ -22,7 +22,7 @@ class Model_Maker:
         elif model_type == "input_J":
             self.J = J
             self.h = h
-            self.model = IsingEnergyFunction(self.J, self.h, name=self.name, cost_function_signs = self.cost_function_signs)
+            self.model = IsingEnergyFunction(self.J, self.h, name=self.name, cost_function_signs = self.cost_function_signs, no_initial_states = False)
 
     def make_fully_connected_Ising(self):
         shape_of_J = (self.n_spins, self.n_spins)
@@ -36,7 +36,9 @@ class Model_Maker:
         self.model = IsingEnergyFunction(J, h, name=self.name, cost_function_signs = self.cost_function_signs)
         
     def make_1D_Ising(self):
+        # INcluded as an example of how to make other types of Ising model 
         print("I have not analysed 1d ising models, so double check function 'make_1D_Ising' before using")
+        
         h = np.round(np.random.normal(0, 1, self.n_spins), decimals=4)
         shape_of_J = (self.n_spins, self.n_spins)
         J = np.zeros(shape_of_J)
@@ -48,7 +50,7 @@ class Model_Maker:
         J_rand = J_tril + J_triu
 
 
-
+        # Make 1d Ising model
         #loop throgh and find the difference in bitstrings.
         #When the ith bitstring is different (by a value of 1) from the jth bitstring add 1 to Q[i,j]
         for i in range(self.n_spins):
@@ -56,7 +58,10 @@ class Model_Maker:
                 if abs(i-j) == 1 or abs(i-j) == self.n_spins-1:
                     J[i, j] = 1
 
+        # Add (symmetric) 1D weights
         J = J * J_rand
+        
+        
         self.model = IsingEnergyFunction(J, h, name=self.name, cost_function_signs = self.cost_function_signs)
         
         
