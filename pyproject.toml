@@ -19,7 +19,8 @@ dependencies = [
     "typing-extensions>=4.13.2",
 ]
 
-
+[tool.hatch.build.targets.wheel]
+      packages = ["src/qemcmc"]
 
 [project.scripts]
 qemcmc = "qemcmc:main"

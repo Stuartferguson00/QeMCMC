@@ -4,10 +4,8 @@
 import numpy as np
 from typing import Optional
 from tqdm import tqdm
-import random
 from .helpers import MCMCChain, MCMCState, get_random_state, test_accept
 from .energy_models import IsingEnergyFunction
-import warnings
 
 
 

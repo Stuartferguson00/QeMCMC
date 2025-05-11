@@ -5,7 +5,7 @@ import numpy as np
 from tqdm import tqdm
 from .helpers import MCMCChain, MCMCState, get_random_state, test_accept
 from .energy_models import IsingEnergyFunction
-from typing import Optional, Union, Tuple
+from typing import Optional
 from .CircuitMaker import CircuitMaker
 
 
@@ -25,9 +25,9 @@ class QeMCMC:
         Args:
             model (Model): The model to be simulated.
             gamma (float|tuple[float]): The gamma parameter.
-            time (int|tuple[int]): The time parameter.
+            time (int|tuple[int]): The time parameter. The number of trotter steps to take. (can be sampled from range represented by tuple.)
             temp (float): The temperature parameter.
-            delta_time (float, optional): The delta time parameter. Defaults to 0.8.
+            delta_time (float, optional): The delta time parameter for length of trotter steps. Defaults to 0.8.
         """
         self.model = model
         self.n_spins = model.num_spins
@@ -50,7 +50,7 @@ class QeMCMC:
         initial_state: Optional[str] = None,
         name:str = "QeMCMC",
         verbose:bool = False,
-        sample_frequency:int = 1):
+        sample_frequency:int = 1)->MCMCChain:
         """
         Runs the quantum MCMC algorithm for a specified number of hops.
 
@@ -115,7 +115,7 @@ class QeMCMC:
             
         return mcmc_chain
     
-    def get_s_prime(self, current_state: str):
+    def get_s_prime(self, current_state: str)-> str:
         """
         Returns the next state s_prime based on the current state, g, and t.
 

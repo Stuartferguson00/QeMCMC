@@ -1,17 +1,6 @@
-def main():
-    print("Hello from qemcmc!")
-
-
-
-from qemcmc import *
-
-
-
-import numpy as np
-import scipy as sp
+from qemcmc import MCMC, QeMCMC, MCMCChain, ModelMaker
 from matplotlib import pyplot as plt
 from joblib import Parallel, delayed
-print(plt.get_backend())
 
 if __name__ == "__main__":
     
@@ -32,7 +21,7 @@ if __name__ == "__main__":
     model_type = "Fully Connected Ising"
     name = "Test Ising model"
     
-    model = Model_Maker(n, model_type, name).model
+    model = ModelMaker(n, model_type, name).model
     
     temp = 0.1
     initial_states = model.initial_state

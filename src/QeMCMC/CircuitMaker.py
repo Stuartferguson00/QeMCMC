@@ -2,8 +2,7 @@ import numpy as np
 from .energy_models import IsingEnergyFunction
 from typing import Union
 from qiskit import QuantumCircuit
-from qiskit.synthesis import SuzukiTrotter
-from qiskit.quantum_info import Pauli, SparsePauliOp
+from qiskit.quantum_info import SparsePauliOp
 from qiskit.circuit.library import PauliEvolutionGate
 #from qiskit_qulacs.qulacs_backend import QulacsBackend
 import qiskit 
@@ -115,6 +114,10 @@ class CircuitMaker:
         Returns:
             QuantumCircuit: The combined quantum circuit for the given bitstring.
         """
+        
+        if type(s) is not str:
+            raise TypeError("s must be a string in build_circuit in CircuitMaker")
+        
         #build a circuit for a given bitstring
         qc_s = self.initialise_qc(s)
         qc_s.compose(self.trotter_ckt, inplace=True)
@@ -136,6 +139,10 @@ class CircuitMaker:
         Returns:
             str: The output bitstring in binary format.
         """
+        
+        if type(s) is not str:
+            raise TypeError("s must be a string in get_state_obtained_binary in CircuitMaker")
+        
         #get the output bitstring s' given s
 
         qc_for_s = self.build_circuit(s)
@@ -196,6 +203,10 @@ class CircuitMaker:
         Raises:
             AssertionError: If the length of the input string `s` does not match the number of qubits.
         """
+        
+        if type(s) is not str:
+            raise TypeError("s must be a string in initialise_qc in CircuitMaker")
+        
 
         qc_in=QuantumCircuit(self.n_spins)
         len_str_in = len(s)
