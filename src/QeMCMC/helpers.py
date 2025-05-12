@@ -237,6 +237,10 @@ def magnetization_of_state(bitstring: str) -> float:
     Returns:
     magnetization for the given bitstring
     """
+    
+    if type(bitstring) is not str:
+        raise TypeError("bitstring must be a string in magnetization_of_state")
+    
     array = np.array(list(bitstring))
     num_times_one = np.count_nonzero(array == "1")
     num_times_zero = len(array) - num_times_one
