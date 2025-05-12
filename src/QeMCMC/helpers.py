@@ -168,31 +168,6 @@ def plot_chains(chains: list[MCMCChain], color: str, label:str):
     avg_energy = sum(chain.get_current_energy_array() for chain in chains) / len(chains)
     plt.plot(pos, avg_energy, color=color, label=f"Average {label}")
 
-def test_accept(
-    energy_s: float, energy_sprime: float, temperature: float = 1.
-) -> MCMCState:
-    """
-    Accepts the state "sprime" with probability A ( i.e. min(1,exp(-(E(s')-E(s))/ temp) )
-    and s_init with probability 1-A.
-    """
-    delta_energy = energy_sprime - energy_s  # E(s')-E(s)
-    #with warnings.catch_warnings():
-    #    warnings.simplefilter("error", RuntimeWarning)
-    try:
-        exp_factor = np.exp(-delta_energy / temperature)
-    except RuntimeWarning:
-        if energy_sprime < energy_s:
-            exp_factor = 1
-        else:
-            exp_factor = 0
-        
-        #print("Error in exponantial: delta_energy = ", delta_energy, "temperature = ", temperature, " energy_s = ", energy_s, " energy_sprime = ", energy_sprime)
-            
-    acceptance = min(
-        1, exp_factor
-    )  # for both QC case as well as uniform random strategy, the transition matrix Pij is symmetric!
-
-    return acceptance > np.random.rand()
 
 
 def get_random_state(num_spins: int) -> str:

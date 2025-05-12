@@ -1,4 +1,4 @@
-from qemcmc import MCMC, QeMCMC, MCMCChain, ModelMaker
+from qemcmc import ClassicalMCMC, QeMCMC, MCMCChain, ModelMaker
 from matplotlib import pyplot as plt
 from joblib import Parallel, delayed
 
@@ -28,14 +28,14 @@ if __name__ == "__main__":
     
     uni_chains = []
     for rep in range(reps):
-        classical_uniform_MCMC = MCMC(model, temp, method = "uniform")
+        classical_uniform_MCMC = ClassicalMCMC(model, temp, method = "uniform")
         uni_chain = classical_uniform_MCMC.run(steps, initial_state = initial_states[rep], name = "classical uniform MCMC", verbose = True, sample_frequency = 1)
         uni_chains.append(uni_chain)
     plot_chains(uni_chains, "orange", "classical uniform MCMC")
     
     loc_chains = []
     for rep in range(reps):
-        classical_local_MCMC = MCMC(model, temp, method = "local")
+        classical_local_MCMC = ClassicalMCMC(model, temp, method = "local")
         loc_chain = classical_local_MCMC.run(steps, initial_state = initial_states[rep], name = "classical local MCMC", verbose = True, sample_frequency = 1)
         loc_chains.append(loc_chain)
     plot_chains(loc_chains, "lightgreen", "classical local MCMC")
@@ -55,4 +55,5 @@ if __name__ == "__main__":
     #plt.savefig("plots/MCMC_chains.png")
     
     
+        
 

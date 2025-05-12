@@ -132,7 +132,7 @@ class CircuitMaker:
         """
         Get the output bitstring s' given an input bitstring s.
         This method builds a quantum circuit based on the input bitstring `s`, 
-        initializes a quantum state (using GPU if available), updates the quantum 
+        initializes a quantum state, updates the quantum 
         state with the circuit, and then samples the resulting state to obtain the 
         output bitstring in binary format.
         Args:
@@ -331,4 +331,48 @@ class CircuitMaker:
         return qc_combine
 
 
+
+    
+    def get_statevector_obtained(self, s: str) -> str:
+        """
+        Get the output statevector representing probability of s^{prime}s given an input bitstring s.
+        This method builds a quantum circuit based on the input bitstring `s`, 
+        initializes a quantum state, updates the quantum 
+        state with the circuit, and then samples the resulting state to obtain the 
+        output bitstring in binary format.
+        Args:
+            s (str): The input bitstring.
+        Returns:
+            str: The output bitstring in binary format.
+        """
+        
+        if type(s) is not str:
+            raise TypeError("s must be a string in get_state_obtained_binary in CircuitMaker")
+        
+        #get the output bitstring s' given s
+
+        qc_for_s = self.build_circuit(s)
+        
+        #q_state= QuantumState(qubit_count=self.n_spins)
+        #q_state.set_zero_state()
+        #qc_for_s.update_quantum_state(q_state)
+
+        #state_obtained=q_state.sampling(sampling_count=1)[0]
+        #state_obtained_binary=f"{state_obtained:0{self.n_spins}b}"
+        
+        
+        # Use Qiskit-Qulacs to run the circuit
+        
+        #backend = QulacsBackend()
+        backend = AerSimulator(method='statevector')
+            
+        
+        
+        #qc_for_s.draw(output="text", filename='plots/qc_for_s.png')
+        qc_for_s.save_statevector()
+
+        result = backend.run(qc_for_s).result()
+        statevector = result.get_statevector(qc_for_s)
+        
+        return statevector.probabilities()
 

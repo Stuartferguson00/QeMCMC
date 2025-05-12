@@ -4,7 +4,7 @@
 import numpy as np
 from typing import Optional
 from tqdm import tqdm
-from .helpers import MCMCChain, MCMCState, get_random_state, test_accept
+from .helpers import MCMCChain, MCMCState, get_random_state
 from .energy_models import IsingEnergyFunction
 
 
@@ -14,19 +14,18 @@ from .energy_models import IsingEnergyFunction
 
 class MCMC:
     """
-    A class to perform Markov Chain Monte Carlo (MCMC) simulations for the Ising model.
+    A base class to perform Markov Chain Monte Carlo (MCMC) simulations for the Ising model.
     
     """
     
     
-    def __init__(self, model: IsingEnergyFunction , temp, method = "uniform"):
+    def __init__(self, model: IsingEnergyFunction , temp: float):
         """
         Initialize the MCMC routine for the Ising model.
         
         Args:
         model (IsingEnergyFunction): The energy function of the Ising model.
         temp (float): The temperature of the system.
-        method (str, optional): The update method to use. Options are "uniform" or "local". Default is "uniform".
         
         
         """
@@ -36,60 +35,9 @@ class MCMC:
         self.temp = temp
         self.beta = 1/self.temp
         self.n_spins = model.num_spins
-        self.method = method
-
-        if self.method == "uniform":
-            self.update = self.update_uniform
-        elif self.method == "local":
-            self.update = self.update_local
-        else:
-            print("method name is incorrect. Choose from: 'uniform' or 'local'")
-                
-            
+        
         
 
-    def update_uniform(self,current_state_bitstring:str) -> str:
-        """
-        Updates the current state bitstring by generating a new random state bitstring of the same length.
-        Args:
-            current_state_bitstring (str): The current state represented as a bitstring.
-        Returns:
-            str: A new random state bitstring of the same length as the input.
-        """
-
-
-        s_prime = get_random_state(len(current_state_bitstring))
-
-        return s_prime
-    
-    
-
-    
-
-    
-    def update_local(self,current_state_bitstring:str)-> str:
-        """
-        Update the local state by flipping a randomly chosen spin in the current state bitstring.
-        Args:
-            current_state_bitstring (str): The current state represented as a bitstring.
-        Returns:
-            str: The new state bitstring after flipping a randomly chosen spin.
-        """
-
-        
-        # Randomly choose which spin to flip
-        choice = np.random.randint(0,self.n_spins)
-
-        # Flip the chosen spin
-        c_s = list(current_state_bitstring)
-        c_s[choice] = str(int(c_s[choice]) ^ 1)
-        
-        # Return the new state as a bitstring
-        s_prime = ''.join(c_s)   
-        return s_prime
-
-        
-    
 
 
 
@@ -97,7 +45,7 @@ class MCMC:
     def run(self,
         n_hops: int,
         initial_state: Optional[str] = None,
-        name:str = "classical MCMC",
+        name:str = "MCMC",
         verbose:bool = False,
         sample_frequency:int = 1):
 
@@ -161,7 +109,7 @@ class MCMC:
             energy_sprime = self.model.get_energy(s_prime)
             
             # Decide whether to accept the new state
-            accepted = test_accept(energy_s, energy_sprime, temperature=self.temp)
+            accepted = self.test_accept(energy_s, energy_sprime, temperature=self.temp)
             
             # If accepted, update current_state
             if accepted:
@@ -198,7 +146,39 @@ class MCMC:
         """
 
         delta_energy = energy_sprime - energy_s  # E(s')-E(s)
-        exp_factor = np.exp(-delta_energy / self.temp)
+        if energy_sprime < energy_s:
+            exp_factor = 1
+        else:
+            exp_factor = np.exp(-delta_energy / self.temp)
+            
+        acceptance = min(
+            1, exp_factor
+        )  
+        return acceptance
 
-        return exp_factor
+    
+    def test_accept(self, 
+        energy_s: float, energy_sprime: float, temperature: float = 1.
+        ) -> MCMCState:
+        """
+        Accepts the state "sprime" with probability A ( i.e. min(1,exp(-(E(s')-E(s))/ temp) )
+        and s_init with probability 1-A.
+        """
+        delta_energy = energy_sprime - energy_s  # E(s')-E(s)
+        #with warnings.catch_warnings():
+        #    warnings.simplefilter("error", RuntimeWarning)
+        try:
+            exp_factor = np.exp(-delta_energy / temperature)
+        except RuntimeWarning:
+            if energy_sprime < energy_s:
+                exp_factor = 1
+            else:
+                exp_factor = 0
+            
+            #print("Error in exponantial: delta_energy = ", delta_energy, "temperature = ", temperature, " energy_s = ", energy_s, " energy_sprime = ", energy_sprime)
+                
+        acceptance = min(
+            1, exp_factor
+        )  # for both QC case as well as uniform random strategy, the transition matrix Pij is symmetric!
 
+        return acceptance > np.random.rand()

@@ -9,7 +9,6 @@ class ModelMaker:
     # It might seem a bit convoluted, but will allow for more complex models to be made in future.
     def __init__(self, n_spins:int, model_type:str, name:str, J: np.ndarray = None, h: np.ndarray = None, cost_function_signs: list = [-1,-1]):
         
-        print("Make model super class, and Ising model etc can inherit")
         self.name = name
         self.n_spins = n_spins
         self.cost_function_signs = cost_function_signs
