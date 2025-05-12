@@ -137,7 +137,7 @@ class MCMCChain:
         for i in range(1, len(self.states)):
             mcmc_state = self.states[i].bitstring
             whether_accepted = self.states[i].accepted
-            if whether_accepted == True:
+            if whether_accepted:
                 markov_chain_in_state.append(mcmc_state)
             else:
                 markov_chain_in_state.append(markov_chain_in_state[i-1])
