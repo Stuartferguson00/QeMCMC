@@ -4,12 +4,13 @@ from typing import Union
 from qiskit import QuantumCircuit
 from qiskit.quantum_info import SparsePauliOp
 from qiskit.circuit.library import PauliEvolutionGate
-#from qiskit_qulacs.qulacs_backend import QulacsBackend
+from qiskit_qulacs.qulacs_backend import QulacsBackend
 import qiskit 
 from qiskit_aer import AerSimulator
+import time as time_
 
 
- 
+
 
 class CircuitMaker:
 
@@ -63,7 +64,6 @@ class CircuitMaker:
         self.delta_time = 0.8
         self.n_spins = model.num_spins   
         self.alpha = model.alpha
-        self.pauli_index_list:list=[1,1] #cant really remember what this does
         self.num_trotter_steps = int(np.floor((self.time / self.delta_time)))
 
         #create trotter circuit that is irrelevant of the input string
@@ -82,7 +82,7 @@ class CircuitMaker:
         #self.trotter_ckt = qiskit.transpile(self.trotter_ckt, simulator)
         
         #self.trotter_ckt.decompose(16)
-        backend = AerSimulator(method='statevector')
+        #backend = AerSimulator(method='statevector')
         #backend = AerSimulator(method="automatic")
         #backend = AerSimulator(method='extended_stabilizer')
         #backend = AerSimulator(method='unitary')
@@ -90,20 +90,19 @@ class CircuitMaker:
         #backend = AerSimulator(method='stabilizer')
         #backend = AerSimulator(method='density_matrix')
 
-
-
-        #backend = QulacsBackend()
-        #config = backend.configuration()
-        #fixed_basis_gates = np.delete(np.array(config.basis_gates),-4)
-        #self.pm = qiskit.transpiler.generate_preset_pass_manager(optimization_level=3,
-        #    basis_gates = fixed_basis_gates)
         
-        #self.trotter_ckt = self.pm.run(self.trotter_ckt)
-        
+        backend = QulacsBackend()
         config = backend.configuration()
-        self.pm = qiskit.transpiler.generate_preset_pass_manager(optimization_level=3,
-        basis_gates = config.basis_gates)
+        fixed_basis_gates = np.delete(np.array(config.basis_gates),-4)
+        
+        self.pm = qiskit.transpiler.generate_preset_pass_manager(optimization_level=0,
+            basis_gates = fixed_basis_gates)
         self.trotter_ckt = self.pm.run(self.trotter_ckt)
+        
+        #config = backend.configuration()
+        #self.pm = qiskit.transpiler.generate_preset_pass_manager(optimization_level=3,
+        #basis_gates = config.basis_gates)
+        #self.trotter_ckt = self.pm.run(self.trotter_ckt)
         
         
 
@@ -158,34 +157,26 @@ class CircuitMaker:
         
         # Use Qiskit-Qulacs to run the circuit
         
-        #backend = QulacsBackend()
-        backend = AerSimulator(method='statevector')
         
         
-        
-        
-        
-        
-        
-        
-
-
-        
-        # Add measurement to all qubits
-        qc_for_s.measure_all()
-        
-        
-        
-        #qc_for_s.draw(output="text", filename='plots/qc_for_s.png')
+        backend = QulacsBackend()
         
         result = backend.run(qc_for_s, shots = 1).result()
-        result_data = result.data()
-                
-        state_obtained_binary = list(result_data["counts"].keys())[0]
-
-        state_obtained_binary = int(state_obtained_binary,0)
+        state_obtained_binary = list(result.data()["counts"].keys())[0]
         
-        state_obtained_binary = f"{state_obtained_binary:0{self.n_spins}b}"
+        
+        #backend = AerSimulator(method='statevector')
+        # Add measurement to all qubits
+        #qc_for_s.measure_all()
+        #result = backend.run(qc_for_s, shots = 1).result()
+        
+        #result_data = result.data()
+                
+        #state_obtained_binary = list(result_data["counts"].keys())[0]
+        #state_obtained_binary = int(state_obtained_binary,0)
+        #state_obtained_binary = f"{state_obtained_binary:0{self.n_spins}b}"
+        
+        
         #print("s:", s)
         #print("s_prime:", state_obtained_binary)
         
@@ -250,15 +241,15 @@ class CircuitMaker:
             H = self.delta_time*(a*X(2)+b_list[j]*Z(2))
             #evo_gate = qiskit.synthesis.MatrixExponential(H).decompose(4)
             evo_gate = PauliEvolutionGate(H, time=1)
-            
-            
-            
+
+
+
+
             #qc_h1.draw(output="mpl", filename='plots/qc_h1_before.png')
 
             
             qc_h1.append(evo_gate, [self.n_spins-1-j])
             
-            #qc_h1.draw(output="mpl", filename='plots/qc_h1_after.png')
             
             #print("you havent checked this works.. code 14523689 circuit maker")
             
@@ -363,8 +354,9 @@ class CircuitMaker:
         
         # Use Qiskit-Qulacs to run the circuit
         
-        #backend = QulacsBackend()
-        backend = AerSimulator(method='statevector')
+        
+        backend = QulacsBackend()
+        #backend = AerSimulator(method='statevector')
             
         
         

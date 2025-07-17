@@ -27,7 +27,7 @@ class QeMCMC(MCMC):
             temp (float): The temperature parameter.
             delta_time (float, optional): The delta time parameter for length of trotter steps. Defaults to 0.8.
         """
-        
+
         super().__init__(model, temp)
         
         

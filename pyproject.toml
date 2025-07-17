@@ -1,9 +1,9 @@
 [project]
 name = "qemcmc"
-version = "0.1.0"
+version = "0.3.1"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 dependencies = [
     "algorithms>=0.1.4",
     "collections-extended>=2.0.2",
@@ -17,6 +17,7 @@ dependencies = [
     "pytest>=8.3.5",
     "qiskit==1.4",
     "qiskit-aer>=0.17.0",
+    "qiskit-qulacs",
     "spyder-kernels==2.4",
     "tqdm>=4.67.1",
     "typing-extensions>=4.13.2",
