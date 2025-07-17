@@ -59,6 +59,6 @@ Quantum-enhanced Markov chain Monte Carlo by David Layden et al. https://www.nat
 ## Tutorial
 
 
-We also include a tutorial jupyter notebook "tutorial.ipynb", where a Markov Chain Monte Carlo algorithm is run for an example 9 spin instance. Classical "Uniform" and "local" update proposals are compared with a QeMCMC implimentation using only 3 simulated qubits.
+We also include a tutorial jupyter notebook "tutorial.ipynb", where Markov Chain Monte Carlo algorithms are run to compare classical and quantum proposal methods.
 
 
