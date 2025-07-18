@@ -6,8 +6,8 @@ from qiskit.quantum_info import SparsePauliOp
 from qiskit.circuit.library import PauliEvolutionGate
 from qiskit_qulacs.qulacs_backend import QulacsBackend
 import qiskit 
-from qiskit_aer import AerSimulator
-import time as time_
+#from qiskit_aer import AerSimulator
+#import time as time_
 
 
 
