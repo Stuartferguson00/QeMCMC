@@ -113,8 +113,9 @@ class MCMC:
             
             # If accepted, update current_state
             if accepted:
-                current_state = MCMCState(s_prime, accepted, energy_s, position = i)
                 energy_s = energy_sprime
+                current_state = MCMCState(s_prime, accepted, energy_s, position = i)
+                
                 
                 
             # if time to sample, add state to chain
