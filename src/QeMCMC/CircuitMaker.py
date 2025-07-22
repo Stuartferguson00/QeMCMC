@@ -3,7 +3,7 @@ try:
     from qulacs import QuantumStateGpu as QuantumStateGpu
     from qulacs import QuantumState
     print("Using GPU qulacs")
-except:
+except ImportError:
     from qulacs import QuantumState
     print("Using CPU qulacs as qulacs install is not configured for GPU simulation ")
 import qulacs
