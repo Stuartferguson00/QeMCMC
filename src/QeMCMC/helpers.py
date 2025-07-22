@@ -35,7 +35,6 @@ class MCMCState:
 class MCMCChain:
     
     
-    
     def __init__(self, states: Optional[List[MCMCState]] = None, name: Optional[str] = 'MCMC'):
         
         self.name = name 

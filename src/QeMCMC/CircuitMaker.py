@@ -1,14 +1,21 @@
+
+try:
+    from qulacs import QuantumStateGpu as QuantumStateGpu
+    from qulacs import QuantumState
+    print("Using GPU qulacs")
+except:
+    from qulacs import QuantumState
+    print("Using CPU qulacs as qulacs install is not configured for GPU simulation ")
+import qulacs
+from qulacs.gate import DenseMatrix
+from qulacs.gate import X, Y, Z  , Pauli, Identity, merge
+from qulacs import QuantumCircuit
+
+from scipy.linalg import expm
 import numpy as np
+import torch
 from .energy_models import IsingEnergyFunction
 from typing import Union
-from qiskit import QuantumCircuit
-from qiskit.quantum_info import SparsePauliOp
-from qiskit.circuit.library import PauliEvolutionGate
-from qiskit_qulacs.qulacs_backend import QulacsBackend
-import qiskit 
-#from qiskit_aer import AerSimulator
-#import time as time_
-
 
 
 
@@ -20,10 +27,9 @@ class CircuitMaker:
     Can be initialised, then tasked with making a circuit given a new input string s.
 
     Taken mostly from https://github.com/pafloxy/quMCMC but restructured
-
     """
 
-    def __init__(self, model: IsingEnergyFunction, gamma: Union[float, tuple] , time: Union[int, tuple]):
+    def __init__(self, model: IsingEnergyFunction, gamma: Union[float, tuple] , time: Union[int, tuple], noise_model_dict: Union[dict, None] = None):
 
         """
         Initialise Circuit_Maker object.
@@ -44,7 +50,15 @@ class CircuitMaker:
 
         """
         
-        
+        self.noise_model_dict = noise_model_dict
+        if self.noise_model_dict is not None:
+            self.noise_model = self.noise_model_dict.get("noise_model", "depolarising")
+            self.noise_prob_one_qubit = self.noise_model_dict.get("noise_prob_one_qubit", 0)
+            self.noise_prob_two_qubit = self.noise_model_dict.get("noise_prob_two_qubit", 0)
+        else:
+            self.noise_model = None
+        if self.noise_model != "depolarising" and self.noise_model is not None:
+            raise ValueError("Only depolarising (or None) noise model is supported for now")
         self.time = time
         self.gamma = gamma
         self.model = model
@@ -64,47 +78,16 @@ class CircuitMaker:
         self.delta_time = 0.8
         self.n_spins = model.num_spins   
         self.alpha = model.alpha
+        self.pauli_index_list:list=[1,1] #cant really remember what this does
         self.num_trotter_steps = int(np.floor((self.time / self.delta_time)))
 
         #create trotter circuit that is irrelevant of the input string
         self.qc_evol_h1 = self.fn_qc_h1()  
         self.qc_evol_h2 = self.fn_qc_h2()
-        
-        
-
-        
-
         self.trotter_ckt = self.trottered_qc_for_transition(self.qc_evol_h1, self.qc_evol_h2, self.num_trotter_steps)
-        
-        # QISKIT TRANSPILING IS SO SLOW
-        
-        #simulator = AerSimulator()
-        #self.trotter_ckt = qiskit.transpile(self.trotter_ckt, simulator)
-        
-        #self.trotter_ckt.decompose(16)
-        #backend = AerSimulator(method='statevector')
-        #backend = AerSimulator(method="automatic")
-        #backend = AerSimulator(method='extended_stabilizer')
-        #backend = AerSimulator(method='unitary')
-        #backend = AerSimulator(method='superop')
-        #backend = AerSimulator(method='stabilizer')
-        #backend = AerSimulator(method='density_matrix')
 
-        
-        backend = QulacsBackend()
-        config = backend.configuration()
-        fixed_basis_gates = np.delete(np.array(config.basis_gates),-4)
-        
-        self.pm = qiskit.transpiler.generate_preset_pass_manager(optimization_level=0,
-            basis_gates = fixed_basis_gates)
-        self.trotter_ckt = self.pm.run(self.trotter_ckt)
-        
-        #config = backend.configuration()
-        #self.pm = qiskit.transpiler.generate_preset_pass_manager(optimization_level=3,
-        #basis_gates = config.basis_gates)
-        #self.trotter_ckt = self.pm.run(self.trotter_ckt)
-        
-        
+
+        # init_qc=initialise_qc(n_spins=n_spins, bitstring='1'*n_spins)
 
     def build_circuit(self, s:str) -> QuantumCircuit:
         """
@@ -114,24 +97,17 @@ class CircuitMaker:
         Returns:
             QuantumCircuit: The combined quantum circuit for the given bitstring.
         """
-        
-        if type(s) is not str:
-            raise TypeError("s must be a string in build_circuit in CircuitMaker")
-        
         #build a circuit for a given bitstring
         qc_s = self.initialise_qc(s)
-        qc_s.compose(self.trotter_ckt, inplace=True)
-        
-        
-        #qc_for_s = self.combine_2_qc(qc_s, self.trotter_ckt)# i can get rid of this!
+        qc_for_s = self.combine_2_qc(qc_s, self.trotter_ckt)# i can get rid of this!
 
-        return qc_s
+        return qc_for_s
 
     def get_state_obtained_binary(self, s: str) -> str:
         """
         Get the output bitstring s' given an input bitstring s.
         This method builds a quantum circuit based on the input bitstring `s`, 
-        initializes a quantum state, updates the quantum 
+        initializes a quantum state (using GPU if available), updates the quantum 
         state with the circuit, and then samples the resulting state to obtain the 
         output bitstring in binary format.
         Args:
@@ -139,49 +115,20 @@ class CircuitMaker:
         Returns:
             str: The output bitstring in binary format.
         """
-        
-        if type(s) is not str:
-            raise TypeError("s must be a string in get_state_obtained_binary in CircuitMaker")
-        
         #get the output bitstring s' given s
 
         qc_for_s = self.build_circuit(s)
-        
-        #q_state= QuantumState(qubit_count=self.n_spins)
-        #q_state.set_zero_state()
-        #qc_for_s.update_quantum_state(q_state)
+        num_gpus = torch.cuda.device_count()
+        if num_gpus !=0:
+            q_state= QuantumStateGpu(qubit_count=self.n_spins)
+        else:
+            q_state= QuantumState(qubit_count=self.n_spins)
+        q_state.set_zero_state()
+        qc_for_s.update_quantum_state(q_state)
 
-        #state_obtained=q_state.sampling(sampling_count=1)[0]
-        #state_obtained_binary=f"{state_obtained:0{self.n_spins}b}"
-        
-        
-        # Use Qiskit-Qulacs to run the circuit
-        
-        
-        
-        backend = QulacsBackend()
-        
-        result = backend.run(qc_for_s, shots = 1).result()
-        state_obtained_binary = list(result.data()["counts"].keys())[0]
-        
-        
-        #backend = AerSimulator(method='statevector')
-        # Add measurement to all qubits
-        #qc_for_s.measure_all()
-        #result = backend.run(qc_for_s, shots = 1).result()
-        
-        #result_data = result.data()
-                
-        #state_obtained_binary = list(result_data["counts"].keys())[0]
-        #state_obtained_binary = int(state_obtained_binary,0)
-        #state_obtained_binary = f"{state_obtained_binary:0{self.n_spins}b}"
-        
-        
-        #print("s:", s)
-        #print("s_prime:", state_obtained_binary)
-        
+        state_obtained=q_state.sampling(sampling_count=1)[0]
+        state_obtained_binary=f"{state_obtained:0{self.n_spins}b}"
         return state_obtained_binary
-
 
     def initialise_qc(self,s : str) -> QuantumCircuit :
         """
@@ -195,20 +142,15 @@ class CircuitMaker:
         Raises:
             AssertionError: If the length of the input string `s` does not match the number of qubits.
         """
-        
-        if type(s) is not str:
-            raise TypeError("s must be a string in initialise_qc in CircuitMaker")
-        
 
-        qc_in=QuantumCircuit(self.n_spins)
+        qc_in=QuantumCircuit(qubit_count=self.n_spins)
         len_str_in = len(s)
+        assert len_str_in==qc_in.get_qubit_count(), "len(s) should be equal to number_of_qubits/spins"
 
         for i in range(0,len(s)):
             if s[i]=="1":
-                qc_in.x(len_str_in - 1 - i)
+                qc_in.add_X_gate(len_str_in - 1 - i)
         return qc_in
-
-
 
     def fn_qc_h1(self) -> QuantumCircuit :
         """
@@ -224,39 +166,19 @@ class CircuitMaker:
         a=self.gamma
         b_list = ((self.gamma-1)*self.alpha)* np.array(self.h)
         qc_h1 = QuantumCircuit(self.n_spins)
-        
-        X = SparsePauliOp("X")
-        Z = SparsePauliOp("Z")
-        
         for j in range(0, self.n_spins):
-            
-            #Matrix = np.round(np.expm(-1j*self.delta_time*(a*X(2).get_matrix()+b_list[j]*Z(2).get_matrix())),decimals=6)
 
-            #unitary_gate=DenseMatrix(index=self.n_spins-1-j,
-            #                matrix = Matrix)
-            
-            #qc_h1.add_gate(unitary_gate)
-            
+            Matrix = np.round(expm(-1j*self.delta_time*(a*X(2).get_matrix()+b_list[j]*Z(2).get_matrix())),decimals=6)
 
-            H = self.delta_time*(a*X(2)+b_list[j]*Z(2))
-            #evo_gate = qiskit.synthesis.MatrixExponential(H).decompose(4)
-            evo_gate = PauliEvolutionGate(H, time=1)
-
-
-
-
-            #qc_h1.draw(output="mpl", filename='plots/qc_h1_before.png')
-
+            unitary_gate=DenseMatrix(index=self.n_spins-1-j,
+                            matrix = Matrix)
             
-            qc_h1.append(evo_gate, [self.n_spins-1-j])
-            
-            
-            #print("you havent checked this works.. code 14523689 circuit maker")
-            
+            if self.noise_model == "depolarising" and self.noise_prob_one_qubit > 0:
+                qc_h1.add_noise_gate(unitary_gate, "Depolarizing", self.noise_prob_one_qubit)
+            else:
+                qc_h1.add_gate(unitary_gate)
+
         return qc_h1
-
-
-
 
     def fn_qc_h2(self) -> QuantumCircuit :
         
@@ -279,19 +201,23 @@ class CircuitMaker:
         qc_for_evol_h2=QuantumCircuit(self.n_spins)
         upper_triag_without_diag=np.triu(self.J,k=1)
         theta_array=(-2*(1-self.gamma)*self.alpha*self.delta_time)*upper_triag_without_diag
+        pauli_z_index=[3,3]# ZZ
         for j in range(0,self.n_spins-1):
             for k in range(j+1,self.n_spins):
+
                 target_list=[self.n_spins-1-j,self.n_spins-1-k]
                 angle = theta_array[j,k]
-                
-                
-                qc_for_evol_h2.rzz(angle, target_list[0], target_list[1])
-                
-                #qc_for_evol_h2.add_multi_Pauli_rotation_gate(index_list=target_list,pauli_ids=pauli_z_index,angle = angle)
+
+                #print(" 2 qubit depolarising isnt working I dont think")
+                if self.noise_model == "Depolarising" and self.noise_prob_two_qubit > 0:
+                    #print("This bit will not work idk what to do")
+                    gate = qulacs.gate.PauliRotation(target_list, pauli_z_index, angle)
+                    qc_for_evol_h2.add_noise_gate(gate, "Depolarizing", self.noise_prob_two_qubit)
+                else:
+                    qc_for_evol_h2.add_multi_Pauli_rotation_gate(index_list=target_list,pauli_ids=pauli_z_index,angle = angle)
                 
 
         return qc_for_evol_h2
-
 
     def trottered_qc_for_transition(self, qc_h1: QuantumCircuit, qc_h2: QuantumCircuit, num_trotter_steps: int) -> QuantumCircuit:
         """
@@ -311,60 +237,20 @@ class CircuitMaker:
         qc_combine=QuantumCircuit(self.n_spins)
         for _ in range(0,num_trotter_steps-1):
 
-            qc_combine.compose(qc_h1, inplace=True)
-            qc_combine.compose(qc_h2, inplace=True)
-            #qc_combine.merge_circuit(qc_h1)
-            #qc_combine.merge_circuit(qc_h2)
+            qc_combine.merge_circuit(qc_h1)
+            qc_combine.merge_circuit(qc_h2)
 
-        #qc_combine.merge_circuit(qc_h1)
-        qc_combine.compose(qc_h1, inplace=True)
+        qc_combine.merge_circuit(qc_h1)
 
         return qc_combine
 
-
-
-    
-    def get_statevector_obtained(self, s: str) -> str:
-        """
-        Get the output statevector representing probability of s^{prime}s given an input bitstring s.
-        This method builds a quantum circuit based on the input bitstring `s`, 
-        initializes a quantum state, updates the quantum 
-        state with the circuit, and then samples the resulting state to obtain the 
-        output bitstring in binary format.
-        Args:
-            s (str): The input bitstring.
-        Returns:
-            str: The output bitstring in binary format.
-        """
-        
-        if type(s) is not str:
-            raise TypeError("s must be a string in get_state_obtained_binary in CircuitMaker")
-        
-        #get the output bitstring s' given s
-
-        qc_for_s = self.build_circuit(s)
-        
-        #q_state= QuantumState(qubit_count=self.n_spins)
-        #q_state.set_zero_state()
-        #qc_for_s.update_quantum_state(q_state)
-
-        #state_obtained=q_state.sampling(sampling_count=1)[0]
-        #state_obtained_binary=f"{state_obtained:0{self.n_spins}b}"
-        
-        
-        # Use Qiskit-Qulacs to run the circuit
-        
-        
-        backend = QulacsBackend()
-        #backend = AerSimulator(method='statevector')
+    def combine_2_qc(self, init_qc: QuantumCircuit, trottered_qc: QuantumCircuit) -> QuantumCircuit:
+        """ 
+            Function to combine 2 quantum circuits of compatible size.
             
-        
-        
-        #qc_for_s.draw(output="text", filename='plots/qc_for_s.png')
-        qc_for_s.save_statevector()
-
-        result = backend.run(qc_for_s).result()
-        statevector = result.get_statevector(qc_for_s)
-        
-        return statevector.probabilities()
+        """
+        qc_merge=QuantumCircuit(self.n_spins)
+        qc_merge.merge_circuit(init_qc)
+        qc_merge.merge_circuit(trottered_qc)
+        return qc_merge
 
