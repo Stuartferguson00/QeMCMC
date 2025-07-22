@@ -5,6 +5,8 @@ import numpy as np
 from .MCMC import MCMC
 from .energy_models import IsingEnergyFunction
 from .CircuitMaker import CircuitMaker
+import warnings
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 
 
