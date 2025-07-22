@@ -8,7 +8,7 @@ except:
     print("Using CPU qulacs as qulacs install is not configured for GPU simulation ")
 import qulacs
 from qulacs.gate import DenseMatrix
-from qulacs.gate import X, Y, Z  , Pauli, Identity, merge
+from qulacs.gate import X, Z
 from qulacs import QuantumCircuit
 
 from scipy.linalg import expm
