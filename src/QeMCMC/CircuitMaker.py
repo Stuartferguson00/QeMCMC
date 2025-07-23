@@ -1,11 +1,6 @@
 
-try:
-    from qulacs import QuantumStateGpu as QuantumStateGpu
-    from qulacs import QuantumState
-    print("Using GPU qulacs")
-except ImportError:
-    from qulacs import QuantumState
-    print("Using CPU qulacs as qulacs install is not configured for GPU simulation ")
+
+from qulacs import QuantumState
 import qulacs
 from qulacs.gate import DenseMatrix
 from qulacs.gate import X, Z
@@ -13,7 +8,6 @@ from qulacs import QuantumCircuit
 
 from scipy.linalg import expm
 import numpy as np
-import torch
 from .energy_models import IsingEnergyFunction
 from typing import Union
 
@@ -118,11 +112,7 @@ class CircuitMaker:
         #get the output bitstring s' given s
 
         qc_for_s = self.build_circuit(s)
-        num_gpus = torch.cuda.device_count()
-        if num_gpus !=0:
-            q_state= QuantumStateGpu(qubit_count=self.n_spins)
-        else:
-            q_state= QuantumState(qubit_count=self.n_spins)
+        q_state= QuantumState(qubit_count=self.n_spins)
         q_state.set_zero_state()
         qc_for_s.update_quantum_state(q_state)
 
