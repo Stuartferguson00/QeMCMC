@@ -1,4 +1,7 @@
-from qemcmc import ClassicalMCMC, QeMCMC, MCMCChain, ModelMaker
+from qemcmc.ClassicalMCMC import ClassicalMCMC
+from qemcmc.ModelMaker import ModelMaker
+from qemcmc.QeMCMC_ import QeMCMC
+from qemcmc.helpers import MCMCChain
 from matplotlib import pyplot as plt
 from joblib import Parallel, delayed
 
