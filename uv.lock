@@ -1191,7 +1191,7 @@ wheels = [
 
 [[package]]
 name = "qemcmc"
-version = "0.3.3"
+version = "0.3.31"
 source = { editable = "." }
 dependencies = [
     { name = "algorithms" },
