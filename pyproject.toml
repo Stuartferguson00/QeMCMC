@@ -28,7 +28,8 @@ dependencies = [
       packages = ["src/qemcmc"]
 
 [project.scripts]
-qemcmc = "qemcmc:main"
+qemcmc = "qemcmcm:main"
+
 
 [build-system]
 requires = ["hatchling"]
@@ -39,5 +40,4 @@ members = [
     "cmake",
 ]
 
-[tool.setuptools]
-package-dir = {"" = "src"}
+
