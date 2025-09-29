@@ -36,8 +36,7 @@ class EnergyModel(abc.ABC):
         """
         pass
     
-    @staticmethod
-    def calculate_energy_from_couplings(couplings: List[np.ndarray], state: Union[str, List[int]], state_representation: str = 'spin', sign: int = 1) -> float:
+    def calculate_energy_from_couplings(self, state: Union[str, List[int]], state_representation: str = 'spin', sign: int = 1) -> float:
         """ 
         Calculates the energy for any arbitrary-order Ising/QUBO model.
         Args:
@@ -58,6 +57,8 @@ class EnergyModel(abc.ABC):
         Returns:
             float: The total calculated energy of the state.
         """
+        couplings = self.couplings
+
         if state_representation == 'spin':
             if not isinstance(state, list):
                 raise TypeError("For 'spin' format, the state must be a list of integers (e.g., [1, -1, 1]).")
@@ -130,7 +131,7 @@ class EnergyModel(abc.ABC):
         return all_energies
             
             
-    def get_lowest_energies(self,num_states:int) -> typing.Tuple[np.ndarray, np.ndarray]:
+    def get_lowest_energies(self, num_states:int) -> typing.Tuple[np.ndarray, np.ndarray]:
         """
         Retrieve the lowest energy states and their degeneracies.
         This method computes all possible energies and then finds the specified number
@@ -201,10 +202,7 @@ class EnergyModel(abc.ABC):
 
         return lowest_energy
 
-    def get_boltzmann_factor(
-        self, state: str, beta: float = 1.0
-    ) -> float:
-
+    def get_boltzmann_factor(self, state: str, beta: float = 1.0) -> float:
         """ 
         Get un-normalised boltzmann probability of a given state 
 
@@ -316,7 +314,7 @@ class IsingEnergyFunction(EnergyModel):
 
     
             
-    def calc_an_energy(self,state:str) -> float:
+    def calc_an_energy(self, state:str) -> float:
         """
         Calculate the energy of a given state.
         
@@ -380,21 +378,23 @@ class IsingEnergyFunction(EnergyModel):
 #     my_couplings = [h, 0.5 * J]
 
 #     my_state = '011'
-#     # my_state = [1, 1, 1]  # Corresponding spin representation
 
-#     # Calculate the energy using the new static method
-#     energy = EnergyModel.calculate_energy_from_couplings(
-#         couplings=my_couplings,
-#         state=my_state,
-#         state_representation='binary', sign=-1
-#     )
+#     energies = []
+#     energies2 = []
+#     for state in ['000', '001', '010', '011', '100', '101', '110', '111']:
 
-#     print(f"The energy of state {my_state} (spins: [+1, -1, +1]) is: {energy}")
+#         print("Calculating energy for state:", state)
+#         energy_model = EnergyModel(n=3, couplings=my_couplings)
+#         energy = energy_model.calculate_energy_from_couplings(state=state, state_representation='binary', sign=-1)
+#         print("Energy using couplings:", energy)
+#         energies.append(energy)
 
+#         ising_model = IsingEnergyFunction(J=J, h=h, name="Test Ising Model")
+#         energy_ising = ising_model.get_energy(state)
+#         print("Energy using IsingEnergyFunction:", energy_ising)
+#         energies2.append(energy_ising)
 
-#     ising_model = IsingEnergyFunction(J=J, h=h, name="Test Ising Model")
-#     energy_ising = ising_model.get_energy(my_state)
-#     print(f"The energy of state {my_state} using IsingEnergyFunction is: {energy_ising}")
+#         print("\n\n")
 
-
-
+#     print("Lowest energy is", min(energies))
+#     print("Lowest energy (Ising model) is", min(energies2))
