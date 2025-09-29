@@ -1,75 +1,119 @@
-
-
 import numpy as np
 import itertools
 import typing
 import abc
+from typing import List, Union
 
-class EnergyModel:
-    
-    def __init__(self, n:int, name:str = None, no_initial_states = False) -> None:
-        
+
+class EnergyModel(abc.ABC):
+    """
+    Abstract base class for energy models. Initializes with a couplings list.
+    """
+    def __init__(self, n: int, couplings: List[np.ndarray] = [], name: str = None) -> None:
         """
-        Initialize an energy model. This acts as a base class for specific energy models (such as Ising mdoels)
+        Initialize an energy model. This acts as a base class for specific energy models (such as Ising models).
         Parameters:
             n (int): Number of spins in the model.
+            couplings (List[np.ndarray]): List of numpy arrays representing coupling tensors.
             name (str, optional): Name of the model. Defaults to None.
-            no_initial_states (bool, optional): If True, no initial states are stored for the model. Defaults to False.
-
-        """
-
-        self.name = name 
-        self.S = None
+            """
         self.n = n
-
-        
-        
-        #100 optional optional states to use for fair starting state between different simulations
-        if no_initial_states:
-            self.initial_state = []
-        else:
-            self.initial_state = []
-            for i in range(100): 
-                self.initial_state.append(''.join(str(i) for i in np.random.randint(0, 2, self.n, dtype = int)))
+        self.couplings = couplings
+        self.name = name
 
 
-
-    def get_energy(self, state: str) -> float:
-        """ 
-        Returns the energy of a given state
-
-        Args:
-        state (str) : Configuration of spins for which the energy is required to be calculated.
-
-        """
-        if not isinstance(state,str):
-            raise TypeError(f"State must be a string, but got {type(state)}")
-        
-
-        energy = self.calc_an_energy(state)
-        
-        return energy
-    
     @abc.abstractmethod
-    def calc_an_energy(self,state:str) -> float:
+    def calc_an_energy(self, state: str) -> float:
         """
         Calculate the energy of a given state.
-        This function is expected to be implemented in subclasses.
-        
+        This function is Model-specific and is expected to be implemented in subclasses.
+
         Args:
         state (str): A string representing the state, where each character is either "0" or "1".
         
         Returns
         float: The calculated energy of the given state.
-        
-        Raises:
-        TypeError
-            If the input state is not a string.
         """
-
         pass
     
+    @staticmethod
+    def calculate_energy_from_couplings(couplings: List[np.ndarray], state: Union[str, List[int]], state_representation: str = 'spin', sign: int = 1) -> float:
+        """ 
+        Calculates the energy for any arbitrary-order Ising/QUBO model.
+        Args:
+            couplings: An unordered list of numpy arrays representing
+                all coupling terms. The function determines the interaction order from
+                each array's dimension (e.g., 1D for fields, 2D for interactions).
+
+            state: The configuration state.
+                - If 'spin', provide a list of ints, e.g., [1, -1, 1].
+                - If 'binary', provide a string of '0's and '1's, e.g., '101'.
+
+            state_representation: The convention for the state variables.
+                Defaults to 'spin'.
+
+            sign: The sign convention for the coupling terms.
+                Defaults to 1.
+
+        Returns:
+            float: The total calculated energy of the state.
+        """
+        if state_representation == 'spin':
+            if not isinstance(state, list):
+                raise TypeError("For 'spin' format, the state must be a list of integers (e.g., [1, -1, 1]).")
+            s = np.array(state, dtype=np.int8)
+            if not np.all(np.isin(s, [-1, 1])):
+                 raise ValueError("Spin states in list format must only contain 1 and -1.")
+        
+        elif state_representation == 'binary':
+            if not isinstance(state, str):
+                raise TypeError("For 'binary' format, the state must be a string (e.g., '101').")
+            # Convert the binary string '0'/'1' to a spin array [-1, 1] for calculation.
+            s = np.array([2 * int(char) - 1 for char in state], dtype=np.int8)
+        
+        else:
+            raise ValueError("state_representation must be either 'spin' or 'binary'.")
+
+        total_energy = 0.0
+        einsum_indices = 'ijklmnopqrstuvwxyz' # Provides indices for up to 26-order interactions
+        num_spins = len(s)
+
+        # Iterate through the coupling tensors (h, J, L, ...)
+        for coeffs in couplings:
+            # Determine the interaction order from the array's dimension
+            order = coeffs.ndim
+            if order == 0:
+                total_energy += coeffs.item()
+                continue
+            # Validate that the tensor dimensions match the number of spins
+            if not all(dim == num_spins for dim in coeffs.shape):
+                raise ValueError(f"Shape {coeffs.shape} of a coupling tensor is not "
+                                 f"compatible with the number of spins ({num_spins}).")
+            if order > len(einsum_indices):
+                raise ValueError(f"Cannot handle interaction order > {len(einsum_indices)}.")
+
+            # Dynamically build and execute the einsum calculation for this term
+            # For order=1 (h): 'i,i->' sums h_i * s_i
+            # For order=2 (J): 'i,j,ij->' sums J_ij * s_i * s_j
+            # ... etc.
+            indices = einsum_indices[:order]
+            path = ','.join(indices) + ',' + indices + '->'
+            operands = [s] * order + [coeffs]
+            total_energy += np.einsum(path, *operands)
+
+        return sign * total_energy
     
+    
+    def get_energy(self, state: str) -> float:
+        """ 
+        Returns the energy of a given state
+        """
+        if not isinstance(state,str):
+            raise TypeError(f"State must be a string, but got {type(state)}")
+        
+        energy = self.calc_an_energy(state)
+        
+        return energy
     
     def get_all_energies(self) -> np.ndarray :
         """
@@ -195,9 +239,7 @@ class EnergyModel:
     
 
 
-
 class IsingEnergyFunction(EnergyModel):
-    
     """
     A class to build the Ising Energy Function from self.
     Heavily modified from https://github.com/pafloxy/quMCMC to add functionality.
@@ -243,12 +285,9 @@ class IsingEnergyFunction(EnergyModel):
         Returns the un-normalized Boltzmann probability of a given state.
     get_boltzmann_factor_from_energy(E: float, beta: float = 1.0) -> float
         Returns the un-normalized Boltzmann probability for a given energy.
-
-    
     """    
 
     def __init__(self, J: np.array, h: np.array, name:str = None, cost_function_signs:list = [-1,-1], no_initial_states = False) -> None:
-        
         """
         Initialize the Ising model.
         Parameters:
@@ -256,10 +295,9 @@ class IsingEnergyFunction(EnergyModel):
             h (np.array): Local field to the spins.
             name (str, optional): Name of the Ising model. Defaults to None.
             cost_function_signs (list, optional): List of two elements, the first element is the sign of the interaction term and the second element is the sign of the field term. Allows for the cost function to be flipped with respect to the standard Ising model. Defaults to [-1, -1].
-            no_initial_states (bool, optional): If True, no initial states are stored for the model. Defaults to False.
-
+            no_initial_states (bool, optional): If True, no initial states are stored for the model, randomly generated. Defaults to False.
         """
-        super().__init__(n = J.shape[0], name = name, no_initial_states = no_initial_states)
+        super().__init__(n = J.shape[0], name = name)
         
         # self.cost_function_signs allows for cost function to be flipped wrt to the standard Ising model
         self.cost_function_signs = cost_function_signs
@@ -269,8 +307,12 @@ class IsingEnergyFunction(EnergyModel):
         self.lowest_energy  = None
         self.num_spins =self.n
         self.alpha = np.sqrt(self.num_spins) / np.sqrt( sum([J[i][j]**2 for i in range(self.num_spins) for j in range(i)]) + sum([h[j]**2 for j in range(self.num_spins)])  )
-
-        
+        if no_initial_states:
+            self.initial_state = []
+        else:
+            self.initial_state = []
+            for i in range(100): 
+                self.initial_state.append(''.join(str(i) for i in np.random.randint(0, 2, self.n, dtype = int)))
 
     
             
@@ -296,10 +338,9 @@ class IsingEnergyFunction(EnergyModel):
         if not isinstance(state, str):
             raise TypeError(f"State must be a string, but got {type(state)}")
         
-        
         state = np.array([-1 if elem == "0" else 1 for elem in state])
         
-        #THIS ONLY WORKS IF THE INPUT IS NOT UPPER DIAGONAL.
+        # THIS ONLY WORKS IF THE INPUT IS NOT UPPER DIAGONAL.
         # self.cost_function_signs allows for cost function to be flipped wrt to the standard Ising model
         try:
             energy = self.cost_function_signs[0]* 0.5 * np.dot(state.transpose(), self.J.dot(state)) + self.cost_function_signs[1]* np.dot(self.h.transpose(), state)
@@ -307,11 +348,8 @@ class IsingEnergyFunction(EnergyModel):
             print(f"Error calculating energy for state {state}: {e}")
             print("This error is generally caused when qulacs outputs a bitstring of 1 followed by n 0's for the state for some reason")
             energy = 10000
-        
-
 
         return energy
-    
     
     
     @property
@@ -321,6 +359,42 @@ class IsingEnergyFunction(EnergyModel):
     @property
     def get_h(self):
         return self.h
+
+
+
+
+# if __name__ == "__main__":
+
+#     # Linear coefficients (h vector)
+#     h = np.array([-1.0, -2.0, -3.0])
+
+#     # Quadratic coefficients (J matrix)
+#     # J_12 = 0.5, J_23 = -1.5
+#     J = np.array([
+#         [0.0, 0.5, 0.0],
+#         [0.5, 0.0, -1.5],
+#         [0.0, -1.5, 0.0]
+#     ])
+
+#     # Create the list of coupling tensors
+#     my_couplings = [h, 0.5 * J]
+
+#     my_state = '011'
+#     # my_state = [1, 1, 1]  # Corresponding spin representation
+
+#     # Calculate the energy using the new static method
+#     energy = EnergyModel.calculate_energy_from_couplings(
+#         couplings=my_couplings,
+#         state=my_state,
+#         state_representation='binary', sign=-1
+#     )
+
+#     print(f"The energy of state {my_state} (spins: [+1, -1, +1]) is: {energy}")
+
+
+#     ising_model = IsingEnergyFunction(J=J, h=h, name="Test Ising Model")
+#     energy_ising = ising_model.get_energy(my_state)
+#     print(f"The energy of state {my_state} using IsingEnergyFunction is: {energy_ising}")
 
 
 
