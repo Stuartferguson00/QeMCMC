@@ -1,23 +1,14 @@
-##########################################################################################
-## IMPORTS ##
-###########################################################################################
 import numpy as np
-
 from .helpers import  get_random_state
 from .energy_models import IsingEnergyFunction
 from .MCMC import MCMC
 
 
 
-
-
-
 class ClassicalMCMC(MCMC):
     """
     A class to perform Markov Chain Monte Carlo (MCMC) simulations for the Ising model.
-    
     """
-    
     
     def __init__(self, model: IsingEnergyFunction , temp, method = "uniform"):
         """
@@ -27,11 +18,8 @@ class ClassicalMCMC(MCMC):
         model (IsingEnergyFunction): The energy function of the Ising model.
         temp (float): The temperature of the system.
         method (str, optional): The update method to use. Options are "uniform" or "local". Default is "uniform".
-        
-        
         """
         super().__init__(model, temp)
-
 
         self.method = method
 
@@ -41,8 +29,6 @@ class ClassicalMCMC(MCMC):
             self.update = self.update_local
         else:
             print("method name is incorrect. Choose from: 'uniform' or 'local'")
-                
-            
         
 
     def update_uniform(self,current_state_bitstring:str) -> str:
@@ -53,16 +39,9 @@ class ClassicalMCMC(MCMC):
         Returns:
             str: A new random state bitstring of the same length as the input.
         """
-
-
         s_prime = get_random_state(len(current_state_bitstring))
-
         return s_prime
     
-    
-
-    
-
     
     def update_local(self,current_state_bitstring:str)-> str:
         """
@@ -73,7 +52,6 @@ class ClassicalMCMC(MCMC):
             str: The new state bitstring after flipping a randomly chosen spin.
         """
 
-        
         # Randomly choose which spin to flip
         choice = np.random.randint(0,self.n_spins)
 

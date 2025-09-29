@@ -1,58 +1,33 @@
-##########################################################################################
-## IMPORTS ##
-###########################################################################################
 import numpy as np
 from typing import Optional
 from tqdm import tqdm
 from .helpers import MCMCChain, MCMCState, get_random_state
-from .energy_models import IsingEnergyFunction
+from .energy_models import IsingEnergyFunction, EnergyModel
 import warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
-
-
-
 
 
 
 class MCMC:
     """
     A base class to perform Markov Chain Monte Carlo (MCMC) simulations for the Ising model.
-    
     """
-    
-    
-    def __init__(self, model: IsingEnergyFunction , temp: float):
+    def __init__(self, model: EnergyModel , temp: float):
         """
         Initialize the MCMC routine for the Ising model.
         
         Args:
-        model (IsingEnergyFunction): The energy function of the Ising model.
+        model (EnergyModel): The energy function of the Ising model.
         temp (float): The temperature of the system.
-        
-        
         """
-
 
         self.model = model
         self.temp = temp
         self.beta = 1/self.temp
         self.n_spins = model.num_spins
         
-        
 
-
-
-
-
-    def run(self,
-        n_hops: int,
-        initial_state: Optional[str] = None,
-        name:str = "MCMC",
-        verbose:bool = False,
-        sample_frequency:int = 1):
-
-
-
+    def run(self, n_hops: int, initial_state: Optional[str] = None, name:str = "MCMC", verbose:bool = False, sample_frequency:int = 1):
         """
         Run the classical MCMC algorithm for a specified number of hops.
         Parameters:
@@ -71,13 +46,6 @@ class MCMC:
             The MCMC chain containing the sequence of states visited during the run.
         """
 
-
-
-
-
-
-
-
         if name is None:
             name = self.method + " MCMC"
 
@@ -87,7 +55,7 @@ class MCMC:
         else:
             initial_state = MCMCState(initial_state, accepted=True, position = 0)
         
-        #set initial state
+        # set initial state
         current_state: MCMCState = initial_state
         energy_s = self.model.get_energy(current_state.bitstring)
         initial_state.energy = energy_s
@@ -97,9 +65,8 @@ class MCMC:
             print("starting with: ", current_state.bitstring, "with energy:", energy_s)
 
 
-        #define MCMC chain
+        # define MCMC chain
         mcmc_chain = MCMCChain([current_state], name= name)
-        
         
         # Do MCMC 
         for i in tqdm(range(0, n_hops), desc='Run '+name, disable= not verbose ):
@@ -118,22 +85,14 @@ class MCMC:
                 energy_s = energy_sprime
                 current_state = MCMCState(s_prime, accepted, energy_s, position = i)
                 
-                
-                
             # if time to sample, add state to chain
             if i//sample_frequency == i/sample_frequency and i != 0 :
                 mcmc_chain.add_state(MCMCState(current_state.bitstring, True, energy_s, position = i))
                 
-            
-
         return mcmc_chain
 
 
-
-
-
     def test_probs(self, energy_s: float, energy_sprime: float) -> float:
-        
         """
         Calculate the probability ratio between two states based on their energies.
         This function computes the exponential factor used in the Metropolis-Hastings 
@@ -168,7 +127,7 @@ class MCMC:
         and s_init with probability 1-A.
         """
         delta_energy = energy_sprime - energy_s  # E(s')-E(s)
-        #with warnings.catch_warnings():
+        # with warnings.catch_warnings():
         #    warnings.simplefilter("error", RuntimeWarning)
         try:
             exp_factor = np.exp(-delta_energy / temperature)
@@ -178,10 +137,8 @@ class MCMC:
             else:
                 exp_factor = 0
             
-            #print("Error in exponantial: delta_energy = ", delta_energy, "temperature = ", temperature, " energy_s = ", energy_s, " energy_sprime = ", energy_sprime)
+            # print("Error in exponantial: delta_energy = ", delta_energy, "temperature = ", temperature, " energy_s = ", energy_s, " energy_sprime = ", energy_sprime)
                 
-        acceptance = min(
-            1, exp_factor
-        )  # for both QC case as well as uniform random strategy, the transition matrix Pij is symmetric!
+        acceptance = min(1, exp_factor)  # for both QC case as well as uniform random strategy, the transition matrix Pij is symmetric!
 
         return acceptance > np.random.rand()

@@ -1,23 +1,17 @@
-##########################################################################################
-## IMPORTS ##
-###########################################################################################
 import numpy as np
 from .MCMC import MCMC
-from .energy_models import IsingEnergyFunction
-from .CircuitMaker import CircuitMaker
+from .energy_models import IsingEnergyFunction, EnergyModel
+from .CircuitMaker import CircuitMakerIsing
 import warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
-
 
 
 
 class QeMCMC(MCMC):
     """
     Class to set up the Quantum-enhanced Markov Chain Monte Carlo.
-    
     """
-    
-    def __init__(self, model:IsingEnergyFunction, gamma:float|tuple[float], time: int|tuple[int], temp: float, delta_time:float = 0.8):
+    def __init__(self, model:EnergyModel, gamma:float|tuple[float], time: int|tuple[int], temp: float, delta_time:float = 0.8):
         #havent done type hinting yet
         """
         Initializes an instance of the QeMCMC class.
@@ -32,14 +26,12 @@ class QeMCMC(MCMC):
 
         super().__init__(model, temp)
         
-        
         self.gamma = gamma
         self.time = time
         self.delta_time = delta_time
         self.update = self.get_s_prime
         self.method = "quantum"
         
-
     
     def get_s_prime(self, current_state: str)-> str:
         """
@@ -69,11 +61,10 @@ class QeMCMC(MCMC):
         
         
         # Get s_prime
-        CM = CircuitMaker(self.model, g, t)
+        CM = CircuitMakerIsing(self.model, g, t)
         s_prime = CM.get_state_obtained_binary(current_state)
         
         return s_prime
-
 
 
     def get_output_statevector(self, current_state: str)-> str:
@@ -106,7 +97,7 @@ class QeMCMC(MCMC):
         
         
         # Get s_prime
-        CM = CircuitMaker(self.model, g, t)
+        CM = CircuitMakerIsing(self.model, g, t)
         s_primes = CM.get_statevector_obtained(current_state)
         
         return s_primes
