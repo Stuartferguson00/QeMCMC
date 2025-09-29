@@ -124,7 +124,7 @@ class EnergyModel(abc.ABC):
         Returns:
             np.ndarray: An array containing the energies of all possible spin states.
         """
-        self.S = [''.join(i) for i in itertools.product('01', repeat=self.num_spins)]
+        self.S = [''.join(i) for i in itertools.product('01', repeat=self.n)]
         all_energies = np.zeros(len(self.S))
         for state in self.S:
             all_energies[int(state,2)] = self.calc_an_energy(state)
