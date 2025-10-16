@@ -24,19 +24,19 @@ NOTE: This library is built with flexibility and convenience in mind rather than
 
 This project uses [`uv`](https://astral.sh/uv), an extremely fast Python package installer written in Rust, intended as a drop-in replacement for `pip` and `pip-tools`.
 
-1.  **Install `uv` (if you don't have it):**
-    Follow the official installation instructions at [astral.sh/uv](https://astral.sh/uv). For macOS and Linux:
+1.  **Install `uv`:**
+    Follow official installation instructions at [astral.sh/uv](https://astral.sh/uv). For macOS and Linux run:
 
     ```bash
     curl -LsSf [https://astral.sh/uv/install.sh](https://astral.sh/uv/install.sh) | sh
     ```
 
 2.  **Create the Virtual Environment:**
-    From the project's root directory, run the following command. This will create a local `.venv` folder and install all required dependencies from `pyproject.toml` and `uv.lock`.
+    From the project's root directory, run the following command:
     ```bash
     uv sync
     ```
-
+    This will create a local `.venv` folder and install all required dependencies from `pyproject.toml` and `uv.lock`.
 ## Quick Start
 
 The library makes it simple to define a problem and generate the corresponding evolution circuit. Here is a quick example of a workflow:
