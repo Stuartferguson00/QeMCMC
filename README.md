@@ -1,8 +1,8 @@
 # Quantum-enhanced Markov Chain Monte Carlo Simulator
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/release/python-3100/)
-[![Qiskit 2.2](https://img.shields.io/badge/Qiskit-2.2-blueviolet)](https://qiskit.org/)
-[![Qulacs 0.6.12](https://img.shields.io/badge/Qulacs-0.6.12-green)](https://github.com/qulacs/qulacs)
+[![Qiskit 2.2](https://img.shields.io/badge/Qiskit-2.2-blueviolet)](https://quantum.cloud.ibm.com/docs/en/api/qiskit/release-notes/2.2)
+[![Qulacs 0.6.12](https://img.shields.io/badge/Qulacs-0.6.12-green)](https://docs.qulacs.org/en/v0.6.2/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 This library provides a modular and extensible framework for implementing Quantum-enhanced Markov Chain Monte Carlo (QeMCMC) algorithms. It is designed to allow researchers and developers to easily define complex energy models and automatically generate piece-by-piece quantum circuits for time evolution.
@@ -37,6 +37,7 @@ This project uses [`uv`](https://astral.sh/uv), an extremely fast Python package
     uv sync
     ```
     This will create a local `.venv` folder and install all required dependencies from `pyproject.toml` and `uv.lock`.
+
 ## Quick Start
 
 The library makes it simple to define a problem and generate the corresponding evolution circuit. Here is a quick example of a workflow:
