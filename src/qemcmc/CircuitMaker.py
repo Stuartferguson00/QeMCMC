@@ -7,7 +7,6 @@ from scipy.linalg import expm
 from typing import Union, Any, List
 
 from qemcmc.energy_models import IsingEnergyFunction, EnergyModel
-from qulacsvis import circuit_drawer
 
 
 
@@ -111,6 +110,7 @@ class CircuitMaker():
                 coeff = coeffs[tuple(index_tuple)]
                 term_angle = 2 * coeff * angle_multiplier
                 self._add_pauli_z_string_evolution(qc, term_angle, list(index_tuple))
+
         return qc
 
     def _add_pauli_z_string_evolution(self, circuit: QuantumCircuit, angle: float, targets: List[int]):
@@ -369,9 +369,6 @@ class CircuitMakerIsing(CircuitMaker):
             A quantum circuit representing the time evolution under the Hamiltonian H2.
         """
 
-        
-
-        
         self.n_spins=np.shape(self.J)[0]
         qc_for_evol_h2=QuantumCircuit(self.n_spins)
         upper_triag_without_diag=np.triu(self.J,k=1)
@@ -384,6 +381,7 @@ class CircuitMakerIsing(CircuitMaker):
                 angle = theta_array[j,k]
 
                 #print(" 2 qubit depolarising isnt working I dont think")
+                # TODO: remove
                 if self.noise_model == "Depolarising" and self.noise_prob_two_qubit > 0:
                     #print("This bit will not work idk what to do")
                     gate = qulacs.gate.PauliRotation(target_list, pauli_z_index, angle)
@@ -391,7 +389,6 @@ class CircuitMakerIsing(CircuitMaker):
                 else:
                     qc_for_evol_h2.add_multi_Pauli_rotation_gate(index_list=target_list,pauli_ids=pauli_z_index,angle = angle)
                 
-
         return qc_for_evol_h2
 
     def trottered_qc_for_transition(self, qc_h1: QuantumCircuit, qc_h2: QuantumCircuit, num_trotter_steps: int) -> QuantumCircuit:
@@ -457,59 +454,61 @@ if __name__== "__main__":
     # Get ground state energy using qulacs Hamiltonian
     ground_energy = cm.get_ground_state_energy(hamiltonian)
 
+    ground_energy_classical = my_model.get_ground_state_energy_bruteforce()
+
     print(f"Ground state energy: {ground_energy}")
 
-    ising_model = IsingEnergyFunction(J=J, h=h, name="Test Ising Model")
-    cm_ising = CircuitMakerIsing(model=ising_model, gamma=0.5, time=2)
-    circuit_ising = cm_ising.build_circuit("101")
-    print("Ising Circuit built successfully!")
-    print(circuit_ising)
-    circuit_drawer(circuit_ising)
+    # ising_model = IsingEnergyFunction(J=J, h=h, name="Test Ising Model")
+    # cm_ising = CircuitMakerIsing(model=ising_model, gamma=0.5, time=2)
+    # circuit_ising = cm_ising.build_circuit("101")
+    # print("Ising Circuit built successfully!")
+    # print(circuit_ising)
+    # circuit_drawer(circuit_ising)
 
-    print("Base Circuit built successfully!")
-    print(cm.evolution_circuit)
-    circuit_drawer(cm.evolution_circuit)
+    # print("Base Circuit built successfully!")
+    # print(cm.evolution_circuit)
+    # circuit_drawer(cm.evolution_circuit)
 
 
-    def get_qulacs_circuit_matrix(circuit: QuantumCircuit) -> np.ndarray:
-        """
-        Manually constructs the unitary matrix of a Qulacs circuit.
+    # def get_qulacs_circuit_matrix(circuit: QuantumCircuit) -> np.ndarray:
+    #     """
+    #     Manually constructs the unitary matrix of a Qulacs circuit.
 
-        This is done by applying the circuit to each computational basis state
-        and using the resulting state vectors as the columns of the matrix.
-        """
-        n_qubits = circuit.get_qubit_count()
-        dim = 2**n_qubits
-        unitary_matrix = np.zeros((dim, dim), dtype=complex)
+    #     This is done by applying the circuit to each computational basis state
+    #     and using the resulting state vectors as the columns of the matrix.
+    #     """
+    #     n_qubits = circuit.get_qubit_count()
+    #     dim = 2**n_qubits
+    #     unitary_matrix = np.zeros((dim, dim), dtype=complex)
 
-        # Loop through each computational basis state |i>
-        for i in range(dim):
-            # Prepare a state in the |i> basis
-            state = QuantumState(n_qubits)
-            state.set_computational_basis(i)
+    #     # Loop through each computational basis state |i>
+    #     for i in range(dim):
+    #         # Prepare a state in the |i> basis
+    #         state = QuantumState(n_qubits)
+    #         state.set_computational_basis(i)
 
-            # Apply the circuit to the state
-            circuit.update_quantum_state(state)
+    #         # Apply the circuit to the state
+    #         circuit.update_quantum_state(state)
 
-            # The resulting state vector is the i-th column of the unitary
-            unitary_matrix[:, i] = state.get_vector()
+    #         # The resulting state vector is the i-th column of the unitary
+    #         unitary_matrix[:, i] = state.get_vector()
             
-        return unitary_matrix
+    #     return unitary_matrix
     
 
-    def are_circuits_equivalent(circuit1: QuantumCircuit, circuit2: QuantumCircuit, tolerance: float = 1e-6) -> bool:
-        """
-        Checks if two Qulacs circuits are functionally equivalent by comparing their unitary matrices.
-        """
-        if circuit1.get_qubit_count() != circuit2.get_qubit_count():
-            return False
+    # def are_circuits_equivalent(circuit1: QuantumCircuit, circuit2: QuantumCircuit, tolerance: float = 1e-6) -> bool:
+    #     """
+    #     Checks if two Qulacs circuits are functionally equivalent by comparing their unitary matrices.
+    #     """
+    #     if circuit1.get_qubit_count() != circuit2.get_qubit_count():
+    #         return False
 
-        # Get the unitary matrix for each circuit using the foolproof method
-        matrix1 = get_qulacs_circuit_matrix(circuit1)
-        matrix2 = get_qulacs_circuit_matrix(circuit2)
+    #     # Get the unitary matrix for each circuit using the foolproof method
+    #     matrix1 = get_qulacs_circuit_matrix(circuit1)
+    #     matrix2 = get_qulacs_circuit_matrix(circuit2)
 
-        # Compare the matrices element-wise
-        return np.allclose(matrix1, matrix2, atol=tolerance)
+    #     # Compare the matrices element-wise
+    #     return np.allclose(matrix1, matrix2, atol=tolerance)
 
 
-    print(are_circuits_equivalent(circuit_ising, cm.evolution_circuit))  # Should return True
+    # print(are_circuits_equivalent(circuit_ising, cm.evolution_circuit))  # Should return True
