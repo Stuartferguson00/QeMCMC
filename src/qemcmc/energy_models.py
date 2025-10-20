@@ -1,13 +1,12 @@
 import numpy as np
 import itertools
 import typing
-import abc
 from typing import List, Union
 
 
-class EnergyModel(abc.ABC):
+class EnergyModel():
     """
-    Abstract base class for energy models. Initializes with a couplings list.
+    Base class for energy models. Initializes with a couplings list.
     """
     def __init__(self, n: int, couplings: List[np.ndarray] = [], name: str = None) -> None:
         """
@@ -22,7 +21,7 @@ class EnergyModel(abc.ABC):
         self.name = name
 
 
-    @abc.abstractmethod
+    # @abc.abstractmethod
     def calc_an_energy(self, state: str) -> float:
         """
         Calculate the energy of a given state.
@@ -35,6 +34,7 @@ class EnergyModel(abc.ABC):
         float: The calculated energy of the given state.
         """
         pass
+
     
     def calculate_energy_from_couplings(self, state: Union[str, List[int]], state_representation: str = 'spin', sign: int = 1) -> float:
         """ 
@@ -70,8 +70,9 @@ class EnergyModel(abc.ABC):
             if not isinstance(state, str):
                 raise TypeError("For 'binary' format, the state must be a string (e.g., '101').")
             # Convert the binary string '0'/'1' to a spin array [-1, 1] for calculation.
-            s = np.array([2 * int(char) - 1 for char in state], dtype=np.int8)
-        
+            # TODO: Verify correctness of bit order
+            s = np.array([2 * int(char) - 1 for char in reversed(state)], dtype=np.int8)
+            s = s[::-1]  # Reverse to match the original order
         else:
             raise ValueError("state_representation must be either 'spin' or 'binary'.")
 
