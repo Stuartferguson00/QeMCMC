@@ -1,20 +1,8 @@
-
 import numpy as np
-
-
-
 from collections import Counter
 from typing import Optional, List
 from dataclasses import dataclass
 import matplotlib.pyplot as plt
-
-
-
-
-
-
-
-
 
 
 
@@ -33,7 +21,6 @@ class MCMCState:
 
 @dataclass(init=True)
 class MCMCChain:
-    
     
     def __init__(self, states: Optional[List[MCMCState]] = None, name: Optional[str] = 'MCMC'):
         
@@ -58,7 +45,6 @@ class MCMCChain:
             self._states_accepted.append(state)
         self.markov_chain.append(self._current_state.bitstring)
         self._states.append(state)
-
 
     @property
     def states(self):
@@ -90,7 +76,6 @@ class MCMCChain:
                 current_energy_array.append(current_energy_array[-1])
         return np.array(current_energy_array)
     
-    
     def get_pos_array(self):
         #returns the array of current pos across the entire number of hops
         #Useful for plotting etc
@@ -113,19 +98,15 @@ class MCMCChain:
                 current_state_array.append(current_state_array[-1])
         return np.array(current_state_array)
     
-                
     def get_all_energies(self):
         self.energies = []
         for state in self._states:
             self.energies.append(state.energy)
         return self.energies
             
-
-    
     @property
     def current_state(self):
         return self._current_state
-
 
     @property
     def accepted_states(self) -> List[str]:
@@ -168,7 +149,6 @@ def plot_chains(chains: list[MCMCChain], color: str, label:str):
     plt.plot(pos, avg_energy, color=color, label=f"Average {label}")
 
 
-
 def get_random_state(num_spins: int) -> str:
     """
     Generate a random state for a given number of spins.
@@ -186,8 +166,6 @@ def get_random_state(num_spins: int) -> str:
     # Convert the state from integer to a bitstring
     s_prime = f"{next_state:0{num_spins}b}"
     return s_prime
-
-
 
 
 def get_all_possible_states(num_spins: int) -> list:
@@ -238,7 +216,6 @@ def dict_magnetization_of_all_states(list_all_possible_states: list) -> dict:
     dict_magnetization = dict(zip(list_all_possible_states, list_mag_vals))
     # print("dict_magnetization:"); print(dict_magnetization)
     return dict_magnetization
-
 
 
 def hamming_dist(str1, str2):
