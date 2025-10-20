@@ -86,13 +86,9 @@ print("\n--- Circuit Info ---")
 print(circuit_maker.evolution_circuit)
 ```
 
-## Tutorial
-
-For a more in-depth comparison of classical and quantum proposal methods using this library, please see the included Jupyter Notebook: `tutorial.ipynb`.
-
 ## License
 
-Distributed under the MIT License. See `LICENSE.txt` for more information.
+Distributed under the MIT License. See `LICENSE` for more information.
 
 ## Authors and Contact
 
