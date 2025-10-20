@@ -1,1 +1,21 @@
+# TODO:
 
+## Priority
+
+-   **Implement Qiskit Circuit Builder:** Modify `CircuitMaker` base class to fully implement gates, circuit building and time evolution.
+
+## Code Cleanup & Refactoring
+
+-   **Archive Qulacs Code and `CircuitMaker_old_qq.py`:**
+
+    -   Move current Qulacs-based `CircuitMakerBase` to an `archive/` folder or a separate qulacs branch.
+
+-   **Unify `CircuitMaker`:**
+    -   Once the new Qiskit `CircuitMaker` is complete and tested, make it the main `CircuitMaker` for the project.
+    -   Deprecate `CircuitMakerIsing` class, as the new generic builder makes it redundant.
+
+## Testing
+
+-   Update the `test_energy_equivalence` script to use new Qiskit `CircuitMaker` Hamiltonian.
+-   Add new tests to verify structure of the auto-generated Qiskit circuits (e.g., check gate counts for a known `h` and `J` input).
+-   Add a test to confirm the circuit builder correctly handles both symmetric and upper-triangular `J` matrices (i.e., by ignoring the lower triangle).
