@@ -14,7 +14,7 @@ For a more advanced implementation that allows for simulations on systems larger
 ## Key Features
 
 -   **Flexible Energy Models:** Easily define any classical Ising or QUBO-like model using a simple list of coupling tensors (`h`, `J`, `L`, etc.). A universal energy calculator handles arbitrary-order interactions.
--   **Automatic Hamiltonian Construction:** The framework automatically converts your classical energy model into a quantum Hamiltonian operator, with support for both **Qiskit** (`SparsePauliOp`) and **Qulacs** (`Observable`).
+-   **Automatic Hamiltonian Construction:** The framework automatically converts your classical energy model into a quantum Hamiltonian operator, with support for **Qiskit** (`SparsePauliOp`) and ~~**Qulacs** (`Observable`)~~ (Qulacs support is discontinued and is deprecated for use with the latest versions of Qiskit).
 -   **Optimized Circuit Building:** Instead of relying on slow, high-level gates, the `CircuitMaker` automatically constructs a high-performance, piece-by-piece time-evolution circuit using Trotterization.
 -   **Backend Agnostic:** Core logic is designed to be compatible with multiple quantum computing frameworks.
 
