@@ -1,4 +1,4 @@
-from typing import Any, List, Union
+from typing import Any, Union
 
 from qiskit.circuit.library import PauliEvolutionGate
 from qiskit import QuantumCircuit, transpile
