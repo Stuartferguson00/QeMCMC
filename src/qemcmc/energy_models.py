@@ -1,7 +1,6 @@
 import itertools
 import typing
-from typing import List
-
+from typing import List, Tuple, Dict
 import numpy as np
 from qiskit.quantum_info import SparsePauliOp, Statevector
 
@@ -46,12 +45,10 @@ class EnergyModel:
 
     def couplings_to_sparse_pauli(self, n, couplings, sign=-1):
         """
-        Convert arbitrary-order couplings directly to SparsePauliOp.
+        This function basically maps a classical energy model into a quantum operator (hamiltonian)
+        It converts an arbitrary-order list of couplings directly to SparsePauliOp.
         Never constructs the full 2^n matrix!
-
-        so im essentially computing the Hamiltonian and storing it in a sparse pauli
-        inside this classical function
-
+        
         Parameters:
             n: number of qubits
             couplings: list of coupling tensors (1D=linear, 2D=quadratic, 3D=cubic, etc.)
@@ -104,6 +101,91 @@ class EnergyModel:
 
         # return SparsePauliOp.from_list(pauli_list).simplify()
         return SparsePauliOp.from_list(pauli_list)
+
+    def coarse_grain_couplings(
+        couplings: List[np.ndarray],
+        n: int,
+        active: List[int],
+        frozen_spin: np.ndarray,  # length n, entries in {-1,+1}; values for ALL spins (active values ignored)
+    ) -> Tuple[List[np.ndarray], float]:
+        """
+        Project an arbitrary-order coupling list onto an active subset by freezing the rest.
+
+        Parameters
+        ----------
+        couplings : list of np.ndarray
+            Each tensor has shape (n,)*k for k-body terms.
+            Example: h shape (n,), J shape (n,n), K shape (n,n,n), ...
+        n : int
+            Total number of spins/qubits in the full model.
+        active : list[int]
+            Indices to keep as dynamical variables (coarse-grained region).
+        frozen_spin : np.ndarray
+            Spin assignment for ALL indices (length n, in {-1,+1}).
+            For indices in active, values are irrelevant here.
+
+        Returns
+        -------
+        cg_couplings : list[np.ndarray]
+            New coupling tensors defined only on m=len(active) spins.
+            The list length is max_order found in original couplings (missing orders filled with zeros).
+        constant_offset : float
+            Additive constant energy shift from frozen-only parts.
+        """
+        active = list(active)
+        m = len(active)
+        active_set = set(active)
+
+        # map global index -> active-local index 0..m-1 (or None if frozen)
+        g2l = {g: i for i, g in enumerate(active)}
+
+        max_order = max(np.array(c).ndim for c in couplings) if couplings else 0
+
+        # We'll accumulate effective tensors by order (1..max_order) on m spins
+        eff: Dict[int, np.ndarray] = {
+            k: np.zeros((m,) * k, dtype=float) for k in range(1, max_order + 1)
+        }
+        constant_offset = 0.0
+
+        for tensor in couplings:
+            T = np.array(tensor, dtype=float)
+            k = T.ndim
+            if k == 0:
+                constant_offset += float(T)
+                continue
+
+            # Iterate only nonzero entries (important if tensors are sparse-ish)
+            nz = np.argwhere(T != 0)
+            for idx_tuple in map(tuple, nz):
+                coeff = T[idx_tuple]
+                if coeff == 0:
+                    continue
+
+                # Split indices into active and frozen
+                active_idxs_local = []
+                frozen_factor = 1.0
+
+                # Ignore any repeated indices (matches your higher-order logic)
+                if len(set(idx_tuple)) != len(idx_tuple):
+                    continue
+
+                for g in idx_tuple:
+                    if g in active_set:
+                        active_idxs_local.append(g2l[g])
+                    else:
+                        frozen_factor *= float(frozen_spin[g])  # ±1
+
+                new_order = len(active_idxs_local)
+                new_coeff = coeff * frozen_factor
+
+                if new_order == 0:
+                    constant_offset += float(new_coeff)
+                else:
+                    eff[new_order][tuple(active_idxs_local)] += float(new_coeff)
+
+        # Return as a list ordered by k=1..max_order (skip completely empty higher orders if you want)
+        cg_couplings = [eff[k] for k in range(1, max_order + 1)]
+        return cg_couplings, constant_offset
 
     def calculate_energy(self, state, couplings, spin_type="binary", sign=1):
         """

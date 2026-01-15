@@ -93,7 +93,44 @@ class CircuitMaker:
                 pauli_list.append("".join(pauli_term))
                 coeff_list.append(sign * spin_sign * coeff)
 
-        return SparsePauliOp(pauli_list, coeffs=coeff_list)
+        return SparsePauliOp(pauli_list, coeffs=coeff_list).simplify()
+
+    def evolve_problem(self, sign: float = -1.0, reps: int = 1) -> QuantumCircuit:
+        """
+        Build a circuit implementing time-evolution under the (problem) Hamiltonian
+        derived from the model couplings:
+
+            U(t) = exp(-i H t)
+
+        Uses CircuitMaker attributes:
+          - self.n_qubits
+          - self.time  (if tuple, uses first element; else uses it directly)
+
+        Parameters
+        ----------
+        sign : float
+            Passed through to get_qiskit_hamiltonian(sign=...).
+        reps : int
+            Trotter repetitions used by PauliEvolutionGate.
+
+        Returns
+        -------
+        QuantumCircuit
+        """
+        t = self.time[0] if isinstance(self.time, tuple) else self.time
+        if t is None:
+            raise ValueError(
+                "self.time is None (or empty tuple). Provide an evolution time."
+            )
+
+        H = self.get_qiskit_hamiltonian(sign=sign).simplify()
+
+        qc = QuantumCircuit(self.n_qubits)
+        qc.append(
+            PauliEvolutionGate(H, time=t, synthesis="trotter", reps=reps),
+            list(range(self.n_qubits)),
+        )
+        return qc
 
 
 # # This code was done using qulacs and runs much quicker! But is no longer supported and is being kept for reference.
@@ -515,6 +552,7 @@ if __name__ == "__main__":
     my_model = EnergyModel(3, couplings=my_couplings)
     cm = CircuitMaker(model=my_model, gamma=0.5, time=2)
 
+    H_new = cm._build_problem_hamiltonian()
     H_qiskit = cm.get_qiskit_hamiltonian()
     H_sparse = my_model.couplings_to_sparse_pauli(3, my_couplings, sign=-1)
 
@@ -528,6 +566,7 @@ if __name__ == "__main__":
     energies_qiskit = []
     energies_sparse = []
     energies_direct = []
+    energies_built = []
 
     print("\n" + "=" * 60)
     print("ENERGIES FOR ALL BASIS STATES")
@@ -552,3 +591,7 @@ if __name__ == "__main__":
         energy_direct = my_model.calculate_energy(_state, my_couplings, sign=-1)
         print(f"Energy (calculate_energy):        {energy_direct:.4f}")
         energies_direct.append(energy_direct)
+
+        energy_built = sv.expectation_value(H_new).real
+        print(f"Energy (built Hamiltonian):       {energy_built:.4f}")
+        energies_built.append(energy_built)
