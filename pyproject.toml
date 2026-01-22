@@ -4,8 +4,8 @@ dynamic = ["version"]
 description = "Quantum enhanced Markov Chain Monte Carlo sampler simulated using Qiskit and Qulacs."
 readme = "README.md"
 authors = [
-    { name = "Stuart Ferguson", email = "99267485+Stuartferguson00@users.noreply.github.com" },
-    { name = "Feroz Hassan", email = "75996466+ferozmay@users.noreply.github.com." },
+    { name = "Stuart Ferguson" },
+    { name = "Feroz Hassan" },
 ]
 requires-python = ">=3.10"
 dependencies = [
