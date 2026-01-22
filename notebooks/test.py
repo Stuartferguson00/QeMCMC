@@ -1,3 +1,4 @@
+from qemcmc.ClassicalMCMC import ClassicalMCMC
 
 # Import necessary libraries
 from matplotlib import pyplot as plt

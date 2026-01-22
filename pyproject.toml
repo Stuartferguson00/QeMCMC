@@ -4,28 +4,21 @@ dynamic = ["version"]
 description = "Quantum enhanced Markov Chain Monte Carlo sampler simulated using Qiskit and Qulacs."
 readme = "README.md"
 authors = [
-    { name = "Stuart Ferguson", email = "99267485+Stuartferguson00@users.noreply.github.com" },
-    { name = "Feroz Hassan", email = "75996466+ferozmay@users.noreply.github.com." },
+    { name = "Stuart Ferguson"},
+    { name = "Feroz Hassan"},
 ]
 requires-python = ">=3.10"
 dependencies = [
-    "algorithms>=0.1.4",
-    "collections-extended>=2.0.2",
-    "iprogress>=0.4",
-    "ipywidgets>=8.1.7",
-    "joblib>=1.5.0",
-    "matplotlib>=3.10.3",
-    "numpy>=2.2.5",
-    "pandas>=2.2.3",
-    "pip>=25.1.1",
-    "pytest>=8.3.5",
-    "qiskit==2.2",
-    "qiskit-aer>=0.17.0",
-    "qiskit-qulacs",
-    "qulacs>=0.6.12",
-    "spyder-kernels==2.4",
+    "joblib>=1.5.3",
+    "matplotlib>=3.10.8",
+    "numpy>=2.2.6",
+    "pandas>=2.3.3",
+    "pathlib>=1.0.1",
+    "pip>=25.3",
+    "pytest>=9.0.2",
+    "qiskit>=2.3.0",
+    "qiskit-aer>=0.17.2",
     "tqdm>=4.67.1",
-    "typing-extensions>=4.13.2",
 ]
 
 [project.scripts]
