@@ -82,9 +82,9 @@ class QeMCMC(MCMC):
         # s_prime = self.CM.get_state_obtained_binary(current_state)
 
         # 2. Get s_prime using generic CircuitMaker
-        s_prime = self.CM.get_state(current_state)
+        # s_prime = self.CM.get_state(current_state)
 
         # 3. Get s_prime for coarse graining
-        # s_prime = self.CM.update(current_state)
+        s_prime = self.CM.update(current_state)
 
         return s_prime
