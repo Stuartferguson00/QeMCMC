@@ -22,7 +22,7 @@ from qemcmc.ModelMaker import ModelMaker
 # Define parameters
 n = 10 # Number of spins in the system
 reps = 5 # How many markov chains to produce
-steps = 300 # Length of each markov chain
+steps = 30 # Length of each markov chain
 temp = 0.1 # Temperature of the system
 
 
@@ -31,7 +31,7 @@ gamma = (0.3,0.6)# Relative strength of mixer hamiltonian
 time = (1,20) # Time for hamiltonian simulation
 
 # Build an Ising model to test the algorithms on
-model_type = "Fully Connected Ising"
+model_type = "Coarse Grained Ising"
 name = "Test Ising model"
 model = ModelMaker(n, model_type, name).model
 initial_states = model.initial_state

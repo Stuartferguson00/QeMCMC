@@ -125,6 +125,32 @@ class CircuitMaker:
         result = self.backend.run(t_qc, shots=1).result()
         return list(result.get_counts().keys())[0]
 
+    def get_state_vector(self, s: str) -> str:
+        """
+        Get the output statevector, ie. the probabilities of each s' given input s.
+        Workflow: Initialize circuit -> Evolve -> Dont Measure.
+        """
+        qc = self.initialise_qc(s)
+        alpha = self.model.alpha
+        coeff_mixer = self.gamma
+        coeff_problem = -(1 - self.gamma) * alpha
+
+        H_mixer = self.get_mixer_hamiltonian() * coeff_mixer
+        H_problem = self.get_problem_hamiltonian(sign=coeff_problem)
+        H_total = (H_mixer + H_problem).simplify()
+
+        synthesis = SuzukiTrotter(reps=self.num_trotter_steps)
+        evolution_gate = PauliEvolutionGate(H_total, time=self.time, synthesis=synthesis)
+
+        qc.append(evolution_gate, range(self.n_qubits))
+
+        #t_qc = transpile(qc, self.backend, optimization_level=0)
+        #result = self.backend.run(t_qc, shots=1).result()
+        #return list(result.get_counts().keys())[0]
+        print("using n qubits:", qc.qubits)
+        state = Statevector.from_instruction(qc)
+        return state
+
 
 # # This code was done using qulacs and runs much quicker! But is no longer supported and is being kept for reference.
 # class CircuitMakerIsing(CircuitMaker):
