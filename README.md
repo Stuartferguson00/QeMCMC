@@ -13,9 +13,8 @@ For a more advanced implementation that allows for simulations on systems larger
 
 ## Key Features
 
--   **Flexible Energy Models:** Easily define any classical Ising or QUBO-like model using a simple list of coupling tensors (`h`, `J`, `L`, etc.). A universal energy calculator handles arbitrary-order interactions.
+-   **Flexible Energy Models:** Easily define any classical Ising or QUBO-like model using a simple list of coupling tensors (`h`, `J`, `L`, etc). A universal energy calculator handles arbitrary-order interactions.
 -   **Automatic Hamiltonian Construction:** The framework automatically converts your classical energy model into a quantum Hamiltonian operator, with support for **Qiskit** (`SparsePauliOp`) and ~~**Qulacs** (`Observable`)~~ (Qulacs support is discontinued and is deprecated for use with the latest versions of Qiskit).
--   **Optimized Circuit Building:** Instead of relying on slow, high-level gates, the `CircuitMaker` automatically constructs a high-performance, piece-by-piece time-evolution circuit using Trotterization.
 -   **Backend Agnostic:** Core logic is designed to be compatible with multiple quantum computing frameworks.
 
 NOTE: This library is built with flexibility and convenience in mind rather than performance or efficiency.
@@ -45,14 +44,39 @@ The library makes it simple to define a problem and generate the corresponding e
 `energy_models.py`
 
 ```python
-# Pre-defined abstract base class for energy models. Initializes with a couplings list.
-class EnergyModel(abc.ABC):
+# Pre-defined base class for energy models. Initializes with a couplings list.
+class EnergyModel():
     ...
 
 # Define your energy model here inheriting base class EnergyModel
 class your_energy_model(EnergyModel)
     ...
 ```
+
+## Coarse Graining
+To do coarse graining, a list of subgroups and it's corresponding probabilities along with the couplings list should be passed in as parameters when initializing their energy model. The subgroup list should contain lists of spin indices that belong to each subgroup. For example, for a system with 6 spins divided into 2 subgroups of 3 spins each, the subgroup list would be `[[0, 1, 2], [3, 4, 5]]`. 
+NOTE: All spins must belong to at least one subgroup and subgroups can overlap (i.e., a spin can belong to multiple subgroups).
+
+The `CircuitMaker` will then automatically build the evolution circuit to perform coarse graining based on these subgroups.
+
+
+
+```python
+# main
+h = np.array([-1.0, -2.0, -3.0, -4.0, -5.0, -6.0])  # Linear terms
+J = np.array([  # Quadratic terms
+    [0.0, 0.5, 0.0, 0.0, 0.0, 0.0],
+    [0.5, 0.0, -1.5, 0.0, 0.0, 0.0],
+    [0.0, -1.5, 0.0, 0.0, 0.0, 0.0],
+    [0.0, 0.0, 0.0, 0.0, 1.0, 0.0],
+    [0.0, 0.0, 0.0, 1.0, 0.0, -2.0],
+    [0.0, 0.0, 0.0, 0.0, -2.0, 0.0]
+])
+my_couplings = [h, 0.5 * J]
+my_energy_model = your_energy_model(couplings=my_couplings, subgroups=[[0,1,2],[3,4,5]])
+```
+
+
 
 `main.py`
 
@@ -97,7 +121,7 @@ This project was created by Stuart Ferguson with contributions from Feroz Hassan
 For questions, suggestions, or collaboration, please feel free to contact the authors:
 
 -   S.A.Ferguson-3@sms.ed.ac.uk.
--   F.M.Hassan@sms.ed.ac.uk
+-   fhassan2@ed.ac.uk
 
 ## Acknowledgements
 

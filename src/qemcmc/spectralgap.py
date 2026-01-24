@@ -49,6 +49,7 @@ class SpectralGap:
         """
         
         possible_states = self.mcmc.model.S
+        # TODO: define S separately, not inside the model since S is the state space and will be pretty inefficient otherwise
 
         Q = np.zeros((2 ** self.mcmc.n_spins, 2 ** self.mcmc.n_spins))
 

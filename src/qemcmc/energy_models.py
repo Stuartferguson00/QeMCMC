@@ -1,7 +1,6 @@
 import itertools
 import typing
 from typing import List
-
 import numpy as np
 from qiskit.quantum_info import SparsePauliOp, Statevector
 
@@ -12,33 +11,38 @@ class EnergyModel:
     """
 
     def __init__(
-        self, n: int, couplings: List[np.ndarray] = [], name: str = None
-    ) -> None:
-        """
-        Initialize an energy model. This acts as a base class for specific energy models (such as Ising models).
-        Parameters:
-            n (int): Number of spins in the model.
-            couplings (List[np.ndarray]): List of numpy arrays representing coupling tensors.
-            name (str, optional): Name of the model. Defaults to None.
-        """
+        self,
+        n: int,
+        couplings: List[np.ndarray] = [],
+        subgroups: List[List[int]] = None,
+        subgroup_probs: List[float] = None,
+        name: str = None,
+        alpha: float = 1.0,
+        cost_function_signs: list = [-1, -1],
+    ):
         self.n = n
+        self.n_spins = n
         self.couplings = couplings
         self.name = name
+        self.alpha = alpha
+        self.cost_function_signs = cost_function_signs
+        self.initial_state = []
+        for i in range(100):
+            self.initial_state.append("".join(str(i) for i in np.random.randint(0, 2, self.n, dtype=int)))
+
+        if subgroups is None:
+            self.subgroups = [list(range(n))]
+            self.subgroup_probs = [1.0]
+        else:
+            self.subgroups = subgroups
+            if subgroup_probs is None:
+                k = len(subgroups)
+                self.subgroup_probs = [1.0 / k] * k
+            else:
+                self.subgroup_probs = subgroup_probs
 
     def calc_an_energy(self, state):
-        """
-        Placeholder method to calculate the energy of a given state.
-        This method should be overridden by subclasses to provide specific energy calculations.
-        Parameters:
-            state : The configuration state for which the energy is to be calculated.
-        Returns:
-            float : The calculated energy of the given state.
-        Raises:
-            NotImplementedError: If the method is not overridden in a subclass.
-        """
-        raise NotImplementedError(
-            "This method should be implemented by subclasses of EnergyModel."
-        )
+        return self.calculate_energy(state, self.couplings)
 
     def get_hamiltonian(self, spin_type="binary", sign=1):
         H_sparse = self.couplings_to_sparse_pauli(self.n, self.couplings, sign)
@@ -46,11 +50,9 @@ class EnergyModel:
 
     def couplings_to_sparse_pauli(self, n, couplings, sign=-1):
         """
-        Convert arbitrary-order couplings directly to SparsePauliOp.
+        This function basically maps a classical energy model into a quantum operator (hamiltonian)
+        It converts an arbitrary-order list of couplings directly to SparsePauliOp.
         Never constructs the full 2^n matrix!
-
-        so im essentially computing the Hamiltonian and storing it in a sparse pauli
-        inside this classical function
 
         Parameters:
             n: number of qubits
@@ -87,9 +89,7 @@ class EnergyModel:
                             pauli_str[i] = "Z"  # No reversal
                             pauli_str[j] = "Z"
                             # No sign flip needed: σ_i σ_j = (-Z_i)(-Z_j) = Z_i Z_j
-                            pauli_list.append(
-                                ("".join(pauli_str), sign * coupling[i, j])
-                            )
+                            pauli_list.append(("".join(pauli_str), sign * coupling[i, j]))
 
             elif order >= 3:
                 # Higher-order terms: K_ijk... Z_i Z_j Z_k ...
@@ -98,9 +98,7 @@ class EnergyModel:
                         pauli_str = ["I"] * n
                         for idx in indices:
                             pauli_str[idx] = "Z"  # Big-endian: no reversal
-                        pauli_list.append(
-                            ("".join(pauli_str), sign * spin_sign * coupling[indices])
-                        )
+                        pauli_list.append(("".join(pauli_str), sign * spin_sign * coupling[indices]))
 
         # return SparsePauliOp.from_list(pauli_list).simplify()
         return SparsePauliOp.from_list(pauli_list)
@@ -150,15 +148,45 @@ class EnergyModel:
                 total_energy += np.einsum("ij, i, j->", coupling, state, state)
             else:
                 # General case for any order >=3 (cubic, quartic etc.)
-                indices = "".join(
-                    chr(97 + i) for i in range(order)
-                )  # 'abc...', 'ijkl...'
-                einsum_str = (
-                    f"{indices}," + ",".join([indices[i] for i in range(order)]) + "->"
-                )
+                indices = "".join(chr(97 + i) for i in range(order))  # 'abc...', 'ijkl...'
+                einsum_str = f"{indices}," + ",".join([indices[i] for i in range(order)]) + "->"
                 total_energy += np.einsum(einsum_str, coupling, *([state] * order))
 
         return sign * total_energy
+
+    def get_subgroup_couplings(self, subgroup: List[int], current_state: str):
+        """
+        Calculates local couplings for a subgroup.
+        Spins outside the group are treated as frozen constants.
+        """
+        n_sub = len(subgroup)
+        subgroup_set = set(subgroup)
+        g_to_l = {g_idx: l_idx for l_idx, g_idx in enumerate(subgroup)}
+
+        # Map bitstring '0'/'1' to spin values -1/+1
+        state_vals = np.array([1 if b == "1" else -1 for b in current_state])
+        max_order = max(c.ndim for c in self.couplings)
+        new_couplings = [np.zeros((n_sub,) * d) for d in range(1, max_order + 1)]
+
+        for coupling in self.couplings:
+            for indices in np.ndindex(coupling.shape):
+                coeff = coupling[indices]
+                if coeff == 0 or len(set(indices)) != len(indices):
+                    continue
+
+                in_group = [i for i in indices if i in subgroup_set]
+                out_group = [i for i in indices if i not in subgroup_set]
+
+                # Multiply coefficient by values of fixed spins outside the subgroup
+                multiplier = np.prod(state_vals[out_group])
+                effective_coeff = coeff * multiplier
+
+                if in_group:
+                    new_order = len(in_group)
+                    local_indices = tuple(g_to_l[i] for i in in_group)
+                    new_couplings[new_order - 1][local_indices] += effective_coeff
+
+        return new_couplings
 
     def get_energy(self, state: str) -> float:
         """
@@ -185,9 +213,7 @@ class EnergyModel:
             all_energies[int(state, 2)] = self.calc_an_energy(state)
         return all_energies
 
-    def get_lowest_energies(
-        self, num_states: int
-    ) -> typing.Tuple[np.ndarray, np.ndarray]:
+    def get_lowest_energies(self, num_states: int) -> typing.Tuple[np.ndarray, np.ndarray]:
         """
         Retrieve the lowest energy states and their degeneracies.
         This method computes all possible energies and then finds the specified number
@@ -205,9 +231,7 @@ class EnergyModel:
         all_energies = self.get_all_energies()
 
         # very slow (sorts whole array)
-        self.lowest_energies, self.lowest_energy_degeneracy = self.find_lowest_values(
-            all_energies, num_values=num_states
-        )
+        self.lowest_energies, self.lowest_energy_degeneracy = self.find_lowest_values(all_energies, num_values=num_states)
 
         return self.lowest_energies, self.lowest_energy_degeneracy
 
@@ -308,7 +332,7 @@ class IsingEnergyFunction(EnergyModel):
         Array of energies for all possible states.
     lowest_energy : float or None
         The lowest energy found.
-    num_spins : int
+    n_spins : int
         Number of spins in the system.
     alpha : float
         Scaling factor for the energy.
@@ -363,19 +387,14 @@ class IsingEnergyFunction(EnergyModel):
         self.h = h
         self.S = None
         self.lowest_energy = None
-        self.num_spins = self.n
-        self.alpha = np.sqrt(self.num_spins) / np.sqrt(
-            sum([J[i][j] ** 2 for i in range(self.num_spins) for j in range(i)])
-            + sum([h[j] ** 2 for j in range(self.num_spins)])
-        )
+        self.n_spins = self.n
+        self.alpha = np.sqrt(self.n_spins) / np.sqrt(sum([J[i][j] ** 2 for i in range(self.n_spins) for j in range(i)]) + sum([h[j] ** 2 for j in range(self.n_spins)]))
         if no_initial_states:
             self.initial_state = []
         else:
             self.initial_state = []
             for i in range(100):
-                self.initial_state.append(
-                    "".join(str(i) for i in np.random.randint(0, 2, self.n, dtype=int))
-                )
+                self.initial_state.append("".join(str(i) for i in np.random.randint(0, 2, self.n, dtype=int)))
 
     def calc_an_energy(self, state: str) -> float:
         """
@@ -404,14 +423,10 @@ class IsingEnergyFunction(EnergyModel):
         # THIS ONLY WORKS IF THE INPUT IS NOT UPPER DIAGONAL.
         # self.cost_function_signs allows for cost function to be flipped wrt to the standard Ising model
         try:
-            energy = self.cost_function_signs[0] * 0.5 * np.dot(
-                state.transpose(), self.J.dot(state)
-            ) + self.cost_function_signs[1] * np.dot(self.h.transpose(), state)
+            energy = self.cost_function_signs[0] * 0.5 * np.dot(state.transpose(), self.J.dot(state)) + self.cost_function_signs[1] * np.dot(self.h.transpose(), state)
         except Exception as e:
             print(f"Error calculating energy for state {state}: {e}")
-            print(
-                "This error is generally caused when qulacs outputs a bitstring of 1 followed by n 0's for the state for some reason"
-            )
+            print("This error is generally caused when qulacs outputs a bitstring of 1 followed by n 0's for the state for some reason")
             energy = 10000
 
         return energy
@@ -476,16 +491,12 @@ if __name__ == "__main__":
         print("-" * 40)
 
         # Method 1: calculate_energy with spin_type="spin"
-        energy_spin = energy_model.calculate_energy(
-            spin_state, my_couplings_spin, spin_type="spin", sign=-1
-        )
+        energy_spin = energy_model.calculate_energy(spin_state, my_couplings_spin, spin_type="spin", sign=-1)
         print(f"Energy (spin input):   {energy_spin:.4f}")
         energies_spin.append(energy_spin)
 
         # Method 2: calculate_energy with spin_type="binary" (for comparison)
-        energy_binary = energy_model.calculate_energy(
-            binary_state, my_couplings_spin, spin_type="binary", sign=-1
-        )
+        energy_binary = energy_model.calculate_energy(binary_state, my_couplings_spin, spin_type="binary", sign=-1)
         print(f"Energy (binary input): {energy_binary:.4f}")
         energies_binary.append(energy_binary)
 
@@ -498,42 +509,29 @@ if __name__ == "__main__":
         energies_H_sparse.append(energy_pauli)
 
         # Check match
-        if np.isclose(energy_spin, energy_binary) and np.isclose(
-            energy_spin, energy_pauli
-        ):
+        if np.isclose(energy_spin, energy_binary) and np.isclose(energy_spin, energy_pauli):
             print("✓ All methods match!")
         else:
             print("✗ MISMATCH!")
 
-        # for _state in ["000", "001", "010", "011", "100", "101", "110", "111"]:
-        #     print("Calculating energy for state:", _state)
-        #     # energy_model = EnergyModel(n=3, couplings=my_couplings)
-        #     energy = energy_model.calculate_energy_from_couplings(
-        #         state=_state, state_representation="binary", sign=-1
-        #     )
-        #     print("Energy using couplings:", energy)
-        #     energies.append(energy)
+        print("Calculating energy for state:", binary_state)
 
-        #     ising_model = IsingEnergyFunction(J=J, h=h, name="Test Ising Model")
-        #     energy_ising = ising_model.get_energy(_state)
-        #     print("Energy using IsingEnergyFunction:", energy_ising)
-        #     energies2.append(energy_ising)
+        ising_model = IsingEnergyFunction(J=J, h=h, name="Test Ising Model")
+        energy_ising = ising_model.get_energy(binary_state)
+        print("Energy using IsingEnergyFunction:", energy_ising)
+        energies2.append(energy_ising)
 
-        #     energy3 = energy_model.calculate_energy(_state, my_couplings, sign=-1)
-        #     print("Energy using new formula:", energy3)
-        #     energies3.append(energy3)
+        energy3 = energy_model.calculate_energy(binary_state, my_couplings, sign=-1)
+        print("Energy using new formula:", energy3)
+        energies3.append(energy3)
 
-        #     state_index = int(_state, 2)  # "010" -> 2
-        #     energy_H = H[state_index, state_index]
-        #     print("Energy using Hamiltonian:", energy_H)
-        #     energies_H.append(energy_H)
+        state_index = int(binary_state, 2)  # "010" -> 2
+        energy_H = H[state_index, state_index]
+        print("Energy using Hamiltonian:", energy_H)
+        energies_H.append(energy_H)
 
-        #     sv = Statevector.from_label(_state)
-        #     energy = sv.expectation_value(H_sparse).real
-        #     print(f"State {_state}: E = {energy:.4f}")
+        sv = Statevector.from_label(binary_state)
+        energy = sv.expectation_value(H_sparse).real
+        print(f"State {binary_state}: E = {energy:.4f}")
 
-        #     print("\n\n")
-
-    # print("Lowest energy is", min(energies))
-    # print("Lowest energy (Ising model) is", min(energies2))
-    # print("Lowest energy (new formula) is", min(energies3))
+        print("\n\n")

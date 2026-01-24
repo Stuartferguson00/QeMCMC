@@ -1,17 +1,16 @@
 from typing import Any, Union
-
 from qiskit.circuit.library import PauliEvolutionGate
 from qiskit import QuantumCircuit, transpile
 from qiskit_aer import AerSimulator
 import numpy as np
+from qiskit.synthesis import SuzukiTrotter
+from qiskit.quantum_info import SparsePauliOp, Statevector, Operator
+from qemcmc.energy_models import EnergyModel, IsingEnergyFunction
 
 # import qulacs
-from qiskit.quantum_info import SparsePauliOp, Statevector, Operator
 # from qulacs import Observable, QuantumCircuit, QuantumState
 # from qulacs.gate import DenseMatrix, X, Z
 # from scipy.linalg import expm
-
-from qemcmc.energy_models import EnergyModel, IsingEnergyFunction
 
 
 class CircuitMaker:
@@ -30,47 +29,45 @@ class CircuitMaker:
         self.time = time
         self.delta_time = delta_time
         self.n_qubits = model.n
+        self.num_trotter_steps = int(np.floor((self.time / self.delta_time)))
 
-        # Build the Hamiltonians
-        # self.H_problem = self._build_problem_hamiltonian()
-        # self.H_driver = self._build_driver_hamiltonian()
-        # self.H_total = self._build_total_hamiltonian()
+        self.backend = AerSimulator()
 
-    def _build_problem_hamiltonian(self) -> SparsePauliOp:
+    def initialise_qc(self, s: str) -> QuantumCircuit:
+        """Standard big-endian initialization: s[i] maps to qubit (N - 1 - i)."""
+        qc = QuantumCircuit(self.n_qubits)
+        for i, bit in enumerate(s):
+            if bit == "1":
+                qc.x(self.n_qubits - 1 - i)
+        return qc
+
+    def update(self, s: str) -> str:
         """
-        Build the problem Hamiltonian from couplings.
-        H_problem = Σ h_i Z_i + Σ J_ij Z_i Z_j + ...
+        Performs time evolution on coarse grained hamiltonian update to get s' from s
         """
-        pauli_list = []
+        # 1. choose a one of the given subgroups based on probabilities
+        idx = np.random.choice(len(self.model.subgroups), p=self.model.subgroup_probs)
+        # print("INDEX IS: ", idx, "\n", "subgroups are: ", self.model.subgroups, "and", self.model.subgroup_probs)
+        subgroup_choice = self.model.subgroups[idx]
+        # print("subgroup choice is: ", subgroup_choice)
 
-        for coupling in self.couplings:
-            coupling = np.array(coupling)
-            order = coupling.ndim
-            if order == 0:
-                pauli_list.append(("I" * self.n_qubits, coupling.item()))
-                continue
+        # 2. calculate couplings, and initialize a small model and circuit maker for that subgroup
+        local_couplings = self.model.get_subgroup_couplings(subgroup_choice, s)
+        local_model = EnergyModel(n=len(subgroup_choice), couplings=local_couplings)
+        local_CM = CircuitMaker(local_model, self.gamma, self.time)
 
-            non_zero_indices = np.transpose(np.nonzero(coupling))
-            for index_tuple in non_zero_indices:
-                # Skip if indices are not unique (diagonal elements for order >= 2)
-                if len(set(index_tuple)) != len(index_tuple):
-                    continue
+        # 3. get s_cg' for the subgroup and reconstruct full s' using s and s_cg'
+        s_cg = "".join([s[i] for i in subgroup_choice])
+        s_cg_prime = local_CM.get_state(s_cg)
 
-                coeff = coupling[tuple(index_tuple)]
-                pauli_str = ["I"] * self.n_qubits
-                for i in index_tuple:
-                    pauli_str[i] = "Z"
-                pauli_list.append(("".join(pauli_str), coeff))
+        s_list = list(s)
+        for i, global_index in enumerate(subgroup_choice):
+            s_list[global_index] = s_cg_prime[i]
 
-        if not pauli_list:
-            return SparsePauliOp(["I" * self.n_qubits], coeffs=[0.0])
+        return "".join(s_list)
 
-        return SparsePauliOp.from_list(pauli_list).simplify()
-
-    def get_qiskit_hamiltonian(self, sign=-1) -> SparsePauliOp:
-        """
-        Builds a qiskit.quantum_info.SparsePauliOp (Hamiltonian) from the model's couplings.
-        """
+    def get_problem_hamiltonian(self, sign=-1) -> SparsePauliOp:
+        """Builds the Problem Hamiltonian (Z-terms) from model's couplings."""
         pauli_list = []
         coeff_list = []
         n_qubits = self.model.n
@@ -93,7 +90,40 @@ class CircuitMaker:
                 pauli_list.append("".join(pauli_term))
                 coeff_list.append(sign * spin_sign * coeff)
 
-        return SparsePauliOp(pauli_list, coeffs=coeff_list)
+        return SparsePauliOp(pauli_list, coeffs=coeff_list).simplify()
+
+    def get_mixer_hamiltonian(self) -> SparsePauliOp:
+        """Returns the transverse field mixer: H_mixer = Σ X_i."""
+        pauli_list = []
+        for i in range(self.n_qubits):
+            p_str = ["I"] * self.n_qubits
+            p_str[self.n_qubits - 1 - i] = "X"
+            pauli_list.append(("".join(p_str), 1.0))
+        return SparsePauliOp.from_list(pauli_list)
+
+    def get_state(self, s: str) -> str:
+        """
+        Get the output bitstring s' given input s using simulation.
+        Workflow: Initialize circuit -> Evolve -> Measure.
+        """
+        qc = self.initialise_qc(s)
+        alpha = self.model.alpha
+        coeff_mixer = self.gamma
+        coeff_problem = -(1 - self.gamma) * alpha
+
+        H_mixer = self.get_mixer_hamiltonian() * coeff_mixer
+        H_problem = self.get_problem_hamiltonian(sign=coeff_problem)
+        H_total = (H_mixer + H_problem).simplify()
+
+        synthesis = SuzukiTrotter(reps=self.num_trotter_steps)
+        evolution_gate = PauliEvolutionGate(H_total, time=self.time, synthesis=synthesis)
+
+        qc.append(evolution_gate, range(self.n_qubits))
+        qc.measure_all()
+
+        t_qc = transpile(qc, self.backend, optimization_level=0)
+        result = self.backend.run(t_qc, shots=1).result()
+        return list(result.get_counts().keys())[0]
 
 
 # # This code was done using qulacs and runs much quicker! But is no longer supported and is being kept for reference.
@@ -137,7 +167,7 @@ class CircuitMaker:
 #             self.J = self.model.J
 
 #         self.delta_time = 0.8
-#         self.n_spins = model.num_spins
+#         self.n_spins = model.n_spins
 #         self.alpha = model.alpha
 #         self.pauli_index_list: list = [1, 1]
 #         self.num_trotter_steps = int(np.floor((self.time / self.delta_time)))
@@ -336,7 +366,7 @@ class CircuitMakerIsing(CircuitMaker):
             self.J = self.model.J
 
         self.delta_time = 0.8
-        self.n_spins = model.num_spins
+        self.n_spins = model.n_spins
         self.alpha = model.alpha
         self.num_trotter_steps = int(np.floor((self.time / self.delta_time)))
 
@@ -348,9 +378,7 @@ class CircuitMakerIsing(CircuitMaker):
         self.qc_evol_h2 = self.fn_qc_h2()
 
         # Combine them into the main evolution block
-        self.trotter_ckt = self.trottered_qc_for_transition(
-            self.qc_evol_h1, self.qc_evol_h2, self.num_trotter_steps
-        )
+        self.trotter_ckt = self.trottered_qc_for_transition(self.qc_evol_h1, self.qc_evol_h2, self.num_trotter_steps)
 
     def build_circuit(self, s: str) -> QuantumCircuit:
         """
@@ -487,9 +515,7 @@ class CircuitMakerIsing(CircuitMaker):
 
         return qc_h2.decompose()
 
-    def trottered_qc_for_transition(
-        self, qc_h1: QuantumCircuit, qc_h2: QuantumCircuit, num_trotter_steps: int
-    ) -> QuantumCircuit:
+    def trottered_qc_for_transition(self, qc_h1: QuantumCircuit, qc_h2: QuantumCircuit, num_trotter_steps: int) -> QuantumCircuit:
         """
         Returns a Trotterized quantum circuit.
         Pattern: (H2 H1)^(steps-1) (H1)
@@ -515,11 +541,11 @@ if __name__ == "__main__":
     my_model = EnergyModel(3, couplings=my_couplings)
     cm = CircuitMaker(model=my_model, gamma=0.5, time=2)
 
-    H_qiskit = cm.get_qiskit_hamiltonian()
+    H_qiskit = cm.get_problem_hamiltonian()
     H_sparse = my_model.couplings_to_sparse_pauli(3, my_couplings, sign=-1)
 
     print("=" * 60)
-    print("COMPARING get_qiskit_hamiltonian vs couplings_to_sparse_pauli")
+    print("COMPARING get_problem_hamiltonian vs couplings_to_sparse_pauli")
     print("=" * 60)
     print(f"\nH_qiskit:\n{H_qiskit}")
     print(f"\nH_sparse:\n{H_sparse}")
@@ -537,10 +563,10 @@ if __name__ == "__main__":
         print(f"\nState: {_state}")
         print("-" * 40)
 
-        # Method 1: get_qiskit_hamiltonian expectation value
+        # Method 1: get_problem_hamiltonian expectation value
         sv = Statevector.from_label(_state)  # Reverse for endianness
         energy_qiskit = sv.expectation_value(H_qiskit).real
-        print(f"Energy (get_qiskit_hamiltonian): {energy_qiskit:.4f}")
+        print(f"Energy (get_problem_hamiltonian): {energy_qiskit:.4f}")
         energies_qiskit.append(energy_qiskit)
 
         # Method 2: couplings_to_sparse_pauli expectation value

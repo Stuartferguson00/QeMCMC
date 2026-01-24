@@ -12,18 +12,18 @@ if __name__ == "__main__":
             energies = chain.get_current_energy_array()
             pos = chain.get_pos_array()
             plt.plot(pos, energies, color=color, alpha=0.3)
-        avg_energy = sum(chain.get_current_energy_array() for chain in chains) / len(
-            chains
-        )
+        avg_energy = sum(chain.get_current_energy_array() for chain in chains) / len(chains)
         plt.plot(pos, avg_energy, color=color, label=f"Average {label}")
 
     n = 7
     steps = 50
     reps = 10
     model_type = "Fully Connected Ising"
+    model_type2 = "Fully Connected Ising Generic"
+    model_type3 = "Coarse Grained Ising"
     name = "Test Ising model"
 
-    model = ModelMaker(n, model_type, name).model
+    model = ModelMaker(n, model_type2, name).model
 
     temp = 0.1
     initial_states = model.initial_state
