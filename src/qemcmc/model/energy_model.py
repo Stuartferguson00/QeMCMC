@@ -314,132 +314,6 @@ class EnergyModel:
         return np.exp(-1 * beta * E, dtype=np.longdouble)
 
 
-class IsingEnergyFunction(EnergyModel):
-    """
-    A class to build the Ising Energy Function from self.
-    Heavily modified from https://github.com/pafloxy/quMCMC to add functionality.
-    Attributes:
-    -----------
-    negative_energy : bool
-        Indicates if the energy should be negative.
-    J : np.array
-        Weight-matrix of the interactions between the spins.
-    h : np.array
-        Local field to the spins.
-    S : list or None
-        List of all possible states.
-    all_energies : np.array or None
-        Array of energies for all possible states.
-    lowest_energy : float or None
-        The lowest energy found.
-    n_spins : int
-        Number of spins in the system.
-    alpha : float
-        Scaling factor for the energy.
-    name : str
-        Name of the Ising model.
-    initial_state : list
-        List of initial states for simulations.
-    Methods:
-    --------
-    __init__(J: np.array, h: np.array, name: str = None, negative_energy: bool = True, no_inits = False) -> None
-        Initializes the IsingEnergyFunction with given parameters.
-    get_energy(state: str) -> float
-        Returns the energy of a given state.
-    calc_an_energy(state: str) -> float
-        Calculates the energy of a given state.
-    get_all_energies() -> None
-        Calculates and stores the energies of all possible states.
-    get_lowest_energies(num_states: int) -> tuple[np.array, np.array]
-        Returns the lowest energies and their degeneracies.
-    find_lowest_values(arr: np.array, num_values: int = 5) -> tuple[np.array, np.array]
-        Finds the lowest values in an array and their counts.
-    get_lowest_energy() -> float
-        Returns the lowest energy found.
-    get_boltzmann_factor(state: Union[str, np.array], beta: float = 1.0) -> float
-        Returns the un-normalized Boltzmann probability of a given state.
-    get_boltzmann_factor_from_energy(E: float, beta: float = 1.0) -> float
-        Returns the un-normalized Boltzmann probability for a given energy.
-    """
-
-    def __init__(
-        self,
-        J: np.array,
-        h: np.array,
-        name: str = None,
-        cost_function_signs: list = [-1, -1],
-        no_initial_states=False,
-    ) -> None:
-        """
-        Initialize the Ising model.
-        Parameters:
-            J (np.array): Weight-matrix of the interactions between the spins.
-            h (np.array): Local field to the spins.
-            name (str, optional): Name of the Ising model. Defaults to None.
-            cost_function_signs (list, optional): List of two elements, the first element is the sign of the interaction term and the second element is the sign of the field term. Allows for the cost function to be flipped with respect to the standard Ising model. Defaults to [-1, -1].
-            no_initial_states (bool, optional): If True, no initial states are stored for the model, randomly generated. Defaults to False.
-        """
-        super().__init__(n=J.shape[0], name=name)
-
-        # self.cost_function_signs allows for cost function to be flipped wrt to the standard Ising model
-        self.cost_function_signs = cost_function_signs
-        self.J = J
-        self.h = h
-        self.S = None
-        self.lowest_energy = None
-        self.n_spins = self.n
-        self.alpha = np.sqrt(self.n_spins) / np.sqrt(sum([J[i][j] ** 2 for i in range(self.n_spins) for j in range(i)]) + sum([h[j] ** 2 for j in range(self.n_spins)]))
-        if no_initial_states:
-            self.initial_state = []
-        else:
-            self.initial_state = []
-            for i in range(100):
-                self.initial_state.append("".join(str(i) for i in np.random.randint(0, 2, self.n, dtype=int)))
-
-    def calc_an_energy(self, state: str) -> float:
-        """
-        Calculate the energy of a given state.
-
-        This function computes the energy of a given state based on the Ising model.
-        The state is expected to be a string of "0"s and "1"s, which are converted to
-        -1 and 1 respectively for the calculation.
-
-        Args:
-        state (str): A string representing the state, where each character is either "0" or "1".
-
-        Returns
-        float: The calculated energy of the given state.
-
-        Raises:
-        TypeError
-            If the input state is not a string.
-        """
-
-        if not isinstance(state, str):
-            raise TypeError(f"State must be a string, but got {type(state)}")
-
-        state = np.array([-1 if elem == "0" else 1 for elem in state])
-
-        # THIS ONLY WORKS IF THE INPUT IS NOT UPPER DIAGONAL.
-        # self.cost_function_signs allows for cost function to be flipped wrt to the standard Ising model
-        try:
-            energy = self.cost_function_signs[0] * 0.5 * np.dot(state.transpose(), self.J.dot(state)) + self.cost_function_signs[1] * np.dot(self.h.transpose(), state)
-        except Exception as e:
-            print(f"Error calculating energy for state {state}: {e}")
-            print("This error is generally caused when qulacs outputs a bitstring of 1 followed by n 0's for the state for some reason")
-            energy = 10000
-
-        return energy
-
-    @property
-    def get_J(self):
-        return self.J
-
-    @property
-    def get_h(self):
-        return self.h
-
-
 if __name__ == "__main__":
     # Linear coefficients (h vector)
     h = np.array([-1.0, -2.0, -3.0])
@@ -454,7 +328,6 @@ if __name__ == "__main__":
     my_state = "011"
 
     energies = []
-    energies2 = []
     energies3 = []
     energies_H = []
     energy_model = EnergyModel(n=3, couplings=my_couplings)
@@ -515,11 +388,6 @@ if __name__ == "__main__":
             print("✗ MISMATCH!")
 
         print("Calculating energy for state:", binary_state)
-
-        ising_model = IsingEnergyFunction(J=J, h=h, name="Test Ising Model")
-        energy_ising = ising_model.get_energy(binary_state)
-        print("Energy using IsingEnergyFunction:", energy_ising)
-        energies2.append(energy_ising)
 
         energy3 = energy_model.calculate_energy(binary_state, my_couplings, sign=-1)
         print("Energy using new formula:", energy3)

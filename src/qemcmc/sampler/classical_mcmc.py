@@ -1,19 +1,21 @@
-import numpy as np
-from .helpers import  get_random_state
-from .energy_models import IsingEnergyFunction
-from .MCMC import MCMC
+# Internal package imports
+from qemcmc.utils import get_random_state
+from qemcmc.model import EnergyModel
+from qemcmc.sampler import MCMC
 
+# External package imports
+import numpy as np
 
 
 class ClassicalMCMC(MCMC):
     """
     A class to perform Markov Chain Monte Carlo (MCMC) simulations for the Ising model.
     """
-    
-    def __init__(self, model: IsingEnergyFunction , temp, method = "uniform"):
+
+    def __init__(self, model: EnergyModel, temp, method="uniform"):
         """
         Initialize the MCMC routine for the Ising model.
-        
+
         Args:
         model (IsingEnergyFunction): The energy function of the Ising model.
         temp (float): The temperature of the system.
@@ -29,9 +31,8 @@ class ClassicalMCMC(MCMC):
             self.update = self.update_local
         else:
             print("method name is incorrect. Choose from: 'uniform' or 'local'")
-        
 
-    def update_uniform(self,current_state_bitstring:str) -> str:
+    def update_uniform(self, current_state_bitstring: str) -> str:
         """
         Updates the current state bitstring by generating a new random state bitstring of the same length.
         Args:
@@ -41,9 +42,8 @@ class ClassicalMCMC(MCMC):
         """
         s_prime = get_random_state(len(current_state_bitstring))
         return s_prime
-    
-    
-    def update_local(self,current_state_bitstring:str)-> str:
+
+    def update_local(self, current_state_bitstring: str) -> str:
         """
         Update the local state by flipping a randomly chosen spin in the current state bitstring.
         Args:
@@ -53,13 +53,12 @@ class ClassicalMCMC(MCMC):
         """
 
         # Randomly choose which spin to flip
-        choice = np.random.randint(0,self.n_spins)
+        choice = np.random.randint(0, self.n_spins)
 
         # Flip the chosen spin
         c_s = list(current_state_bitstring)
         c_s[choice] = str(int(c_s[choice]) ^ 1)
-        
-        # Return the new state as a bitstring
-        s_prime = ''.join(c_s)   
-        return s_prime
 
+        # Return the new state as a bitstring
+        s_prime = "".join(c_s)
+        return s_prime

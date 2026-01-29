@@ -1,5 +1,8 @@
+# Internal package imports
+from qemcmc.model import EnergyModel
+
+# External package imports
 import numpy as np
-from .energy_models import IsingEnergyFunction, EnergyModel
 
 
 class ModelMaker:
@@ -19,20 +22,6 @@ class ModelMaker:
             self.make_coarse_grained_ising()
         elif model_type == "1D Ising":
             self.make_1D_Ising()
-        elif model_type == "input_J":
-            self.J = J
-            self.h = h
-            self.model = IsingEnergyFunction(self.J, self.h, name=self.name, cost_function_signs=self.cost_function_signs, no_initial_states=False)
-
-    def make_fully_connected_Ising(self):
-        shape_of_J = (self.n_spins, self.n_spins)
-        J = np.round(np.random.normal(0, 1, shape_of_J), decimals=4)
-        J_tril = np.tril(J, -1)
-        J_triu = J_tril.transpose()
-        J = J_tril + J_triu
-
-        h = np.round(np.random.normal(0, 1, self.n_spins), decimals=4)
-        self.model = IsingEnergyFunction(J, h, name=self.name, cost_function_signs=self.cost_function_signs)
 
     def make_fully_connected_Ising_generic(self):
         shape_of_J = (self.n_spins, self.n_spins)
@@ -60,31 +49,28 @@ class ModelMaker:
 
         couplings = [h, J]
         alpha = np.sqrt(self.n_spins) / np.sqrt(sum([J[i][j] ** 2 for i in range(self.n_spins) for j in range(i)]) + sum([h[j] ** 2 for j in range(self.n_spins)]))
-        subgroups = [list(range(self.n_spins))]
+        # subgroups = [[0, 1, 2], [0, 1, 3], [0, 1, 4]]  # [][[0, 1, 2], [3, 4, 5], [6]]  # Example of subgroups for coarse graining
+        subgroups = [
+            (0, 1, 2, 3, 4),
+            (0, 1, 2, 3, 5),
+            (0, 1, 2, 3, 6),
+            (0, 1, 2, 4, 5),
+            (0, 1, 2, 4, 6),
+            (0, 1, 2, 5, 6),
+            (0, 1, 3, 4, 5),
+            (0, 1, 3, 4, 6),
+            (0, 1, 3, 5, 6),
+            (0, 1, 4, 5, 6),
+            (0, 2, 3, 4, 5),
+            (0, 2, 3, 4, 6),
+            (0, 2, 3, 5, 6),
+            (0, 2, 4, 5, 6),
+            (0, 3, 4, 5, 6),
+            (1, 2, 3, 4, 5),
+            (1, 2, 3, 4, 6),
+            (1, 2, 3, 5, 6),
+            (1, 2, 4, 5, 6),
+            (1, 3, 4, 5, 6),
+            (2, 3, 4, 5, 6),
+        ]
         self.model = EnergyModel(n=self.n_spins, couplings=couplings, subgroups=subgroups, name=self.name, alpha=alpha)
-
-    def make_1D_Ising(self):
-        # Included as an example of how to make other types of Ising model
-        print("I have not analysed 1d ising models, so double check function 'make_1D_Ising' before using")
-
-        h = np.round(np.random.normal(0, 1, self.n_spins), decimals=4)
-        shape_of_J = (self.n_spins, self.n_spins)
-        J = np.zeros(shape_of_J)
-
-        J_rand = np.round(np.random.normal(0, 1, shape_of_J), decimals=4)
-        J_tril = np.tril(J_rand, -1)
-        J_triu = J_tril.transpose()
-        J_rand = J_tril + J_triu
-
-        # Make 1d Ising model
-        # loop throgh and find the difference in bitstrings.
-        # When the ith bitstring is different (by a value of 1) from the jth bitstring add 1 to Q[i,j]
-        for i in range(self.n_spins):
-            for j in range(self.n_spins):
-                if abs(i - j) == 1 or abs(i - j) == self.n_spins - 1:
-                    J[i, j] = 1
-
-        # Add (symmetric) 1D weights
-        J = J * J_rand
-
-        self.model = IsingEnergyFunction(J, h, name=self.name, cost_function_signs=self.cost_function_signs)

@@ -1,8 +1,11 @@
+# Internal package imports
+from qemcmc.utils import MCMCChain, MCMCState, get_random_state
+from qemcmc.model import EnergyModel
+
+# External package imports
 import numpy as np
 from typing import Optional
 from tqdm import tqdm
-from .helpers import MCMCChain, MCMCState, get_random_state
-from .energy_models import EnergyModel
 import warnings
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)

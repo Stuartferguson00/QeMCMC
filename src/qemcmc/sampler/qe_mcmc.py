@@ -1,7 +1,10 @@
+# Internal package imports
+from qemcmc.sampler import MCMC
+from qemcmc.model import EnergyModel
+from qemcmc.circuits import PennyLaneCircuitMaker
+
+# External package imports
 import numpy as np
-from .MCMC import MCMC
-from .energy_models import EnergyModel
-from .CircuitMaker import CircuitMakerIsing, CircuitMaker
 import warnings
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
@@ -59,11 +62,11 @@ class QeMCMC(MCMC):
         # Initialize quantum circuit here instead of inside get_s_prime each time.
         # Uncomment either 1. or 2. depending on which CM you want to use.
 
-        # 1. Use CircuitMakerIsing
-        # self.CM = CircuitMakerIsing(self.model, g, t)
+        # 1. Use generic CircuitMaker
+        # self.CM = CircuitMaker(self.model, g, t)
 
-        # 2. Use generic CircuitMaker
-        self.CM = CircuitMaker(self.model, g, t)
+        # 2. Use Pennylane CircuitMaker
+        self.CM = PennyLaneCircuitMaker(self.model, g, t)
 
     def get_s_prime(self, current_state: str) -> str:
         """
@@ -76,15 +79,12 @@ class QeMCMC(MCMC):
         str: The next state s_prime.
         """
 
-        # Uncomment either 1. 2. or 3. depending on which CM you want to use and if you want to do CG.
+        # Uncomment either 1. or 2. depending on which CM you want to use and if you want to do CG.
 
-        # 1. Get s_prime using CircuitMakerIsing
-        # s_prime = self.CM.get_state_obtained_binary(current_state)
-
-        # 2. Get s_prime using generic CircuitMaker
+        # 1. Get s_prime using generic CircuitMaker
         # s_prime = self.CM.get_state(current_state)
 
-        # 3. Get s_prime for coarse graining
+        # 2. Get s_prime for coarse graining
         s_prime = self.CM.update(current_state)
 
         return s_prime

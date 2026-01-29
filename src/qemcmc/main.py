@@ -1,9 +1,11 @@
-from qemcmc.ClassicalMCMC import ClassicalMCMC
-from qemcmc.ModelMaker import ModelMaker
-from qemcmc.QeMCMC_ import QeMCMC
-from qemcmc.helpers import MCMCChain
+# Internal package imports
+from qemcmc.sampler import ClassicalMCMC, QeMCMC
+from qemcmc.utils import ModelMaker, MCMCChain
+
+# External package imports
 from matplotlib import pyplot as plt
 from joblib import Parallel, delayed
+
 
 if __name__ == "__main__":
 
@@ -16,14 +18,14 @@ if __name__ == "__main__":
         plt.plot(pos, avg_energy, color=color, label=f"Average {label}")
 
     n = 7
-    steps = 50
+    steps = 100
     reps = 10
     model_type = "Fully Connected Ising"
     model_type2 = "Fully Connected Ising Generic"
     model_type3 = "Coarse Grained Ising"
     name = "Test Ising model"
 
-    model = ModelMaker(n, model_type2, name).model
+    model = ModelMaker(n, model_type3, name).model
 
     temp = 0.1
     initial_states = model.initial_state
