@@ -197,7 +197,7 @@ class PennyLaneCircuitMaker:
             qml.ApproxTimeEvolution(H_total, self.time, self.num_trotter_steps)
 
             # 3. Return state vector
-            return qml.state
+            return qml.state()
 
         result = quantum_evolution(s)
         return result
