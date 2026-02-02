@@ -137,7 +137,8 @@ class PennyLaneCircuitMaker:
 
         # 'default.qubit' is the standard high-performance CPU simulator
         # 'lightning.qubit' is a faster simulator using C++ backend
-        self.dev = qml.device("lightning.qubit", wires=self.n_qubits, shots=1)
+        #self.dev = qml.device("lightning.qubit", wires=self.n_qubits, shots=1)
+        self.dev = qml.device("default.qubit", wires=self.n_qubits, shots=1)
 
     def get_problem_hamiltonian(self, sign=-1):
         """Constructs the Problem Hamiltonian using PennyLane observables."""
