@@ -138,7 +138,7 @@ class PennyLaneCircuitMaker:
         # 'default.qubit' is the standard high-performance CPU simulator
         # 'lightning.qubit' is a faster simulator using C++ backend
         #self.dev = qml.device("lightning.qubit", wires=self.n_qubits, shots=1)
-        self.dev = qml.device("default.qubit", wires=self.n_qubits, shots=1)
+        self.dev = qml.device("default.qubit", wires=self.n_qubits)
 
     def get_problem_hamiltonian(self, sign=-1):
         """Constructs the Problem Hamiltonian using PennyLane observables."""
@@ -196,13 +196,26 @@ class PennyLaneCircuitMaker:
             # PennyLane has a built-in ApproxTimeEvolution for Suzuki-Trotter
             qml.ApproxTimeEvolution(H_total, self.time, self.num_trotter_steps)
 
-            # 3. Sample (Equivalent to measurement)
-            return qml.sample(wires=range(self.n_qubits))
+            # 3. Return state vector
+            return qml.state
 
-        # Run and convert the sampled array [0, 1, 0] back to "010"
-        sample_result = quantum_evolution(s)
-        return "".join(map(str, sample_result))
+        result = quantum_evolution(s)
+        return result
+        
+    def get_s_prime(self, s: str) -> str:
+        """Returns a single sampled bitstring s' using the quantum distribution."""
+        # Get the full state vector probabilities
+        state_vector = self.get_state(s)  # This returns the complex amplitudes
+        probs = np.abs(state_vector) ** 2
 
+        # Sample one index based on the probabilities
+        n_states = len(probs)
+        idx = np.random.choice(n_states, p=probs)
+
+        # Convert that index back to a bitstring (e.g., 3 -> "011")
+        s_prime = np.binary_repr(idx, width=self.model.n)
+        return s_prime
+    
     def update(self, s: str) -> str:
         """
         Performs time evolution on coarse grained hamiltonian update to get s' from s
@@ -218,7 +231,7 @@ class PennyLaneCircuitMaker:
 
         # 3. get s_cg' for the subgroup and reconstruct full s' using s and s_cg'
         s_cg = "".join([s[i] for i in subgroup_choice])
-        s_cg_prime = local_CM.get_state(s_cg)
+        s_cg_prime = local_CM.get_s_prime(s_cg)
 
         s_list = list(s)
         for i, global_index in enumerate(subgroup_choice):
