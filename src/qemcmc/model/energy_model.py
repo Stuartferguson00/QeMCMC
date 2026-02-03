@@ -194,9 +194,7 @@ class EnergyModel:
         """
         if not isinstance(state, str):
             raise TypeError(f"State must be a string, but got {type(state)}")
-
         energy = self.calc_an_energy(state)
-
         return energy
 
     def get_all_energies(self) -> np.ndarray:
@@ -229,7 +227,7 @@ class EnergyModel:
         """
         # only to be used for small instances, it is just brute force so extremely memory intensive and slow
         all_energies = self.get_all_energies()
-
+        
         # very slow (sorts whole array)
         self.lowest_energies, self.lowest_energy_degeneracy = self.find_lowest_values(all_energies, num_values=num_states)
 
@@ -278,9 +276,9 @@ class EnergyModel:
             return self.lowest_energy
         else:
             all_energies = self.get_all_energies()
-
+            
         lowest_energy = np.min(all_energies)
-
+        
         return lowest_energy
 
     def get_boltzmann_factor(self, state: str, beta: float = 1.0) -> float:
