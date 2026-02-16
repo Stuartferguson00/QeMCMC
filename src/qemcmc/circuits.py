@@ -44,6 +44,14 @@ class CircuitMaker:
         """
         Performs time evolution on coarse grained hamiltonian update to get s' from s
         """
+        # 0. auto select the gamma and t
+        g_step = self.gamma
+        if isinstance(self.gamma, tuple):
+            g_step = np.random.uniform(min(self.gamma), max(self.gamma))
+        t_step = self.time
+        if isinstance(self.time, tuple):
+            t_step = np.random.randint(min(self.time), max(self.time) + 1)
+
         # 1. choose a one of the given subgroups based on probabilities
         idx = np.random.choice(len(self.model.subgroups), p=self.model.subgroup_probs)
         subgroup_choice = self.model.subgroups[idx]
@@ -51,7 +59,7 @@ class CircuitMaker:
         # 2. calculate couplings, and initialize a small model and circuit maker for that subgroup
         local_couplings = self.model.get_subgroup_couplings(subgroup_choice, s)
         local_model = EnergyModel(n=len(subgroup_choice), couplings=local_couplings)
-        local_CM = PennyLaneCircuitMaker(local_model, self.gamma, self.time)
+        local_CM = PennyLaneCircuitMaker(local_model, g_step, t_step)
 
         # 3. get s_cg' for the subgroup and reconstruct full s' using s and s_cg'
         s_cg = "".join([s[i] for i in subgroup_choice])
@@ -116,11 +124,15 @@ class CircuitMaker:
         evolution_gate = PauliEvolutionGate(H_total, time=self.time, synthesis=synthesis)
 
         qc.append(evolution_gate, range(self.n_qubits))
-        qc.measure_all()
+        # qc.measure_all()
 
-        t_qc = transpile(qc, self.backend, optimization_level=0)
-        result = self.backend.run(t_qc, shots=1).result()
-        return list(result.get_counts().keys())[0]
+        # t_qc = transpile(qc, self.backend, optimization_level=0)
+        # result = self.backend.run(t_qc, shots=1).result()
+        # return list(result.get_counts().keys())[0]
+        state_vector = Statevector.from_instruction(qc)
+
+        # Return as a numpy array so np.abs(state)**2 works in your loop
+        return np.array(state_vector.data)
 
 
 class PennyLaneCircuitMaker:
@@ -136,8 +148,7 @@ class PennyLaneCircuitMaker:
         self.num_trotter_steps = int(np.floor((t_val / self.delta_time)))
 
         # 'default.qubit' is the standard high-performance CPU simulator
-        # 'lightning.qubit' is a faster simulator using C++ backend
-        self.dev = qml.device("lightning.qubit", wires=self.n_qubits, shots=1)
+        self.dev = qml.device("lightning.qubit", wires=self.n_qubits)
 
     def get_problem_hamiltonian(self, sign=-1):
         """Constructs the Problem Hamiltonian using PennyLane observables."""
@@ -172,9 +183,8 @@ class PennyLaneCircuitMaker:
         """Constructs the Mixer Hamiltonian: Σ X_i."""
         return qml.Hamiltonian([1.0] * self.n_qubits, [qml.PauliX(i) for i in range(self.n_qubits)])
 
-    def get_state(self, s: str) -> str:
-        """The PennyLane version of evolution and measurement."""
-
+    def get_state_vector(self, s: str) -> str:
+        """Return the state vector."""
         # Coefficients
         alpha = getattr(self.model, "alpha", 1.0)
         coeff_mixer = self.gamma
@@ -195,17 +205,39 @@ class PennyLaneCircuitMaker:
             # PennyLane has a built-in ApproxTimeEvolution for Suzuki-Trotter
             qml.ApproxTimeEvolution(H_total, self.time, self.num_trotter_steps)
 
-            # 3. Sample (Equivalent to measurement)
-            return qml.sample(wires=range(self.n_qubits))
+            # 3. Return state vector
+            return qml.state()
 
         # Run and convert the sampled array [0, 1, 0] back to "010"
         sample_result = quantum_evolution(s)
-        return "".join(map(str, sample_result))
+        return sample_result
+
+    def get_s_prime(self, s: str) -> str:
+        """Returns a single sampled bitstring s' using the quantum distribution."""
+        # Get the full state vector probabilities
+        state_vector = self.get_state_vector(s)  # This returns the complex amplitudes
+        probs = np.abs(state_vector) ** 2
+
+        # Sample one index based on the probabilities
+        n_states = len(probs)
+        idx = np.random.choice(n_states, p=probs)
+
+        # Convert that index back to a bitstring (e.g., 3 -> "011")
+        s_prime = np.binary_repr(idx, width=self.model.n)
+        return s_prime[::-1]
 
     def update(self, s: str) -> str:
         """
         Performs time evolution on coarse grained hamiltonian update to get s' from s
         """
+        # 0. auto select the gamma and t
+        g_step = self.gamma
+        if isinstance(self.gamma, tuple):
+            g_step = np.random.uniform(min(self.gamma), max(self.gamma))
+        t_step = self.time
+        if isinstance(self.time, tuple):
+            t_step = np.random.randint(min(self.time), max(self.time) + 1)
+
         # 1. choose a one of the given subgroups based on probabilities
         idx = np.random.choice(len(self.model.subgroups), p=self.model.subgroup_probs)
         subgroup_choice = self.model.subgroups[idx]
@@ -213,14 +245,15 @@ class PennyLaneCircuitMaker:
         # 2. calculate couplings, and initialize a small model and circuit maker for that subgroup
         local_couplings = self.model.get_subgroup_couplings(subgroup_choice, s)
         local_model = EnergyModel(n=len(subgroup_choice), couplings=local_couplings)
-        local_CM = PennyLaneCircuitMaker(local_model, self.gamma, self.time)
+        local_CM = PennyLaneCircuitMaker(local_model, g_step, t_step)
 
         # 3. get s_cg' for the subgroup and reconstruct full s' using s and s_cg'
         s_cg = "".join([s[i] for i in subgroup_choice])
-        s_cg_prime = local_CM.get_state(s_cg)
+        s_cg_prime = local_CM.get_s_prime(s_cg)
 
         s_list = list(s)
         for i, global_index in enumerate(subgroup_choice):
+            # Now s_cg_prime[i] is a character ("0" or "1"), not a complex number
             s_list[global_index] = s_cg_prime[i]
 
         return "".join(s_list)
@@ -235,20 +268,28 @@ if __name__ == "__main__":
     # 2. Create an instance of the model
     my_model = EnergyModel(3, couplings=my_couplings)
     cm = CircuitMaker(model=my_model, gamma=0.5, time=2)
+    cm2 = PennyLaneCircuitMaker(model=my_model, gamma=0.5, time=2)
 
     H_qiskit = cm.get_problem_hamiltonian()
     H_sparse = my_model.couplings_to_sparse_pauli(3, my_couplings, sign=-1)
+    H_pennylane = cm2.get_problem_hamiltonian()
+
+    dev = qml.device("default.qubit", wires=3)
+
+    @qml.qnode(dev)
+    def get_pl_energy(state_str):
+        # Initialize the state in PennyLane (Big-Endian)
+        for i, bit in enumerate(state_str):
+            if bit == "1":
+                qml.PauliX(wires=i)
+        # Return expectation value of your Hamiltonian
+        return qml.expval(H_pennylane)
 
     print("=" * 60)
     print("COMPARING get_problem_hamiltonian vs couplings_to_sparse_pauli")
     print("=" * 60)
     print(f"\nH_qiskit:\n{H_qiskit}")
     print(f"\nH_sparse:\n{H_sparse}")
-
-    # 4. Test all basis states
-    energies_qiskit = []
-    energies_sparse = []
-    energies_direct = []
 
     print("\n" + "=" * 60)
     print("ENERGIES FOR ALL BASIS STATES")
@@ -261,15 +302,16 @@ if __name__ == "__main__":
         # Method 1: get_problem_hamiltonian expectation value
         sv = Statevector.from_label(_state)  # Reverse for endianness
         energy_qiskit = sv.expectation_value(H_qiskit).real
-        print(f"Energy (get_problem_hamiltonian): {energy_qiskit:.4f}")
-        energies_qiskit.append(energy_qiskit)
+        print(f"Energy (QISKIT): {energy_qiskit:.4f}")
 
         # Method 2: couplings_to_sparse_pauli expectation value
         energy_sparse = sv.expectation_value(H_sparse).real
         print(f"Energy (couplings_to_sparse_pauli): {energy_sparse:.4f}")
-        energies_sparse.append(energy_sparse)
 
         # Method 3: Direct calculation from couplings
         energy_direct = my_model.calculate_energy(_state, my_couplings, sign=-1)
         print(f"Energy (calculate_energy):        {energy_direct:.4f}")
-        energies_direct.append(energy_direct)
+
+        # Method 4: Pennylane hamiltonian expectation value
+        energy_penny = float(get_pl_energy(_state))
+        print(f"Energy PENNYLANE (get_problem_hamiltonian): {energy_penny:.4f}")
