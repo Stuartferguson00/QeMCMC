@@ -143,7 +143,7 @@ class PennyLaneCircuitMaker:
         self.delta_time = delta_time
         self.n_qubits = model.n
 
-        # Calculate Trotter steps
+        # Calculate number of Trotter steps
         t_val = self.time[0] if isinstance(self.time, tuple) else self.time
         self.num_trotter_steps = int(np.floor((t_val / self.delta_time)))
 
@@ -162,11 +162,7 @@ class PennyLaneCircuitMaker:
 
             for index_tuple in non_zero_indices:
                 coeff = coupling_tensor[tuple(index_tuple)]
-                # PennyLane uses the dot product of operators
-                # Example: qml.PauliZ(0) @ qml.PauliZ(1)
                 operators = [qml.PauliZ(i) for i in index_tuple]
-
-                # Combine operators using @ (matrix multiplication/tensor product)
                 if len(operators) > 1:
                     term = operators[0]
                     for op in operators[1:]:
@@ -200,11 +196,8 @@ class PennyLaneCircuitMaker:
             for i, bit in enumerate(input_string):
                 if bit == "1":
                     qml.PauliX(i)
-
-            # 2. Evolve (Trotterization)
-            # PennyLane has a built-in ApproxTimeEvolution for Suzuki-Trotter
+            # 2. Evolve (Trotterization) using PennyLane's built-in ApproxTimeEvolution for Suzuki-Trotter
             qml.ApproxTimeEvolution(H_total, self.time, self.num_trotter_steps)
-
             # 3. Return state vector
             return qml.state()
 

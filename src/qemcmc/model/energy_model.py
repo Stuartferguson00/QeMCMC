@@ -27,6 +27,7 @@ class EnergyModel:
         self.alpha = alpha
         self.cost_function_signs = cost_function_signs
         self.initial_state = []
+
         for i in range(100):
             self.initial_state.append("".join(str(i) for i in np.random.randint(0, 2, self.n, dtype=int)))
 
@@ -194,9 +195,7 @@ class EnergyModel:
         """
         if not isinstance(state, str):
             raise TypeError(f"State must be a string, but got {type(state)}")
-
         energy = self.calc_an_energy(state)
-
         return energy
 
     def get_all_energies(self) -> np.ndarray:
