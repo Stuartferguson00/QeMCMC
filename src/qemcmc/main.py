@@ -25,7 +25,9 @@ if __name__ == "__main__":
     model_type3 = "Coarse Grained Ising"
     name = "Test Ising model"
 
-    model = ModelMaker(n, model_type3, name).model
+    model_maker = ModelMaker(n, model_type3, name)
+    model = model_maker.model
+    cg = model_maker.cg
 
     temp = 0.1
     initial_states = model.initial_state
@@ -57,7 +59,7 @@ if __name__ == "__main__":
     plot_chains(loc_chains, "lightgreen", "classical local MCMC")
 
     def run_qemcmc(rep):
-        qemcmc = QeMCMC(model, gamma=(0.3, 0.6), time=(2, 20), temp=temp)
+        qemcmc = QeMCMC(model, gamma=(0.3, 0.6), time=(2, 20), temp=temp, coarse_graining=cg)
         return qemcmc.run(
             steps,
             initial_state=initial_states[rep],
