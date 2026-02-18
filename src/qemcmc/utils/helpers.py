@@ -241,44 +241,52 @@ def energy_difference_related_counts(num_spins, sprime_each_iter: list, states_a
 # ###########################################################################################
 
 
-def validate_sub_groups(sub_groups: List[Sequence[int]], n: int) -> None:
+@dataclass
+class CoarseGrainingConfig:
+    subgroups: list[list[int]]
+    subgroup_probs: list[float]
+
+
+def validate_subgroups(subgroups, subgroup_probs, n_spins):
     """
     Validate coarse-graining subgroups.
 
     Requirements:
-      - sub_groups is a non-empty list of non-empty sequences
+      - subgroups is a non-empty list of non-empty sequences
       - each element is an int in [0, n-1]
       - each subgroup has no duplicate indices
-      - coverage: every spin 0..n-1 appears in at least one subgroup
+      - every spin from 0 to n-1 appears in at least one subgroup
 
     Raises
     ------
-    ValueError message if validation fails.
+    ValueError/TypeError message if validation fails.
     """
-    if sub_groups is None:
-        raise ValueError("sub_groups is None; expected a list of groups.")
-    if not isinstance(sub_groups, list) or len(sub_groups) == 0:
-        raise ValueError("sub_groups must be a non-empty list of groups (each group is a list of ints).")
+    if not isinstance(subgroups, list) or len(subgroups) == 0:
+        raise ValueError("subgroups must be a non-empty list")
 
-    covered = set()
+    for g in subgroups:
+        if not isinstance(g, Sequence) or len(g) == 0:
+            raise ValueError("each subgroup must be a non-empty list")
 
-    for gi, group in enumerate(sub_groups):
-        if group is None or len(group) == 0:
-            raise ValueError(f"sub_groups[{gi}] is empty; each group must contain at least one spin index.")
+        if not all(isinstance(i, int) for i in g):
+            raise TypeError("subgroup indices must be integers")
 
-        group_list = list(group)
+        if not all(0 <= i < n_spins for i in g):
+            raise ValueError("subgroup index out of bounds")
 
-        # check duplicates within a group
-        if len(set(group_list)) != len(group_list):
-            raise ValueError(f"sub_groups[{gi}] contains duplicate indices: {group_list}")
+        if len(set(g)) != len(g):
+            raise ValueError("duplicate indices inside a subgroup")
 
-        for index in group_list:
-            if not isinstance(index, int):
-                raise ValueError(f"sub_groups[{gi}] contains non-int index {index} (type {type(index)}).")
-            if index < 0 or index >= n:
-                raise ValueError(f"sub_groups[{gi}] contains out-of-range index {index}; valid range is 0..{n - 1}.")
-            covered.add(index)
+    covered = set(i for g in subgroups for i in g)
+    if covered != set(range(n_spins)):
+        raise ValueError("subgroups must cover all spins exactly once or at least once")
 
-    missing = set(range(n)) - covered
-    if missing:
-        raise ValueError(f"sub_groups do not cover the full system. Missing spins: {sorted(missing)}. Every spin 0..{n - 1} must appear in at least one subgroup.")
+    if subgroup_probs is not None:
+        if len(subgroup_probs) != len(subgroups):
+            raise ValueError("subgroup_probs must match subgroups length")
+
+        if any(p < 0 for p in subgroup_probs):
+            raise ValueError("subgroup_probs must be non-negative")
+
+        if not np.isclose(sum(subgroup_probs), 1.0):
+            raise ValueError("subgroup_probs must sum to 1")
