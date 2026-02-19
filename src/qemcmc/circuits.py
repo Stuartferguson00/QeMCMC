@@ -251,6 +251,22 @@ class PennyLaneCircuitMaker:
             s_list[global_index] = s_cg_prime[i]
 
         return "".join(s_list)
+    
+    def update_alt(self, s, subgroup_choice) -> str:
+        """
+        Performs time evolution on coarse grained hamiltonian update to get s' from s
+        """
+        # Get s_cg' for the subgroup and reconstruct full s' using s and s_cg'
+        s_cg = "".join([s[i] for i in subgroup_choice])
+
+        s_cg_prime = self.get_s_prime_alt(s_cg)
+
+        s_list = list(s)
+        for i, global_index in enumerate(subgroup_choice):
+            # Now s_cg_prime[i] is a character ("0" or "1"), not a complex number
+            s_list[global_index] = s_cg_prime[i]
+
+        return "".join(s_list)
 
 
 if __name__ == "__main__":

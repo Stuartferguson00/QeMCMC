@@ -84,3 +84,36 @@ class QeMCMC(MCMC):
         s_prime = self.CM.update(s=current_state, subgroup_choice=subgroup_choice)
 
         return s_prime
+    
+    
+    def get_s_prime_alt(self, current_state: str) -> str:
+        """
+        Returns the next state s_prime based on the current state, g, and t.
+
+        Args:
+        current_state (str): The current state.
+
+        Returns:
+        str: The next state s_prime.
+        """
+        g = self.gamma
+        t = self.time
+        if isinstance(self.gamma, tuple):
+            g = np.random.uniform(min(self.gamma), max(self.gamma))
+        if isinstance(self.time, tuple):
+            t = np.random.randint(min(self.time), max(self.time) + 1)
+
+        subgroup_choice = self.cg.sample()
+        local_couplings = self.model.get_subgroup_couplings(subgroup=subgroup_choice, current_state=current_state)
+
+        self.CM.gamma = g
+        self.CM.time = t
+        self.CM.local_couplings = local_couplings
+
+        # 1. Get s_prime using generic CircuitMaker
+        # s_prime = self.CM.get_state(current_state)
+
+        # 2. Get s_prime for coarse graining
+        s_prime = self.CM.update_alt(s=current_state, subgroup_choice=subgroup_choice)
+
+        return s_prime

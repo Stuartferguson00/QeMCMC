@@ -7,9 +7,10 @@ from qemcmc.sampler import QeMCMC
 import numpy as np
 import tqdm
 import joblib
+from qemcmc.coarse_grain import CoarseGraining
 
 # Define parameters
-n_spins = 6  # Number of spins in the system
+n_spins = 8  # Number of spins in the system
 reps = 10
 coarse_graining_number = n_spins
 # QeMCMC parameters
@@ -34,7 +35,8 @@ couplings = [h, J]
 # why does the user have to calculate their own alpha? At least we should do it in model maker. Ask the user to input max_number of qubits, and we enumerate all combinations internally.
 alpha = np.sqrt(n_spins) / np.sqrt(sum([J[i][j] ** 2 for i in range(n_spins) for j in range(i)]) + sum([h[j] ** 2 for j in range(n_spins)]))
 
-model = EnergyModel(n=n_spins, couplings=couplings, subgroups=subgroups, subgroup_probs=np.ones(len(subgroups)) / len(subgroups), alpha=alpha)
+model = EnergyModel(n=n_spins, couplings=couplings, alpha=alpha)
+CG = CoarseGraining(n = n_spins, subgroups= subgroups)
 """
 model_type = "Coarse Grained Ising"
 name = "Test Ising model"
@@ -84,7 +86,7 @@ def bit_reverse_bitwise(value, n):
 # check individual proposals from QeMCMC
 
 expectedstate = S[11]
-qemcmcm_test = QeMCMC(model, gamma=0, time=1, temp=1)
+qemcmcm_test = QeMCMC(model, gamma=0, time=1, temp=1, coarse_graining=CG)
 for i in range(10):
     state = qemcmcm_test.get_s_prime(expectedstate)
     state_int = int(state, 2)
@@ -103,7 +105,7 @@ qemcmc_weights_brute = np.zeros_like(E_diffs)
 self_proposals = 0
 for i, s in enumerate(tqdm.tqdm(S)):
     for j in range(reps):
-        state = quantum_MCMC.get_s_prime(s)
+        state = quantum_MCMC.get_s_prime_alt(s)
         #state_int = bit_reverse_bitwise(int(state, 2), n_spins)
         state_int = int(state, 2)
         qemcmc_weights_brute[i, state_int] += 1
@@ -120,9 +122,8 @@ def inner_loop(s):
         time_ = np.random.randint(time[0], time[1] + 1)
     else:
         time_ = time
-    CM = CircuitMaker(model, gamma_, time_)
-
-    state = CM.get_state_vector(s)
+    
+    state = quantum_MCMC.CM.get_state_vector(s)
     #qemcmc_weights[int(i),:] += state.probabilities()
     #sampled_strings = state.sample_counts(100)
     # for bitstring, count in sampled_strings.items():
@@ -149,6 +150,13 @@ plt.ylabel("s'")
 plt.colorbar(label="Proposal weight")
 plt.show()
 
+
+plt.hist2d(np.repeat(np.arange(2**n_spins), 2**n_spins), np.tile(np.arange(2**n_spins), 2**n_spins), bins=50, weights=qemcmc_weights_brute_ordered.flatten(), norm="log")
+plt.title("QeMCMC proposal weights heatmap")
+plt.xlabel("s")
+plt.ylabel("s'")
+plt.colorbar(label="Proposal weight")
+plt.show()
 
 
 
