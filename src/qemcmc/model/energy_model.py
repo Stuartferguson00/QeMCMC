@@ -14,8 +14,6 @@ class EnergyModel:
         self,
         n: int,
         couplings: List[np.ndarray] = [],
-        subgroups: List[List[int]] = None,
-        subgroup_probs: List[float] = None,
         name: str = None,
         alpha: float = 1.0,
         cost_function_signs: list = [-1, -1],
@@ -30,17 +28,6 @@ class EnergyModel:
 
         for i in range(100):
             self.initial_state.append("".join(str(i) for i in np.random.randint(0, 2, self.n, dtype=int)))
-
-        if subgroups is None:
-            self.subgroups = [list(range(n))]
-            self.subgroup_probs = [1.0]
-        else:
-            self.subgroups = subgroups
-            if subgroup_probs is None:
-                k = len(subgroups)
-                self.subgroup_probs = [1.0 / k] * k
-            else:
-                self.subgroup_probs = subgroup_probs
 
     def calc_an_energy(self, state):
         return self.calculate_energy(state, self.couplings)

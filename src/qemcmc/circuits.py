@@ -149,13 +149,14 @@ class PennyLaneCircuitMaker:
 
         # 'default.qubit' is the standard high-performance CPU simulator
         self.dev = qml.device("lightning.qubit", wires=self.n_qubits)
+        self.dev2 = qml.device("lightning.qubit", wires=self.n_qubits, shots=1)
 
-    def get_problem_hamiltonian(self, sign=-1):
+    def get_problem_hamiltonian(self, couplings, sign=-1):
         """Constructs the Problem Hamiltonian using PennyLane observables."""
         coeffs = []
         obs = []
 
-        for coupling_tensor in self.model.couplings:
+        for coupling_tensor in couplings:
             order = coupling_tensor.ndim
             spin_sign = (-1) ** order
             non_zero_indices = np.transpose(np.nonzero(coupling_tensor))
@@ -186,24 +187,19 @@ class PennyLaneCircuitMaker:
         coeff_mixer = self.gamma
         coeff_problem = -(1 - self.gamma) * alpha
 
-        # Total Hamiltonian
-        H_total = qml.Hamiltonian([coeff_mixer] + [1.0], [self.get_mixer_hamiltonian(), self.get_problem_hamiltonian(sign=coeff_problem)])
+        H_total = qml.Hamiltonian([coeff_mixer] + [1.0], [self.get_mixer_hamiltonian(), self.get_problem_hamiltonian(couplings=self.local_couplings, sign=coeff_problem)])
 
-        # Define the Quantum Node inside the method
         @qml.qnode(self.dev)
         def quantum_evolution(input_string):
-            # 1. Initialize State
             for i, bit in enumerate(input_string):
                 if bit == "1":
                     qml.PauliX(i)
-            # 2. Evolve (Trotterization) using PennyLane's built-in ApproxTimeEvolution for Suzuki-Trotter
             qml.ApproxTimeEvolution(H_total, self.time, self.num_trotter_steps)
-            # 3. Return state vector
             return qml.state()
 
         # Run and convert the sampled array [0, 1, 0] back to "010"
-        sample_result = quantum_evolution(s)
-        return sample_result
+        state_vector = quantum_evolution(s)
+        return state_vector
 
     def get_s_prime(self, s: str) -> str:
         """Returns a single sampled bitstring s' using the quantum distribution."""
@@ -217,32 +213,37 @@ class PennyLaneCircuitMaker:
 
         # Convert that index back to a bitstring (e.g., 3 -> "011")
         s_prime = np.binary_repr(idx, width=self.model.n)
-        return s_prime[::-1]
+        return s_prime
 
-    def update(self, s: str) -> str:
+    def get_s_prime_alt(self, s: str):
+        """Returns a measured sample after time evolution"""
+        # Coefficients
+        alpha = getattr(self.model, "alpha", 1.0)
+        coeff_mixer = self.gamma
+        coeff_problem = -(1 - self.gamma) * alpha
+
+        H_total = qml.Hamiltonian([coeff_mixer] + [1.0], [self.get_mixer_hamiltonian(), self.get_problem_hamiltonian(couplings=self.local_couplings, sign=coeff_problem)])
+
+        @qml.qnode(self.dev2)
+        def quantum_evolution(input_string):
+            for i, bit in enumerate(input_string):
+                if bit == "1":
+                    qml.PauliX(i)
+            qml.ApproxTimeEvolution(H_total, self.time, self.num_trotter_steps)
+            return qml.sample()
+
+        sample = quantum_evolution(s)
+        bitstring = "".join(str(int(b)) for b in sample)
+        return bitstring
+
+    def update(self, s, subgroup_choice) -> str:
         """
         Performs time evolution on coarse grained hamiltonian update to get s' from s
         """
-        # 0. auto select the gamma and t
-        g_step = self.gamma
-        if isinstance(self.gamma, tuple):
-            g_step = np.random.uniform(min(self.gamma), max(self.gamma))
-        t_step = self.time
-        if isinstance(self.time, tuple):
-            t_step = np.random.randint(min(self.time), max(self.time) + 1)
-
-        # 1. choose a one of the given subgroups based on probabilities
-        idx = np.random.choice(len(self.model.subgroups), p=self.model.subgroup_probs)
-        subgroup_choice = self.model.subgroups[idx]
-
-        # 2. calculate couplings, and initialize a small model and circuit maker for that subgroup
-        local_couplings = self.model.get_subgroup_couplings(subgroup_choice, s)
-        local_model = EnergyModel(n=len(subgroup_choice), couplings=local_couplings)
-        local_CM = PennyLaneCircuitMaker(local_model, g_step, t_step)
-
-        # 3. get s_cg' for the subgroup and reconstruct full s' using s and s_cg'
+        # Get s_cg' for the subgroup and reconstruct full s' using s and s_cg'
         s_cg = "".join([s[i] for i in subgroup_choice])
-        s_cg_prime = local_CM.get_s_prime(s_cg)
+        s_cg_prime = self.get_s_prime(s_cg)
+        # s_cg_prime = self.get_s_prime_alt(s_cg)
 
         s_list = list(s)
         for i, global_index in enumerate(subgroup_choice):

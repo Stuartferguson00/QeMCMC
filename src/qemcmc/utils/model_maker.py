@@ -1,5 +1,6 @@
 # Internal package imports
 from qemcmc.model import EnergyModel
+from qemcmc.coarse_grain import CoarseGraining
 
 # External package imports
 import numpy as np
@@ -73,4 +74,5 @@ class ModelMaker:
             (1, 3, 4, 5, 6),
             (2, 3, 4, 5, 6),
         ]
-        self.model = EnergyModel(n=self.n_spins, couplings=couplings, subgroups=subgroups, name=self.name, alpha=alpha)
+        self.model = EnergyModel(n=self.n_spins, couplings=couplings, name=self.name, alpha=alpha)
+        self.cg = CoarseGraining(n=self.n_spins, subgroups=subgroups)
