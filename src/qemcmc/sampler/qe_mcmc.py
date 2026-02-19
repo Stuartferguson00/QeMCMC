@@ -53,7 +53,7 @@ class QeMCMC(MCMC):
         self.CM = PennyLaneCircuitMaker(self.model, self.gamma, self.time)
         self.cg = coarse_graining or CoarseGraining(model.n)  # defaults to full system
 
-    def get_s_prime(self, current_state: str) -> str:
+    def get_s_prime_old(self, current_state: str) -> str:
         """
         Returns the next state s_prime based on the current state, g, and t.
 
@@ -86,7 +86,7 @@ class QeMCMC(MCMC):
         return s_prime
     
     
-    def get_s_prime_alt(self, current_state: str) -> str:
+    def get_s_prime(self, current_state: str) -> str:
         """
         Returns the next state s_prime based on the current state, g, and t.
 
