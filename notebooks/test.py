@@ -18,7 +18,7 @@ from qemcmc.model import EnergyModel
 
 # Define parameters
 n = 15  # Number of spins in the system
-coarse_graining_number = n  
+coarse_graining_number = n
 n_spins = n
 reps = 5  # How many markov chains to produce
 steps = 300  # Length of each markov chain
@@ -38,7 +38,7 @@ shape_of_J = (n_spins, n_spins)
 J = np.round(np.random.normal(0, 1, shape_of_J), decimals=4)
 J_tril = np.tril(J, -1)
 J_triu = J_tril.transpose()
-J = J_tril# + J_triu
+J = J_tril + J_triu
 
 h = np.round(np.random.normal(0, 1, n_spins), decimals=4)
 

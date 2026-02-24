@@ -19,8 +19,8 @@ class QeMCMC(MCMC):
     def __init__(
         self,
         model: EnergyModel,
-        gamma: float | tuple[float],
-        time: int | tuple[int],
+        gamma: float | tuple[float, float],
+        time: int | tuple[int, int],
         temp: float,
         delta_time: float = 0.8,
         coarse_graining=None,
@@ -30,65 +30,28 @@ class QeMCMC(MCMC):
 
         Args:
             model (Model): The model to be simulated.
-            gamma (float|tuple[float]): The gamma parameter.
-            time (int|tuple[int]): The time parameter. The number of trotter steps to take. (can be sampled from range represented by tuple.)
+            gamma (float|tuple[float, float]): The gamma parameter.
+            time (int|tuple[int, int]): The time parameter. The number of trotter steps to take. (can be sampled from range represented by tuple.)
             temp (float): The temperature parameter.
             delta_time (float, optional): The delta time parameter for length of trotter steps. Defaults to 0.8.
-
-            TODO: implement subgroups here instead of inside energy models.
         """
 
         super().__init__(model, temp)
 
-        self.gamma = gamma
-        self.time = time
+        self.gamma = self._validate_gamma(gamma)
+        self.time = self._validate_time(time)
         self.delta_time = delta_time
+
+        # what is this for?
         self.update = self.get_s_prime
         self.method = "quantum"
 
-        # 1. Use Qiskit CircuitMaker
-        # self.CM = CircuitMaker(self.model, self.gamma, self.time)
-
-        # 2. Use Pennylane CircuitMaker
         self.CM = PennyLaneCircuitMaker(self.model, self.gamma, self.time)
-        self.cg = coarse_graining or CoarseGraining(model.n)  # defaults to full system
+        self.cg = coarse_graining or CoarseGraining(model.n)
 
-    def get_s_prime_old(self, current_state: str) -> str:
-        """
-        Returns the next state s_prime based on the current state, g, and t.
-
-        Args:
-        current_state (str): The current state.
-
-        Returns:
-        str: The next state s_prime.
-        """
-        g = self.gamma
-        t = self.time
-        if isinstance(self.gamma, tuple):
-            g = np.random.uniform(min(self.gamma), max(self.gamma))
-        if isinstance(self.time, tuple):
-            t = np.random.randint(min(self.time), max(self.time) + 1)
-
-        subgroup_choice = self.cg.sample()
-        local_couplings = self.model.get_subgroup_couplings(subgroup=subgroup_choice, current_state=current_state)
-
-        self.CM.gamma = g
-        self.CM.time = t
-        self.CM.local_couplings = local_couplings
-
-        # 1. Get s_prime using generic CircuitMaker
-        # s_prime = self.CM.get_state(current_state)
-
-        # 2. Get s_prime for coarse graining
-        s_prime = self.CM.update(s=current_state, subgroup_choice=subgroup_choice)
-
-        return s_prime
-    
-    
     def get_s_prime(self, current_state: str) -> str:
         """
-        Returns the next state s_prime based on the current state, g, and t.
+        Returns the next state s_prime based on the current state in the markov chain.
 
         Args:
         current_state (str): The current state.
@@ -106,14 +69,42 @@ class QeMCMC(MCMC):
         subgroup_choice = self.cg.sample()
         local_couplings = self.model.get_subgroup_couplings(subgroup=subgroup_choice, current_state=current_state)
 
-        self.CM.gamma = g
-        self.CM.time = t
-        self.CM.local_couplings = local_couplings
-
-        # 1. Get s_prime using generic CircuitMaker
-        # s_prime = self.CM.get_state(current_state)
-
-        # 2. Get s_prime for coarse graining
-        s_prime = self.CM.update_alt(s=current_state, subgroup_choice=subgroup_choice)
+        s_prime = self.CM.update(s=current_state, subgroup_choice=subgroup_choice, local_couplings=local_couplings, gamma=g, time=t)
 
         return s_prime
+
+    def _validate_gamma(self, gamma):
+        if isinstance(gamma, (float, int)):
+            if not (0.0 <= gamma <= 1.0):
+                raise ValueError(f"gamma must be in [0, 1], got {gamma}")
+            return float(gamma)
+
+        if isinstance(gamma, tuple):
+            if len(gamma) != 2:
+                raise ValueError(f"gamma tuple must be (min, max), got {gamma}")
+            g_min, g_max = gamma
+            if not (0.0 <= g_min <= g_max <= 1.0):
+                raise ValueError(f"gamma range must satisfy 0 ≤ min ≤ max ≤ 1, got {gamma}")
+            return (float(g_min), float(g_max))
+
+        raise TypeError(f"gamma must be a float or tuple[float, float], got {type(gamma)}")
+
+    def _validate_time(self, time):
+        if isinstance(time, int):
+            if time <= 0:
+                raise ValueError(f"time must be a positive integer, got {time}")
+            return time
+
+        if isinstance(time, tuple):
+            if len(time) != 2:
+                raise ValueError(f"time tuple must be (min, max), got {time}")
+            t_min, t_max = time
+            if not (isinstance(t_min, int) and isinstance(t_max, int)):
+                raise TypeError(f"time range must contain integers, got {time}")
+            if t_min <= 0 or t_max <= 0:
+                raise ValueError(f"time values must be positive, got {time}")
+            if t_min > t_max:
+                raise ValueError(f"time range must satisfy min ≤ max, got {time}")
+            return (t_min, t_max)
+
+        raise TypeError(f"time must be an int or tuple[int, int], got {type(time)}")

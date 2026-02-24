@@ -176,6 +176,78 @@ class EnergyModel:
 
         return new_couplings
 
+    def calculate_alpha(self, couplings=None, eps: float = 1e-15) -> float:
+        """
+        Compute alpha = sqrt(n) / sqrt(sum of squares of UNIQUE coupling coefficients),
+        assuming coupling tensors are symmetric representations.
+
+        Any non-symmetric 2-body input raises ValueError.
+
+        Parameters
+        ----------
+        couplings : list[np.ndarray] | None
+            Couplings to use. Defaults to self.couplings.
+        eps : float
+            Small threshold to avoid division by zero.
+
+        Returns
+        -------
+        float
+            alpha
+        """
+        if couplings is None:
+            couplings = self.couplings
+
+        n = self.n
+        norm_sq = 0.0
+
+        for T in couplings:
+            T = np.asarray(T)
+            order = T.ndim
+
+            if order == 0:
+                continue
+
+            # 1-body: h_i
+            if order == 1:
+                if T.shape != (n,):
+                    raise ValueError(f"1-body tensor has shape {T.shape}, expected ({n},)")
+                for i in range(n):
+                    c = float(T[i])
+                    norm_sq += c * c
+                continue
+
+            # 2-body: symmetric J
+            if order == 2:
+                if T.shape != (n, n):
+                    raise ValueError(f"2-body tensor has shape {T.shape}, expected ({n},{n})")
+
+                # Enforce symmetry (rejects pure upper/lower triangular)
+                if not np.allclose(T, T.T):
+                    raise ValueError("Non-symmetric J provided. This alpha function only accepts symmetric J.")
+
+                # Count each interaction once: i<j
+                for i in range(n):
+                    for j in range(i + 1, n):
+                        c = float(T[i, j])
+                        if c != 0.0:
+                            norm_sq += c * c
+                continue
+
+            # Order >= 3: count each unordered interaction once using i1<i2<...<ik
+            if T.shape != (n,) * order:
+                raise ValueError(f"{order}-body tensor has shape {T.shape}, expected {(n,) * order}")
+
+            for comb in itertools.combinations(range(n), order):
+                c = float(T[comb])
+                if c != 0.0:
+                    norm_sq += c * c
+
+        if norm_sq < eps:
+            raise ValueError("Cannot compute alpha: no nonzero (non-constant) couplings found.")
+
+        return np.sqrt(n / norm_sq)
+
     def get_energy(self, state: str) -> float:
         """
         Returns the energy of a given state
@@ -302,90 +374,33 @@ class EnergyModel:
 
 if __name__ == "__main__":
     # Linear coefficients (h vector)
-    h = np.array([-1.0, -2.0, -3.0])
+    n_spins = 4
+    h = np.array([-1.0, -2.0, -3.0, -4.0])
 
     # Quadratic coefficients (J matrix)
     # J_12 = 0.5, J_23 = -1.5
-    J = np.array([[0.0, 0.5, 0.0], [0.5, 0.0, -1.5], [0.0, -1.5, 0.0]])
+    # J = np.array([[0.0, 0.5, 0.0], [0.5, 0.0, -1.5], [0.0, -1.5, 0.0]])
+    J = np.array(
+        [
+            [0.0, 2.0, 0.0],
+            [2.0, 0.0, -1.5],
+            [0.0, -1.5, 0.0],
+        ]
+    )
+    J = J_upper = np.array(
+        [
+            [0.0, 1.2, -0.5, 0.0],
+            [0.0, 0.0, 0.8, 1.1],
+            [0.0, 0.0, 0.0, -1.4],
+            [0.0, 0.0, 0.0, 0.0],
+        ]
+    )
 
     # Create the list of coupling tensors
-    my_couplings = [h, 0.5 * J]
+    my_couplings = [h, J]
 
-    my_state = "011"
+    energy_model = EnergyModel(n=4, couplings=my_couplings)
 
-    energies = []
-    energies3 = []
-    energies_H = []
-    energy_model = EnergyModel(n=3, couplings=my_couplings)
-    H = energy_model.get_hamiltonian(spin_type="binary", sign=-1)
+    a3 = np.sqrt(n_spins) / np.sqrt(sum([J[i][j] ** 2 for i in range(n_spins) for j in range(i)]) + sum([h[j] ** 2 for j in range(n_spins)]))
 
-    H_sparse = energy_model.couplings_to_sparse_pauli(3, my_couplings, sign=-1)
-
-    # All possible spin states
-    spin_states = [
-        [-1, -1, -1],  # "000"
-        [-1, -1, 1],  # "001"
-        [-1, 1, -1],  # "010"
-        [-1, 1, 1],  # "011"
-        [1, -1, -1],  # "100"
-        [1, -1, 1],  # "101"
-        [1, 1, -1],  # "110"
-        [1, 1, 1],  # "111"
-    ]
-
-    # Corresponding binary strings (for comparison and Statevector)
-    binary_states = ["000", "001", "010", "011", "100", "101", "110", "111"]
-
-    my_couplings_spin = [h, 0.5 * J]  # Keep same for consistency
-
-    energy_model = EnergyModel(n=3, couplings=my_couplings_spin)
-    H_sparse = energy_model.couplings_to_sparse_pauli(3, my_couplings_spin, sign=-1)
-
-    energies_spin = []
-    energies_binary = []
-    energies_H_sparse = []
-
-    for spin_state, binary_state in zip(spin_states, binary_states):
-        print(f"\nSpin state: {spin_state}  (binary: {binary_state})")
-        print("-" * 40)
-
-        # Method 1: calculate_energy with spin_type="spin"
-        energy_spin = energy_model.calculate_energy(spin_state, my_couplings_spin, spin_type="spin", sign=-1)
-        print(f"Energy (spin input):   {energy_spin:.4f}")
-        energies_spin.append(energy_spin)
-
-        # Method 2: calculate_energy with spin_type="binary" (for comparison)
-        energy_binary = energy_model.calculate_energy(binary_state, my_couplings_spin, spin_type="binary", sign=-1)
-        print(f"Energy (binary input): {energy_binary:.4f}")
-        energies_binary.append(energy_binary)
-
-        # Method 3: SparsePauliOp (always uses computational basis internally)
-        # Convert spin to binary for Statevector: -1 -> "0", +1 -> "1"
-        sv_label = "".join("0" if s == -1 else "1" for s in spin_state)
-        sv = Statevector.from_label(sv_label)  # Reverse for endianness
-        energy_pauli = sv.expectation_value(H_sparse).real
-        print(f"Energy (SparsePauliOp): {energy_pauli:.4f}")
-        energies_H_sparse.append(energy_pauli)
-
-        # Check match
-        if np.isclose(energy_spin, energy_binary) and np.isclose(energy_spin, energy_pauli):
-            print("✓ All methods match!")
-        else:
-            print("✗ MISMATCH!")
-
-        print("Calculating energy for state:", binary_state)
-
-        energy3 = energy_model.calculate_energy(binary_state, my_couplings, sign=-1)
-        print("Energy using new formula:", energy3)
-        energies3.append(energy3)
-
-        state_index = int(binary_state, 2)  # "010" -> 2
-        energy_H = H[state_index, state_index]
-        print("Energy using Hamiltonian:", energy_H)
-        energies_H.append(energy_H)
-
-        sv = Statevector.from_label(binary_state)
-        energy = sv.expectation_value(H_sparse).real
-        print(f"State {binary_state}: E = {energy:.4f}")
-
-        print("\n\n")
+    print(a3)
