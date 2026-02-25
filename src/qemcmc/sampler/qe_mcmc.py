@@ -46,7 +46,7 @@ class QeMCMC(MCMC):
         self.update = self.get_s_prime
         self.method = "quantum"
 
-        self.CM = PennyLaneCircuitMaker(self.model, self.gamma, self.time)
+        self.CM = PennyLaneCircuitMaker(self.model, self.gamma, self.time, delta_time=self.delta_time)
         self.cg = coarse_graining or CoarseGraining(model.n)
 
     def get_s_prime(self, current_state: str) -> str:
