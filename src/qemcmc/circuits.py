@@ -263,9 +263,9 @@ class PennyLaneCircuitMaker:
                 if bit == "1":
                     qml.PauliX(i)
             qml.ApproxTimeEvolution(H_total, self.time, self.num_trotter_steps)
-            return qml.sample()
+            return qml.sample() 
 
-        sample = quantum_evolution(s)
+        sample = quantum_evolution(s)[0] #pennylane update doesnt squeeze singletons anymore
         bitstring = "".join(str(int(b)) for b in sample)
         return bitstring
 
