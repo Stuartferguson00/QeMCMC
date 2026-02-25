@@ -20,16 +20,9 @@ __all__ = [
     "get_all_possible_states",
     "SpectralGap",
     "PennyLaneCircuitMaker",
+    "CoarseGraining",
 ]
-
-# from .helpers import MCMCState, MCMCChain, plot_chains, get_random_state, get_all_possible_states
-# from .energy_model import EnergyModel
-# from .circuits import CircuitMaker, PennyLaneCircuitMaker
-# from .classical_mcmc import ClassicalMCMC
-# from .qemcmc_ import QeMCMC
-# from .mcmc import MCMC
-# from .model_maker import ModelMaker
 
 
 def main() -> None:
-    print("Hello from qemcmc!")
+    print("Hello from QeMCMC!")
