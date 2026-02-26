@@ -1,7 +1,7 @@
-# Internal package imports
+# Internal
 from qemcmc.model import EnergyModel
 
-# External package imports
+# External
 import pennylane as qml
 import numpy as np
 from typing import Any, Union
@@ -147,8 +147,7 @@ class PennyLaneCircuitMaker:
         t_val = self.time[0] if isinstance(self.time, tuple) else self.time
         self.num_trotter_steps = int(np.floor((t_val / self.delta_time)))
 
-        self.dev = qml.device("lightning.qubit", wires=self.n_qubits)
-        self.dev2 = qml.device("lightning.qubit", wires=self.n_qubits, shots=1)
+        self.dev = qml.device("default.qubit", wires=self.n_qubits)
 
     def get_problem_hamiltonian_OLD(self, couplings, sign=-1):
         """Constructs the Problem Hamiltonian using PennyLane observables."""
@@ -257,15 +256,16 @@ class PennyLaneCircuitMaker:
 
         H_total = qml.Hamiltonian([coeff_mixer] + [1.0], [self.get_mixer_hamiltonian(), self.get_problem_hamiltonian(couplings=self.local_couplings, sign=coeff_problem)])
 
-        @qml.qnode(self.dev2)
+        @qml.qnode(self.dev, shots=1)
         def quantum_evolution(input_string):
             for i, bit in enumerate(input_string):
                 if bit == "1":
                     qml.PauliX(i)
             qml.ApproxTimeEvolution(H_total, self.time, self.num_trotter_steps)
-            return qml.sample() 
+            return qml.sample()
 
-        sample = quantum_evolution(s)[0] #pennylane update doesnt squeeze singletons anymore
+        # Get the first shot from the sample
+        sample = quantum_evolution(s)[0]  # pennylane update doesnt squeeze singletons anymore
         bitstring = "".join(str(int(b)) for b in sample)
         return bitstring
 
@@ -273,6 +273,7 @@ class PennyLaneCircuitMaker:
         """
         Performs time evolution on coarse grained hamiltonian update to get s' from s
         """
+        self._assert_bitstring(s)
         self.gamma = gamma
         self.time = time
         self.local_couplings = local_couplings
@@ -286,3 +287,17 @@ class PennyLaneCircuitMaker:
             s_list[global_index] = s_cg_prime[i]
 
         return "".join(s_list)
+
+    def _assert_bitstring(self, s, *, length=None):
+        # Accept numpy strings etc.
+        if not isinstance(s, str):
+            raise TypeError(f"bitstring must be of type str, got {type(s)}: {s!r}")
+
+        if length is not None and len(s) != length:
+            raise ValueError(f"bitstring must have length {length}, got {len(s)}: {s!r}")
+
+        bad = set(s) - {"0", "1"}
+        if bad:
+            raise ValueError(f"bitstring must contain only '0'/'1'. Bad chars: {bad}. Value: {s!r}")
+
+        return s
