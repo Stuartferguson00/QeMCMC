@@ -1,10 +1,10 @@
-# Internal package imports
+# Internal
 from qemcmc.sampler import MCMC
 from qemcmc.model import EnergyModel
 from qemcmc.circuits import PennyLaneCircuitMaker
 from qemcmc.coarse_grain import CoarseGraining
 
-# External package imports
+# External
 import warnings
 import numpy as np
 
@@ -42,7 +42,7 @@ class QeMCMC(MCMC):
         self.time = self._validate_time(time)
         self.delta_time = delta_time
 
-        # what is this for?
+        # check
         self.update = self.get_s_prime
         self.method = "quantum"
 
@@ -59,6 +59,10 @@ class QeMCMC(MCMC):
         Returns:
         str: The next state s_prime.
         """
+
+        if not isinstance(current_state, str):
+            raise TypeError(f"Bitstring must be of type str, got {type(current_state)}: {current_state!r}")
+
         g = self.gamma
         t = self.time
         if isinstance(self.gamma, tuple):
