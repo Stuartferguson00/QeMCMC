@@ -2,7 +2,6 @@ import itertools
 import typing
 from typing import List
 import numpy as np
-from qiskit.quantum_info import SparsePauliOp, Statevector
 
 
 class EnergyModel:
@@ -28,68 +27,6 @@ class EnergyModel:
 
         for i in range(100):
             self.initial_state.append("".join(str(i) for i in np.random.randint(0, 2, self.n, dtype=int)))
-
-    def calc_an_energy(self, state):
-        return self.calculate_energy(state, self.couplings)
-
-    def get_hamiltonian(self, spin_type="binary", sign=1):
-        H_sparse = self.couplings_to_sparse_pauli(self.n, self.couplings, sign)
-        return H_sparse.to_matrix().real
-
-    def couplings_to_sparse_pauli(self, n, couplings, sign=-1):
-        """
-        This function basically maps a classical energy model into a quantum operator (hamiltonian)
-        It converts an arbitrary-order list of couplings directly to SparsePauliOp.
-        Never constructs the full 2^n matrix!
-
-        Parameters:
-            n: number of qubits
-            couplings: list of coupling tensors (1D=linear, 2D=quadratic, 3D=cubic, etc.)
-            sign: overall sign
-
-        Returns:
-            SparsePauliOp
-        """
-        pauli_list = []
-
-        for coupling in couplings:
-            coupling = np.array(coupling)
-            order = coupling.ndim
-
-            # Sign factor: (-1)^order to convert from σ = -Z convention
-            spin_sign = (-1) ** order
-
-            if order == 1:
-                # Linear terms: h_i Z_i
-                for i in range(n):
-                    if coupling[i] != 0:
-                        pauli_str = ["I"] * n
-                        pauli_str[i] = "Z"  # No reversal - match user's big-endian
-                        # Negate because σ = -Z (spin convention flip)
-                        pauli_list.append(("".join(pauli_str), -sign * coupling[i]))
-
-            elif order == 2:
-                # Quadratic terms: J_ij Z_i Z_j
-                for i in range(n):
-                    for j in range(n):
-                        if i != j and coupling[i, j] != 0:
-                            pauli_str = ["I"] * n
-                            pauli_str[i] = "Z"  # No reversal
-                            pauli_str[j] = "Z"
-                            # No sign flip needed: σ_i σ_j = (-Z_i)(-Z_j) = Z_i Z_j
-                            pauli_list.append(("".join(pauli_str), sign * coupling[i, j]))
-
-            elif order >= 3:
-                # Higher-order terms: K_ijk... Z_i Z_j Z_k ...
-                for indices in np.ndindex(coupling.shape):
-                    if coupling[indices] != 0 and len(set(indices)) == len(indices):
-                        pauli_str = ["I"] * n
-                        for idx in indices:
-                            pauli_str[idx] = "Z"  # Big-endian: no reversal
-                        pauli_list.append(("".join(pauli_str), sign * spin_sign * coupling[indices]))
-
-        # return SparsePauliOp.from_list(pauli_list).simplify()
-        return SparsePauliOp.from_list(pauli_list)
 
     def calculate_energy(self, state, couplings, spin_type="binary", sign=1):
         """
@@ -192,8 +129,7 @@ class EnergyModel:
 
         Returns
         -------
-        float
-            alpha
+        float : alpha
         """
         if couplings is None:
             couplings = self.couplings
@@ -254,21 +190,23 @@ class EnergyModel:
         """
         if not isinstance(state, str):
             raise TypeError(f"State must be a string, but got {type(state)}")
-        energy = self.calc_an_energy(state)
+        energy = self.calculate_energy(state, self.couplings)
         return energy
 
     def get_all_energies(self) -> np.ndarray:
         """
         Calculate the energies for all possible spin states.
-        This method generates all possible spin states for the system, calculates the energy for each state,
-        and returns an array of these energies.
-        Returns:
+        This method generates all possible spin states for the
+        system and calculates the energy for each state.
+
+        Returns
+        -------
             np.ndarray: An array containing the energies of all possible spin states.
         """
         self.S = ["".join(i) for i in itertools.product("01", repeat=self.n)]
         all_energies = np.zeros(len(self.S))
         for state in self.S:
-            all_energies[int(state, 2)] = self.calc_an_energy(state)
+            all_energies[int(state, 2)] = self.calculate_energy(state, self.couplings)
         return all_energies
 
     def get_lowest_energies(self, num_states: int) -> typing.Tuple[np.ndarray, np.ndarray]:
@@ -370,37 +308,3 @@ class EnergyModel:
         """
 
         return np.exp(-1 * beta * E, dtype=np.longdouble)
-
-
-if __name__ == "__main__":
-    # Linear coefficients (h vector)
-    n_spins = 4
-    h = np.array([-1.0, -2.0, -3.0, -4.0])
-
-    # Quadratic coefficients (J matrix)
-    # J_12 = 0.5, J_23 = -1.5
-    # J = np.array([[0.0, 0.5, 0.0], [0.5, 0.0, -1.5], [0.0, -1.5, 0.0]])
-    J = np.array(
-        [
-            [0.0, 2.0, 0.0],
-            [2.0, 0.0, -1.5],
-            [0.0, -1.5, 0.0],
-        ]
-    )
-    J = J_upper = np.array(
-        [
-            [0.0, 1.2, -0.5, 0.0],
-            [0.0, 0.0, 0.8, 1.1],
-            [0.0, 0.0, 0.0, -1.4],
-            [0.0, 0.0, 0.0, 0.0],
-        ]
-    )
-
-    # Create the list of coupling tensors
-    my_couplings = [h, J]
-
-    energy_model = EnergyModel(n=4, couplings=my_couplings)
-
-    a3 = np.sqrt(n_spins) / np.sqrt(sum([J[i][j] ** 2 for i in range(n_spins) for j in range(i)]) + sum([h[j] ** 2 for j in range(n_spins)]))
-
-    print(a3)
