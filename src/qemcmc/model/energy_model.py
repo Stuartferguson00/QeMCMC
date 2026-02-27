@@ -21,7 +21,7 @@ class EnergyModel:
         self.n_spins = n
         self.couplings = couplings
         self.name = name
-        self.alpha = alpha
+        self.alpha = self.calculate_alpha(couplings)
         self.cost_function_signs = cost_function_signs
         self.initial_state = []
 
@@ -113,7 +113,7 @@ class EnergyModel:
 
         return new_couplings
 
-    def calculate_alpha(self, couplings=None, eps: float = 1e-15) -> float:
+    def calculate_alpha(self, couplings, eps: float = 1e-15) -> float:
         """
         Compute alpha = sqrt(n) / sqrt(sum of squares of UNIQUE coupling coefficients),
         assuming coupling tensors are symmetric representations.
