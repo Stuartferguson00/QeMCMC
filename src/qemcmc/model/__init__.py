@@ -1,3 +1,4 @@
-from .energy_model import EnergyModel  # Assuming that's your class name
+from .energy_model import EnergyModel
+
 
 __all__ = ["EnergyModel"]
