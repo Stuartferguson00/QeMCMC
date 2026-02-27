@@ -11,26 +11,24 @@ This is a lightweight research package for **Quantum-enhanced Markov Chain Monte
 
 The implementation is inspired by the numerics in [Layden's work on QeMCMC](https://www.nature.com/articles/s41586-023-06095-4) and builds upon the foundations of the [pafloxy/quMCMC](https://github.com/pafloxy/quMCMC) repository.
 
-For a more advanced implementation that allows for simulations on systems larger than the available quantum computer, please see our other work: [CGQeMCMC](https://github.com/Stuartferguson00/CGQeMCMC).
 
 ## Features
-- **Arbitrary Energy Models:** Define any classical Ising or QUBO-like model using a simple list of coupling tensors (example: 2D Ising `h`, `J` etc). A universal energy calculator handles arbitrary-order interactions.
+- **Arbitrary Energy Models:** Define any classical Ising or QUBO-like model using a simple list of coupling tensors (example: 2D Ising `h`, `J` etc). A universal energy calculator handles arbitrary-order interactions
 - **Automatic Hamiltonian Construction:** Build the corresponding **quantum Hamiltonian** based on the given couplings and run **Trotterised time evolution** with PennyLane's lightining qubit simulator
-- **Coarse Graining**: Optionally use local updates on chosen subgroups of spins to scale proposals.
+- **Coarse Graining**: Optionally use local updates on chosen subgroups of spins to scale proposals
 
 
 ## Installation
 
-This project uses [`uv`](https://astral.sh/uv), an extremely fast Python package installer written in Rust, intended as a drop-in replacement for `pip` and `pip-tools`. Official installation instructions at [astral.sh/uv](https://astral.sh/uv)
+This project uses [`uv`](https://astral.sh/uv), an extremely fast Python package installer written in Rust, intended as a drop-in replacement for `pip` and `pip-tools`. Official installation instructions available at [astral.sh/uv](https://astral.sh/uv)
 
 1.  **Install `uv`:**
     For macOS and Linux run:
-
     ```bash
     curl -LsSf https://astral.sh/uv/install.sh | sh
     ```
 
-2.  **Create the Virtual Environment:**
+2.  **Create a virtual environment:**
     From the project's root directory, run:
     ```bash
     uv sync
@@ -39,21 +37,24 @@ This project uses [`uv`](https://astral.sh/uv), an extremely fast Python package
 
 ## Quick Start - Example 2D Ising Model
 
-The library makes it simple to define a problem and generate the corresponding evolution circuit. Here is a quick example of a workflow:
 
-`model/energy_model.py`
+<!-- `model/energy_model.py`
 
 ```python
 # Use our pre-defined base class to initialise an energy model
 class EnergyModel():
     ...
 
-# Or optionally define your own energy model inheriting base class EnergyModel
+# Or optionally define a problem specific energy model inheriting the base class EnergyModel
 class your_energy_model(EnergyModel)
     ...
-```
+``` -->
+### 1. Initialise an energy model
+In this step, we define a classical energy function over binary spin configurations.
+This energy model is the target distribution that the QeMCMC sampler will explore.
 
-### 1. Create an energy model
+
+
 ```python
 import numpy as np
 from qemcmc.model import EnergyModel
@@ -73,8 +74,10 @@ couplings = [h, J]
 
 model = EnergyModel(n=n, couplings=couplings, name="my_ising")
 ```
+Here, h represents local fields and J encodes pairwise interactions in a standard Ising formulation. Higher-order coupling tensors can also be supplied.
 
 ### 2. (Optional) Define coarse graining
+Coarse graining allows the sampler to propose local multi-spin updates on predefined subgroups, rather than updating all spins at once.
 ```python
 from qemcmc.coarse_grain import CoarseGraining
 
@@ -84,7 +87,11 @@ cg = CoarseGraining(
     subgroup_probs=[0.3, 0.5, 0.2],
 )
 ```
+Each subgroup specifies a set of spin indices that may be updated together.
+At each MCMC step, a subgroup is sampled according to subgroup_probs.
+
 ### 3. Create and run QeMCMC
+Finally, we initialise the quantum-enhanced Markov chain and generate a single proposal using simulated quantum time evolution.
 ```python
 from qemcmc.qemcmc import QeMCMC
 
@@ -101,7 +108,7 @@ s = "01010"
 s_prime = sampler.get_s_prime(s)
 print("proposal:", s, "->", s_prime)
 ```
-
+Here, each call to get_s_prime runs a quantum circuit to generate a proposal state conditioned on the current configuration.
 
 ## Coarse Graining
 To do coarse graining, a list of subgroups and it's corresponding probabilities along with the couplings list should be passed in as parameters when initializing an energy model. The subgroup list should contain lists of spin indices that belong to each subgroup. For example, for a system with 6 spins divided into 2 subgroups of 3 spins each, the subgroup list would be `[[0, 1, 2], [3, 4, 5]]`. 
