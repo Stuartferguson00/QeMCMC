@@ -1,5 +1,5 @@
 import numpy as np
-from .MCMC import MCMC
+from .sampler import MCMC
 from tqdm import tqdm
 import scipy as sp
 
