@@ -147,7 +147,7 @@ class PennyLaneCircuitMaker:
         t_val = self.time[0] if isinstance(self.time, tuple) else self.time
         self.num_trotter_steps = int(np.floor((t_val / self.delta_time)))
 
-        self.dev = qml.device("default.qubit", wires=self.n_qubits)
+        self.dev = qml.device("lightning.qubit", wires=self.n_qubits)
 
     def get_problem_hamiltonian_OLD(self, couplings, sign=-1):
         """Constructs the Problem Hamiltonian using PennyLane observables."""
