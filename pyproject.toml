@@ -1,32 +1,24 @@
 [project]
 name = "qemcmc"
-dynamic = ["version"]
-description = "Quantum enhanced Markov Chain Monte Carlo sampler simulated using Qiskit and Qulacs."
+version = "0.0.0"
+description = "Quantum enhanced Markov Chain Monte Carlo sampler simulated using PennyLane"
 readme = "README.md"
-authors = [
-    { name = "Stuart Ferguson" },
-    { name = "Feroz Hassan" },
-]
+authors = [{ name = "Stuart Ferguson" }, { name = "Feroz Hassan" }]
 requires-python = ">=3.13"
 dependencies = [
-    "algorithms>=0.1.4",
-    "collections-extended>=2.0.2",
-    "iprogress>=0.4",
-    "ipywidgets>=8.1.7",
     "joblib>=1.5.0",
     "matplotlib>=3.10.3",
-    "numpy>=2.2.5",
+    "numpy>=2.2.5,<2.4",   # numpy version 2.4 onwards seems to cause an issue with PennyLane 
     "pandas>=2.2.3",
     "pennylane==0.44",
-    "pip>=25.1.1",
-    "pytest>=8.3.5",
     "qiskit==2.2",
     "qiskit-aer>=0.17.0",
-    #"qiskit-qulacs",
-    #"qulacs>=0.6.12",
-    "spyder-kernels==2.4",
     "tqdm>=4.67.1",
-    "typing-extensions>=4.13.2",
+    "matplotlib-inline",
+    "ipykernel",
+    "iprogress",
+    "spyder-kernels==2.4",
+    "ipywidgets>=8.1.7",
 ]
 
 [project.scripts]
@@ -35,6 +27,3 @@ qemcmc = "qemcmc:main"
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
-
-[tool.setuptools.dynamic]
-version = { attr = "qemcmc.__version__" }

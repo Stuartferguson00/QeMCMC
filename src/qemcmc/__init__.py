@@ -2,13 +2,10 @@ from .sampler import MCMC, ClassicalMCMC, QeMCMC
 from .model import EnergyModel
 from .circuits import CircuitMaker, PennyLaneCircuitMaker
 from .utils import MCMCState, MCMCChain, plot_chains, get_random_state, get_all_possible_states, ModelMaker
-
-
-__version__ = "0.3.32"
+from .spectralgap import SpectralGap
 
 __all__ = [
     "EnergyModel",
-    "CircuitMaker",
     "MCMC",
     "ClassicalMCMC",
     "QeMCMC",
@@ -19,6 +16,7 @@ __all__ = [
     "get_random_state",
     "get_all_possible_states",
     "SpectralGap",
+    "CircuitMaker",
     "PennyLaneCircuitMaker",
     "CoarseGraining",
 ]
