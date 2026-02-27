@@ -1,5 +1,8 @@
-import numpy as np
+# Internal
 from qemcmc.utils.helpers import validate_subgroups
+
+# External
+import numpy as np
 
 
 class CoarseGraining:
