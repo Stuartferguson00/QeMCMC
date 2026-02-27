@@ -250,7 +250,7 @@ class PennyLaneCircuitMaker:
     def get_sample(self, s: str):
         """Returns a measured sample after time evolution"""
         # Coefficients
-        alpha = self.model.calculate_alpha(couplings=self.local_couplings)
+        alpha = self.model.calculate_alpha(n=self.spin_length, couplings=self.local_couplings)
         coeff_mixer = self.gamma
         coeff_problem = -(1 - self.gamma) * alpha
 
@@ -277,6 +277,7 @@ class PennyLaneCircuitMaker:
         self.gamma = gamma
         self.time = time
         self.local_couplings = local_couplings
+        self.spin_length = len(subgroup_choice)
 
         # Get s_cg' for the subgroup and reconstruct full s' using s and s_cg'
         s_cg = "".join([s[i] for i in subgroup_choice])
