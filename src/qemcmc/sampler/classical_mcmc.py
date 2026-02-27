@@ -1,9 +1,9 @@
-# Internal package imports
+# Internal
 from qemcmc.utils import get_random_state
 from qemcmc.model import EnergyModel
 from qemcmc.sampler import MCMC
 
-# External package imports
+# External
 import numpy as np
 
 

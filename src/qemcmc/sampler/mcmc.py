@@ -1,8 +1,8 @@
-# Internal package imports
+# Internal
 from qemcmc.utils import MCMCChain, MCMCState, get_random_state
 from qemcmc.model import EnergyModel
 
-# External package imports
+# External
 import numpy as np
 from typing import Optional
 from tqdm import tqdm
@@ -69,7 +69,7 @@ class MCMC:
         # define MCMC chain
         mcmc_chain = MCMCChain([current_state], name=name)
 
-        # Do MCMC
+        # run MCMC
         for i in tqdm(range(0, n_hops), desc="Run " + name, disable=not verbose):
             # Propose a new state
             s_prime = self.update(current_state.bitstring)
