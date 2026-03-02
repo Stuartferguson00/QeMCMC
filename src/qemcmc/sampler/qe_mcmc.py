@@ -1,7 +1,7 @@
 # Internal
 from qemcmc.sampler import MCMC
 from qemcmc.model import EnergyModel
-from qemcmc.circuits import PennyLaneCircuitMaker
+from qemcmc.circuits import CircuitMaker
 from qemcmc.coarse_grain import CoarseGraining
 
 # External
@@ -46,7 +46,7 @@ class QeMCMC(MCMC):
         self.update = self.get_s_prime
         self.method = "quantum"
 
-        self.CM = PennyLaneCircuitMaker(self.model, self.gamma, self.time, delta_time=self.delta_time)
+        self.CM = CircuitMaker(self.model, self.gamma, self.time, delta_time=self.delta_time)
         self.cg = coarse_graining or CoarseGraining(model.n)
 
     def get_s_prime(self, current_state: str) -> str:
