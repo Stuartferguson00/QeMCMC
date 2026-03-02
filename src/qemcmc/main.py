@@ -17,8 +17,8 @@ if __name__ == "__main__":
         avg_energy = sum(chain.get_current_energy_array() for chain in chains) / len(chains)
         plt.plot(pos, avg_energy, color=color, label=f"Average {label}")
 
-    n = 7
-    steps = 500
+    n = 15
+    steps = 300
     reps = 10
     model_type = "Fully Connected Ising"
     model_type2 = "Coarse Grained Ising"
