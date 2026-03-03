@@ -31,9 +31,7 @@ jobs:
 
       - name: Build Sphinx HTML
         run: |
-          cd docs
-          make clean
-          make html
+          python -m sphinx -b html docs/source docs/build/html
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
