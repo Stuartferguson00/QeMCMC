@@ -12,31 +12,28 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent  # docs/source
-REPO_ROOT = HERE.parents[2]  # repo root (docs/source -> docs -> repo)
 
-# If your package is in repo_root/src/qemcmc:
+
+def find_repo_root(start: Path) -> Path:
+    for p in [start, *start.parents]:
+        if (p / "src" / "qemcmc").is_dir():
+            return p
+    raise RuntimeError("Could not find repo root containing src/qemcmc")
+
+
+REPO_ROOT = find_repo_root(HERE)
 SRC = REPO_ROOT / "src"
 PKG = SRC / "qemcmc"
 
-# If instead your package is in repo_root/QeMCMC/src/qemcmc, use:
-# SRC = REPO_ROOT / "QeMCMC" / "src"
-# PKG = SRC / "qemcmc"
-
+# sys.path.insert(0, os.path.abspath("../../QeMCMC/src"))
+sys.path.insert(0, str(SRC))
+autoapi_dirs = [str(PKG)]
 
 project = "QeMCMC"
 copyright = "2025, Feroz Hassan and Stuart Ferguson"
 author = "Feroz Hassan"
 release = "1.0.0"
 
-print(HERE)
-print(REPO_ROOT)
-print(SRC)
-print(PKG)
-
-
-# sys.path.insert(0, os.path.abspath("../../QeMCMC/src"))
-sys.path.insert(0, str(SRC))
-autoapi_dirs = [str(PKG)]
 
 # AutoAPI configuration
 # autoapi_dirs = ["../../QeMCMC/src/qemcmc"]  # Path to your source code
