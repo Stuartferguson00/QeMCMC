@@ -25,7 +25,7 @@ example
 
 ```{toctree}
 :maxdepth: 2
-:caption: Package API Docs
+:caption: Package Docs
 
 api/index
 ```
