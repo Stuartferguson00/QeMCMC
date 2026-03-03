@@ -8,7 +8,8 @@ __pycache__/
 
 .gitignore
 
-# docs
+# Sphinx documentation
+docs/doctrees/
 docs/build/
 
 # figures
