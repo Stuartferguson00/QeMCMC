@@ -1,6 +1,3 @@
-import os
-import sys
-
 # Configuration file for the Sphinx documentation builder.
 #
 # For the full list of built-in configuration values, see the documentation:
@@ -9,15 +6,40 @@ import sys
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
+
+import os
+import sys
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent  # docs/source
+REPO_ROOT = HERE.parents[2]  # repo root (docs/source -> docs -> repo)
+
+# If your package is in repo_root/src/qemcmc:
+SRC = REPO_ROOT / "src"
+PKG = SRC / "qemcmc"
+
+# If instead your package is in repo_root/QeMCMC/src/qemcmc, use:
+# SRC = REPO_ROOT / "QeMCMC" / "src"
+# PKG = SRC / "qemcmc"
+
+
 project = "QeMCMC"
 copyright = "2025, Feroz Hassan and Stuart Ferguson"
 author = "Feroz Hassan"
 release = "1.0.0"
 
-sys.path.insert(0, os.path.abspath("../../QeMCMC/src"))
+print(HERE)
+print(REPO_ROOT)
+print(SRC)
+print(PKG)
+
+
+# sys.path.insert(0, os.path.abspath("../../QeMCMC/src"))
+sys.path.insert(0, str(SRC))
+autoapi_dirs = [str(PKG)]
 
 # AutoAPI configuration
-autoapi_dirs = ["../../QeMCMC/src/qemcmc"]  # Path to your source code
+# autoapi_dirs = ["../../QeMCMC/src/qemcmc"]  # Path to your source code
 autoapi_type = "python"
 autoapi_template_dir = "_autoapi_templates"
 autoapi_root = "api"
