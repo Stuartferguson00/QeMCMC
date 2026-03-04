@@ -1,7 +1,7 @@
 <!-- # Quantum enhanced Markov Chain Monte Carlo Simulator Documentation -->
 
 
-```{include} ../../QeMCMC/README.md
+```{include} ../../README.md
 :relative-images:
 ```
 
@@ -14,7 +14,6 @@ energy-model
 coarse-graining
 ```
 
-
 ```{toctree}
 :maxdepth: 2
 :caption: Usage
@@ -22,10 +21,17 @@ coarse-graining
 example
 ```
 
+```{toctree}
+:maxdepth: 2
+:caption: Package API Docs
+
+api/index
+```
 
 ```{toctree}
 :maxdepth: 2
-:caption: Package Docs
+:caption: Development
 
-api/index
+license
+authors
 ```
