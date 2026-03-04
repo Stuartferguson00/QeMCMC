@@ -43,10 +43,8 @@ J = J_tril + J_triu
 h = np.round(np.random.normal(0, 1, n_spins), decimals=4)
 
 couplings = [h, J]
-# why does the user have to calculate their own alpha? At least we should do it in model maker. Ask the user to input max_number of qubits, and we enumerate all combinations internally.
-alpha = np.sqrt(n_spins) / np.sqrt(sum([J[i][j] ** 2 for i in range(n_spins) for j in range(i)]) + sum([h[j] ** 2 for j in range(n_spins)]))
 
-model = EnergyModel(n=n_spins, couplings=couplings, alpha=alpha)
+model = EnergyModel(n=n_spins, couplings=couplings)
 initial_states = model.initial_state
 
 
