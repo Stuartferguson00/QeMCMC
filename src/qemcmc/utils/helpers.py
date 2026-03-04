@@ -12,6 +12,13 @@ import matplotlib.pyplot as plt
 
 @dataclass
 class MCMCState:
+    """
+    Represents a single step in an MCMC trajectory.
+
+    Stores the proposed configuration, whether it was accepted by the
+    Metropolis rule, its energy, and the position of the step in the chain.
+    """
+
     bitstring: str
     accepted: bool
     energy: float = None
@@ -20,6 +27,15 @@ class MCMCState:
 
 @dataclass(init=True)
 class MCMCChain:
+    """
+    Container for the sequence of states produced during an MCMC run.
+
+    This class records all proposed states, tracks accepted configurations,
+    and provides helper methods for extracting trajectories, energies, and
+    empirical distributions from the Markov chain.
+
+    """
+
     def __init__(self, states: Optional[List[MCMCState]] = None, name: Optional[str] = "MCMC"):
         self.name = name
 

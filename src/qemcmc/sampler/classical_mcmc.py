@@ -9,7 +9,25 @@ import numpy as np
 
 class ClassicalMCMC(MCMC):
     """
-    A class to perform Markov Chain Monte Carlo (MCMC) simulations for the Ising model.
+    Classical Markov Chain Monte Carlo sampler.
+
+    This class implements purely classical proposal mechanisms for MCMC.
+    New candidate states are generated either by sampling a completely
+    random (uniform) configuration or by performing a local single-spin flip.
+
+    Parameters
+    ----------
+    model : EnergyModel
+        Energy model defining the target Boltzmann distribution.
+    temp : float
+        Sampling temperature of the system.
+    method : str, optional
+        Proposal mechanism used to generate candidate states.
+
+        - ``"uniform"`` : propose a completely random spin configuration.
+        - ``"local"`` : flip a single randomly chosen spin.
+
+        Default is ``"uniform"``.
     """
 
     def __init__(self, model: EnergyModel, temp, method="uniform"):
@@ -30,7 +48,7 @@ class ClassicalMCMC(MCMC):
         elif self.method == "local":
             self.update = self.update_local
         else:
-            print("method name is incorrect. Choose from: 'uniform' or 'local'")
+            print("method must be 'uniform' or 'local'")
 
     def update_uniform(self, current_state_bitstring: str) -> str:
         """

@@ -13,7 +13,43 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 class QeMCMC(MCMC):
     """
-    Class to set up the Quantum-enhanced Markov Chain Monte Carlo.
+    Quantum-enhanced Markov Chain Monte Carlo sampler.
+
+    This class implements the proposal mechanism of the quantum-enhanced
+    MCMC algorithm, where candidate states are generated via simulated
+    quantum time evolution of a transverse-field Hamiltonian. The resulting
+    proposals are then accepted or rejected using the classical Metropolis
+    rule defined in the base :class:`MCMC` class.
+
+    The quantum proposal circuit is constructed using :class:`CircuitMaker`
+    and can optionally operate on coarse-grained subgroups of spins to
+    improve scalability.
+
+    Parameters
+    ----------
+    model : EnergyModel
+        Energy model defining the target Boltzmann distribution.
+    gamma : float or tuple[float, float]
+        Transverse field strength used in the quantum evolution. If a tuple
+        is provided, a value is sampled uniformly from the range at each step.
+    time : int or tuple[int, int]
+        Number of Trotter steps used in the quantum evolution. If a tuple is
+        provided, the number of steps is randomly sampled within the range.
+    temp : float
+        Sampling temperature of the system.
+    delta_time : float, optional
+        Length of each Trotter step in the quantum evolution. Default is 0.8.
+    coarse_graining : CoarseGraining, optional
+        Optional coarse-graining scheme defining spin subgroups on which the
+        quantum proposal acts.
+
+    Notes
+    -----
+    The proposal step simulates time evolution of a Quantum circuit of a
+    Hamiltonian and measures the resulting state to produce a candidate
+    configuration. This proposal is then accepted or rejected using the
+    Metropolis criterion to ensure convergence to the target Boltzmann
+    distribution.
     """
 
     def __init__(

@@ -6,7 +6,27 @@ import numpy as np
 
 class EnergyModel:
     """
-    Base class for energy models. Initializes with a couplings list.
+    A base class for energy models for a classical energy function over n spins,
+    defined by arbitrary-order coupling tensors.
+
+    Parameters
+    ----------
+    n:
+        Number of spins
+    couplings:
+        List of numpy arrays representing interaction tensors. A 1D array encodes linear terms,
+        a 2D array encodes pairwise terms (expected symmetric), and higher-rank tensors encode
+        higher-order interactions.
+    name:
+        Optional label for the model (used in plotting / logging).
+    cost_function_signs:
+        Sign convention(s) used by downstream components (e.g. proposal/acceptance conventions).
+
+    Notes
+    -----
+    - Energies are computed by mapping binary states ``{0,1}`` to spin values ``{-1,+1}`` internally.
+    - Brute-force methods such as ``get_all_energies`` scale as O(2^n) and are intended only for
+      small systems.
     """
 
     def __init__(
@@ -14,7 +34,6 @@ class EnergyModel:
         n: int,
         couplings: List[np.ndarray] = [],
         name: str = None,
-        alpha: float = 1.0,
         cost_function_signs: list = [-1, -1],
     ):
         self.n = n

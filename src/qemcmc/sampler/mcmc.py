@@ -13,7 +13,31 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 class MCMC:
     """
-    A base class to perform Markov Chain Monte Carlo (MCMC) simulations for the Ising model.
+    Base class for Markov Chain Monte Carlo samplers.
+
+    This class implements the common machinery for Metropolis-style sampling over
+    discrete spin configurations defined by an :class:`EnergyModel`. It manages the
+    MCMC loop, evaluates energies, performs Metropolis acceptance tests, and records
+    the resulting Markov chain.
+
+    Concrete subclasses implement the proposal mechanism by defining an
+    ``update(state)`` method that generates a candidate state from the current one
+    (e.g. single-spin flips, block updates, or quantum proposals).
+
+    Parameters
+    ----------
+    model : EnergyModel
+        Energy model defining the target distribution over spin configurations.
+    temp : float
+        Sampling temperature. The inverse temperature is stored as ``beta = 1 / temp``.
+
+    Notes
+    -----
+    The sampler targets the Boltzmann distribution
+
+        p(s) ∝ exp(-E(s) / T)
+
+    where ``E(s)`` is the energy of configuration ``s`` provided by the energy model.
     """
 
     def __init__(self, model: EnergyModel, temp: float):

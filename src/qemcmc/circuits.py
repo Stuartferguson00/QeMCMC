@@ -3,6 +3,40 @@ import numpy as np
 
 
 class CircuitMaker:
+    """
+    Constructs and simulates quantum circuits used to generate QeMCMC proposals.
+
+    This class builds the Hamiltonian corresponding to a given energy model and
+    simulates its time evolution using PennyLane. Starting from a classical
+    bitstring configuration, the circuit performs Trotterised quantum evolution
+    and samples a new configuration from the resulting quantum state.
+
+    The generated sample serves as the proposal state in the quantum-enhanced
+    MCMC algorithm.
+
+    Parameters
+    ----------
+    model : EnergyModel
+        Energy model defining the problem Hamiltonian.
+    gamma : float
+        Strength of the transverse-field (mixer) term in the Hamiltonian.
+    time : int or tuple[int, int]
+        Total evolution time or range of evolution times used in the simulation.
+    delta_time : float, optional
+        Duration of each Trotter step used in the approximate time evolution.
+        Default is 0.8.
+
+    Notes
+    -----
+    The total Hamiltonian simulated by the circuit is
+
+        H = γ H_mixer + (1 - γ) α H_problem
+
+    where ``H_problem`` encodes the classical energy model and ``H_mixer``
+    corresponds to a transverse-field term. The evolution is approximated
+    using Trotterisation via ``qml.ApproxTimeEvolution``.
+    """
+
     def __init__(self, model, gamma, time, delta_time=0.8):
         self.model = model
         self.gamma = gamma

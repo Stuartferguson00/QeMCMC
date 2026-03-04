@@ -8,8 +8,14 @@ import itertools
 
 
 class ModelMaker:
-    # Class to control the initialisation of an energy model.
-    # It might seem a bit convoluted, but will allow for more complex models to be made in future.
+    """
+    Utility class for constructing standard Ising energy models used in simulations and experiments.
+
+    This class constructs predefined random energy models used for testing
+    and experimentation. Depending on the chosen ``model_type``, it generates
+    coupling tensors and initialises an :class:`EnergyModel` instance.
+    """
+
     def __init__(self, n_spins: int, model_type: str, name: str, coarse_graining_number: int = 1, cost_function_signs: list = [-1, -1]):
         self.name = name
         self.n_spins = n_spins
