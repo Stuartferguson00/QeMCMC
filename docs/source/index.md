@@ -32,6 +32,7 @@ api/index
 :maxdepth: 2
 :caption: Development
 
+github
 license
 authors
 ```
