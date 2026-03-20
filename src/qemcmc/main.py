@@ -17,16 +17,16 @@ if __name__ == "__main__":
         avg_energy = sum(chain.get_current_energy_array() for chain in chains) / len(chains)
         plt.plot(pos, avg_energy, color=color, label=f"Average {label}")
 
-    n = 15
+    n = 30
     steps = 300
     reps = 10
     model_type = "Fully Connected Ising"
     model_type2 = "Coarse Grained Ising"
     name = "Test Ising model"
 
-    model_maker = ModelMaker(n, model_type2, name)
+    model_maker = ModelMaker(n, model_type, name)
     model = model_maker.model
-    cg = model_maker.cg
+    # cg = model_maker.cg
 
     temp = 0.1
     initial_states = model.initial_state
@@ -58,7 +58,8 @@ if __name__ == "__main__":
     plot_chains(loc_chains, "lightgreen", "classical local MCMC")
 
     def run_qemcmc(rep):
-        qemcmc = QeMCMC(model, gamma=(0.3, 0.6), time=(2, 20), temp=temp, coarse_graining=cg)
+        # qemcmc = QeMCMC(model, gamma=(0.3, 0.6), time=(2, 20), temp=temp, coarse_graining=cg)
+        qemcmc = QeMCMC(model, gamma=(0.3, 0.6), time=(2, 20), temp=temp, m=3)
         return qemcmc.run(
             steps,
             initial_state=initial_states[rep],

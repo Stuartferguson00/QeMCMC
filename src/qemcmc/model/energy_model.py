@@ -113,9 +113,14 @@ class EnergyModel:
         new_couplings = [np.zeros((n_sub,) * d) for d in range(1, max_order + 1)]
 
         for coupling in self.couplings:
-            for indices in np.ndindex(coupling.shape):
+            # only loop over elements that actually exist (non-zero)
+            non_zero_indices = np.transpose(np.nonzero(coupling))
+
+            for indices in non_zero_indices:
+                indices = tuple(indices)
                 coeff = coupling[indices]
-                if coeff == 0 or len(set(indices)) != len(indices):
+
+                if len(set(indices)) != len(indices):
                     continue
 
                 in_group = [i for i in indices if i in subgroup_set]

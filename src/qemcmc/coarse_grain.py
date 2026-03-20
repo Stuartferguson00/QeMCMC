@@ -8,11 +8,9 @@ import numpy as np
 class CoarseGraining:
     def __init__(self, n, subgroups=None, subgroup_probs=None):
         if subgroups is None:
-            used = False
             subgroups = [list(range(n))]
             subgroup_probs = [1.0]
         else:
-            used = True
             if subgroup_probs is None:
                 subgroup_probs = [1.0 / len(subgroups)] * len(subgroups)
 
@@ -21,8 +19,18 @@ class CoarseGraining:
         self.n = n
         self.subgroups = subgroups
         self.subgroup_probs = subgroup_probs
-        self.used = used
 
     def sample(self, rng=np.random):
         idx = rng.choice(len(self.subgroups), p=self.subgroup_probs)
         return self.subgroups[idx]
+
+    def get_partitions(self, m: int, rng=np.random):
+        """
+        Randomly partitions the n spins into m disjoint subgroups.
+        Sizes will be approximately n/m.
+        """
+        spins = np.arange(self.n)
+        rng.shuffle(spins)
+        # array_split handles uneven divisions gracefully
+        return [list(chunk) for chunk in np.array_split(spins, m)]
+
