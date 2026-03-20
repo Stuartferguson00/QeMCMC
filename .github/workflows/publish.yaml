@@ -1,4 +1,4 @@
-name: Publish to PyPI
+name: Publish qemcmc to PyPI
 
 on:
   push:
