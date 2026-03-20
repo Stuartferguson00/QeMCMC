@@ -58,7 +58,7 @@ if __name__ == "__main__":
     plot_chains(loc_chains, "lightgreen", "classical local MCMC")
 
     def run_qemcmc(rep):
-        qemcmc = QeMCMC(model, gamma=(0.3, 0.6), time=(2, 20), temp=temp, coarse_graining=cg)
+        qemcmc = QeMCMC(model, gamma=(0.3, 0.6), time=(2, 20), temp=temp, coarse_graining=None)
         return qemcmc.run(
             steps,
             initial_state=initial_states[rep],
