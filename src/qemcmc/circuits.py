@@ -48,7 +48,14 @@ class CircuitMaker:
         t_val = self.time[0] if isinstance(self.time, tuple) else self.time
         self.num_trotter_steps = int(np.floor((t_val / self.delta_time)))
 
+        self._devices = {}
         self.dev = qml.device("lightning.qubit", wires=self.n_qubits)
+
+    def _get_device(self, num_wires: int):
+        """Gets a PennyLane device of the exact required size, or creates it if it doesn't exist."""
+        if num_wires not in self._devices:
+            self._devices[num_wires] = qml.device("lightning.qubit", wires=num_wires)
+        return self._devices[num_wires]
 
     def get_problem_hamiltonian(self, couplings, sign=-1):
         """
@@ -63,6 +70,7 @@ class CircuitMaker:
             if order == 0:
                 continue
             spin_sign = (-1) ** order
+
             non_zero_indices = np.transpose(np.nonzero(coupling_tensor))
             for index_tuple in non_zero_indices:
                 index_tuple = tuple(int(i) for i in index_tuple)
@@ -85,20 +93,23 @@ class CircuitMaker:
 
         return qml.Hamiltonian(coeffs, obs)
 
-    def get_mixer_hamiltonian(self):
+    def get_mixer_hamiltonian(self, num_wires: int):
         """Constructs the Mixer Hamiltonian: Σ X_i."""
-        return qml.Hamiltonian([1.0] * self.n_qubits, [qml.PauliX(i) for i in range(self.n_qubits)])
+        return qml.Hamiltonian([1.0] * num_wires, [qml.PauliX(i) for i in range(num_wires)])
 
     def get_state_vector(self, s: str) -> str:
         """Return the state vector."""
+        num_wires = len(s)
+        dev = self._get_device(num_wires)
+
         # Coefficients
         alpha = self.model.calculate_alpha(couplings=self.local_couplings)
         coeff_mixer = self.gamma
         coeff_problem = -(1 - self.gamma) * alpha
 
-        H_total = qml.Hamiltonian([coeff_mixer] + [1.0], [self.get_mixer_hamiltonian(), self.get_problem_hamiltonian(couplings=self.local_couplings, sign=coeff_problem)])
+        H_total = qml.Hamiltonian([coeff_mixer] + [1.0], [self.get_mixer_hamiltonian(num_wires), self.get_problem_hamiltonian(couplings=self.local_couplings, sign=coeff_problem)])
 
-        @qml.qnode(self.dev)
+        @qml.qnode(dev)
         def quantum_evolution(input_string):
             for i, bit in enumerate(input_string):
                 if bit == "1":
@@ -125,14 +136,17 @@ class CircuitMaker:
 
     def get_sample(self, s: str):
         """Returns a measured sample after time evolution"""
+        num_wires = len(s)
+        dev = self._get_device(num_wires)
+
         # Coefficients
         alpha = self.model.calculate_alpha(n=self.spin_length, couplings=self.local_couplings)
         coeff_mixer = self.gamma
         coeff_problem = -(1 - self.gamma) * alpha
 
-        H_total = qml.Hamiltonian([coeff_mixer] + [1.0], [self.get_mixer_hamiltonian(), self.get_problem_hamiltonian(couplings=self.local_couplings, sign=coeff_problem)])
+        H_total = qml.Hamiltonian([coeff_mixer] + [1.0], [self.get_mixer_hamiltonian(num_wires), self.get_problem_hamiltonian(couplings=self.local_couplings, sign=coeff_problem)])
 
-        @qml.qnode(self.dev, shots=1)
+        @qml.qnode(dev, shots=1)
         def quantum_evolution(input_string):
             for i, bit in enumerate(input_string):
                 if bit == "1":
