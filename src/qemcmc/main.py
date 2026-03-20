@@ -8,7 +8,7 @@ from qemcmc.coarse_grain import CoarseGraining
 from matplotlib import pyplot as plt
 from joblib import Parallel, delayed
 import numpy as np
-from tqdm import tqdm  # <-- Imported tqdm!
+from tqdm import tqdm
 
 
 def plot_thermalisation(chains_dict, n_spins, temp, exact_energy=None, lowest_levels=None):
