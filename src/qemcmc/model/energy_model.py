@@ -2,6 +2,9 @@ import itertools
 import typing
 from typing import List
 import numpy as np
+import dimod
+import math
+from tqdm import tqdm
 
 
 class EnergyModel:
@@ -47,6 +50,34 @@ class EnergyModel:
         for i in range(100):
             self.initial_state.append("".join(str(i) for i in np.random.randint(0, 2, self.n, dtype=int)))
 
+    def get_ground_state(self, num_reads=100, num_batches=10):
+        """
+        Finds an approximate ground state using Simulated Annealing.
+        """
+        h, J = self.couplings
+
+        h_dict = {i: h[i] for i in range(self.n_spins)}
+        J_dict = {(i, j): J[i, j] for i in range(self.n_spins) for j in range(i + 1, self.n_spins)}
+
+        bqm = dimod.BinaryQuadraticModel.from_ising(h_dict, J_dict)
+
+        sampler = dimod.SimulatedAnnealingSampler()
+        best_energy = float("inf")
+
+        reads_per_batch = max(1, num_reads // num_batches)
+
+        for _ in tqdm(range(num_batches), desc=f"Annealing ({num_reads} total reads)"):
+            response = sampler.sample(bqm, num_reads=reads_per_batch)
+
+            current_best = response.first
+            if current_best.energy < best_energy:
+                best_energy = current_best.energy
+
+        print("\n--- Simulated Annealing Results ---")
+        print(f"Lowest Energy Found: {best_energy:.4f}")
+
+        return best_energy
+
     def calculate_energy(self, state, couplings, spin_type="binary", sign=1):
         """
         Calculate the energy of a given state for an arbitrary-order Ising/QUBO model.
@@ -89,12 +120,13 @@ class EnergyModel:
             if order == 1:
                 total_energy += np.dot(coupling, state)
             elif order == 2:
-                total_energy += np.einsum("ij, i, j->", coupling, state, state)
+                total_energy += 0.5 * np.einsum("ij, i, j->", coupling, state, state)
             else:
                 # General case for any order >=3 (cubic, quartic etc.)
                 indices = "".join(chr(97 + i) for i in range(order))  # 'abc...', 'ijkl...'
                 einsum_str = f"{indices}," + ",".join([indices[i] for i in range(order)]) + "->"
-                total_energy += np.einsum(einsum_str, coupling, *([state] * order))
+                coefficient = 1.0 / math.factorial(order)
+                total_energy += coefficient * np.einsum(einsum_str, coupling, *([state] * order))
 
         return sign * total_energy
 
