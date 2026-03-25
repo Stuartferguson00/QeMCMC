@@ -11,6 +11,7 @@ class SpectralGap:
 
     def __init__(self, mcmc: MCMC):
         self.mcmc = mcmc
+        
 
     def find_acceptance_matrix(self):
         """
@@ -91,7 +92,8 @@ class SpectralGap:
 
         for i in range(2**self.mcmc.n_spins):
             for _ in range(multiples):
-                Q[i, :] += self.mcmc.get_output_statevector(self.mcmc.model.S[i])
+                Q[i, :] += abs(self.mcmc.CM.get_state_vector(self.mcmc.model.S[i]))**2
+                #get_output_statevector(self.mcmc.model.S[i])
         Q = Q / multiples
 
         return Q

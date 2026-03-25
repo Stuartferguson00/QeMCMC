@@ -105,13 +105,13 @@ class CircuitMaker:
         """Return the state vector."""
         num_wires = len(s)
         dev = self._get_device(num_wires)
-
         # Coefficients
-        alpha = self.model.calculate_alpha(couplings=self.local_couplings)
+        #alpha = self.model.calculate_alpha(couplings=self.local_couplings)
+        alpha = self.model.calculate_alpha(n=len(s), couplings=self.model.couplings) # dummy alpha for testing spectral gap, should not affect results
         coeff_mixer = self.gamma
         coeff_problem = -(1 - self.gamma) * alpha
 
-        H_total = qml.Hamiltonian([coeff_mixer] + [1.0], [self.get_mixer_hamiltonian(num_wires), self.get_problem_hamiltonian(couplings=self.local_couplings, sign=coeff_problem)])
+        H_total = qml.Hamiltonian([coeff_mixer] + [1.0], [self.get_mixer_hamiltonian(num_wires), self.get_problem_hamiltonian(couplings=self.model.couplings, sign=coeff_problem)])
 
         @qml.qnode(dev)
         def quantum_evolution(input_string):

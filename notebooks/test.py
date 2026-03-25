@@ -7,6 +7,7 @@ from joblib import Parallel, delayed
 
 # sampler contains the classical and quantum enhanced MCMC sampler
 from qemcmc.sampler import ClassicalMCMC, QeMCMC
+from qemcmc.sampler.runners import MCMCRunner
 
 # These are object useful to store the results of the MCMC simulation
 from qemcmc.utils import plot_chains
@@ -50,17 +51,19 @@ initial_states = model.initial_state
 
 # Run classical (uniform and local) chains
 
+runner = MCMCRunner()
+
 uni_chains = []
 for rep in range(reps):
     classical_uniform_MCMC = ClassicalMCMC(model, temp, method="uniform")
-    uni_chain = classical_uniform_MCMC.run(steps, initial_state=initial_states[rep], name="classical uniform MCMC", verbose=False, sample_frequency=1)
+    uni_chain = runner.run(classical_uniform_MCMC, steps, initial_state=initial_states[rep], name="classical uniform MCMC", verbose=False, sample_frequency=1)
     uni_chains.append(uni_chain)
 
 
 loc_chains = []
 for rep in range(reps):
     classical_local_MCMC = ClassicalMCMC(model, temp, method="local")
-    loc_chain = classical_local_MCMC.run(steps, initial_state=initial_states[rep], name="classical local MCMC", verbose=False, sample_frequency=1)
+    loc_chain = runner.run(classical_local_MCMC, steps, initial_state=initial_states[rep], name="classical local MCMC", verbose=False, sample_frequency=1)
     loc_chains.append(loc_chain)
 
 
@@ -72,7 +75,7 @@ for rep in range(reps):
 
 def run_qemcmc(rep):
     quantum_MCMC = QeMCMC(model, gamma=gamma, time=time, temp=temp)
-    return quantum_MCMC.run(steps, initial_state=initial_states[rep], name="QeMCMC", verbose=True, sample_frequency=1)
+    return runner.run(quantum_MCMC, steps, initial_state=initial_states[rep], name="QeMCMC", verbose=True, sample_frequency=1)
 
 
 # Run in parallel as they can take a while.
