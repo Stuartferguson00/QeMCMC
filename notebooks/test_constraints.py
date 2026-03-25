@@ -51,25 +51,6 @@ couplings = [h, J]
 # Note that we could add a term representing the constraint to this, 
 # but it would be highly innefficient in terms of hamiltonian simulation
 # Instead we just leave it out.
-#
-# J_n = np.zeros((n_spins,)*n_spins)
-
-
-# h_i*Z_i
-# J_ij*Z_i*Z_j
-# J_i...n*Z_i*Z_j*Z_k*...*Z_n
-
-
-# # loop through the indices of J 
-# for i,j,k in range(n_spins):
-#     if i != j, i != k, j != k:
-#         add term J_ijk*Z_i*Z_j*Z_k to hamiltonian
-
-# J_sparse = {(0,1,2): 1.3, (0,3,4): -0.7, (1,2,4): 0.5} # example sparse representation of 3-local couplings
-# J_paulis = [1.3*ZZZIII, -0.7*ZIIIZZ, 0.5*IZZIIZ] # example representation of the same couplings in terms of Pauli strings (using some hypothetical notation where ZZZIII means Z on qubits 0,1,2 and I on 3,4,5)
-# # loop through the indices of J 
-# for term in J_sparse:
-#     add term.key * Z_term[0]*Z_term[0]*Z_term[0] to hamiltonian
 
 
 # Define a constraint function: magnetization must be zero (equal number of 0s and 1s)
