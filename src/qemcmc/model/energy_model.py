@@ -48,7 +48,7 @@ class EnergyModel:
         self.initial_state = []
 
         for i in range(100):
-            self.initial_state.append("".join(str(i) for i in np.random.randint(0, 2, self.n, dtype=int)))
+            self.initial_state.append(self.get_random_state())
 
     def get_ground_state(self, num_reads=100, num_batches=10):
         """
@@ -264,7 +264,7 @@ class EnergyModel:
             all_energies[int(state, 2)] = self.calculate_energy(state, self.couplings)
         return all_energies
 
-    def get_lowest_energies(self, num_states: int) -> typing.Tuple[np.ndarray, np.ndarray]:
+    def get_lowest_energies(self, num_states: int, return_configurations: bool = False) -> typing.Tuple[np.ndarray, np.ndarray]:
         """
         Retrieve the lowest energy states and their degeneracies.
         This method computes all possible energies and then finds the specified number
@@ -273,6 +273,7 @@ class EnergyModel:
         memory intensive and slow.
         Args:
             num_states (int): The number of lowest energy states to retrieve.
+            return_configurations (bool): Whether to also return the corresponding configurations of the lowest energy states. Defaults to False.
         Returns:
             Two numpy arrays:
                 - The first array contains the lowest energy values.
@@ -283,8 +284,14 @@ class EnergyModel:
 
         # very slow (sorts whole array)
         self.lowest_energies, self.lowest_energy_degeneracy = self.find_lowest_values(all_energies, num_values=num_states)
-
-        return self.lowest_energies, self.lowest_energy_degeneracy
+        if return_configurations:
+            lowest_configs = []
+            for energy in self.lowest_energies:
+                configs = [self.S[i] for i, e in enumerate(all_energies) if e == energy]
+                lowest_configs.append(configs)
+            return self.lowest_energies, self.lowest_energy_degeneracy, lowest_configs
+        else:
+            return self.lowest_energies, self.lowest_energy_degeneracy
 
     def find_lowest_values(self, arr: np.ndarray, num_values: int = 5):
         """
@@ -363,3 +370,6 @@ class EnergyModel:
         """
 
         return np.exp(-1 * beta * E, dtype=np.longdouble)
+    
+    def get_random_state(self) -> str:
+        return "".join(str(i) for i in np.random.randint(0, 2, self.n, dtype=int))

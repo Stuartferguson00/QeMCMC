@@ -37,7 +37,7 @@ class ClassicalMCMC(MCMC):
         Args:
         model (IsingEnergyFunction): The energy function of the Ising model.
         temp (float): The temperature of the system.
-        method (str, optional): The update method to use. Options are "uniform" or "local". Default is "uniform".
+        method (str, optional): The update method to use. Options are "uniform", "local" or "2-local". Default is "uniform".
         """
         super().__init__(model, temp)
 
@@ -47,6 +47,8 @@ class ClassicalMCMC(MCMC):
             self.update = self.update_uniform
         elif self.method == "local":
             self.update = self.update_local
+        elif self.method == "2-local":
+            self.update = self.update_2local
         else:
             print("method must be 'uniform' or 'local'")
 
@@ -76,6 +78,27 @@ class ClassicalMCMC(MCMC):
         # Flip the chosen spin
         c_s = list(current_state_bitstring)
         c_s[choice] = str(int(c_s[choice]) ^ 1)
+
+        # Return the new state as a bitstring
+        s_prime = "".join(c_s)
+        return s_prime
+
+    def update_2local(self, current_state_bitstring: str) -> str:
+        """
+        Update the local state by flipping two randomly chosen spins in the current state bitstring.
+        Args:
+            current_state_bitstring (str): The current state represented as a bitstring.
+        Returns:
+            str: The new state bitstring after flipping two randomly chosen spins.
+        """
+
+        # Randomly choose which two spins to flip
+        choices = np.random.choice(self.n_spins, size=2, replace=False)
+
+        # Flip the chosen spins
+        c_s = list(current_state_bitstring)
+        for choice in choices:
+            c_s[choice] = str(int(c_s[choice]) ^ 1)
 
         # Return the new state as a bitstring
         s_prime = "".join(c_s)

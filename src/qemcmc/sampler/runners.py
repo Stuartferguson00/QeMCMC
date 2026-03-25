@@ -111,3 +111,4 @@ class ConstrainedMCMCRunner:
                 mcmc_chain.add_state(MCMCState(current_state.bitstring, True, energy_s, position=i))
 
         return mcmc_chain
+    
