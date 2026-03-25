@@ -60,6 +60,7 @@ class QeMCMC(MCMC):
         temp: float,
         delta_time: float = 0.8,
         coarse_graining=None,
+        m: int = 3,  # num of subgroups to partition into
     ):
         """
         Initializes an instance of the QeMCMC class.
@@ -77,6 +78,7 @@ class QeMCMC(MCMC):
         self.gamma = self._validate_gamma(gamma)
         self.time = self._validate_time(time)
         self.delta_time = delta_time
+        self.m = m
 
         # check
         self.update = self.get_s_prime
@@ -87,31 +89,27 @@ class QeMCMC(MCMC):
 
     def get_s_prime(self, current_state: str) -> str:
         """
-        Returns the next state s_prime based on the current state in the markov chain.
-
-        Args:
-        current_state (str): The current state.
-
-        Returns:
-        str: The next state s_prime.
+        Perform 'm' sequential quantum updates across
+        non-overlapping subgroups to produce a macro-proposal s_prime.
         """
-
         if not isinstance(current_state, str):
             raise TypeError(f"Bitstring must be of type str, got {type(current_state)}: {current_state!r}")
 
-        g = self.gamma
-        t = self.time
-        if isinstance(self.gamma, tuple):
-            g = np.random.uniform(min(self.gamma), max(self.gamma))
-        if isinstance(self.time, tuple):
-            t = np.random.randint(min(self.time), max(self.time) + 1)
+        # I only sample gamma and time once per full proposal, not per subgroup update
+        g = self.gamma if not isinstance(self.gamma, tuple) else np.random.uniform(*self.gamma)
+        t = self.time if not isinstance(self.time, tuple) else np.random.randint(self.time[0], self.time[1] + 1)
 
-        subgroup_choice = self.cg.sample()
-        local_couplings = self.model.get_subgroup_couplings(subgroup=subgroup_choice, current_state=current_state)
+        # Generate m disjoint partitions (e.g., if n=10, m=3 -> [[3,8,1,9], [0,4,2], [5,6,7]])
+        partitions = self.cg.get_partitions(m=self.m)
 
-        s_prime = self.CM.update(s=current_state, subgroup_choice=subgroup_choice, local_couplings=local_couplings, gamma=g, time=t)
+        working_state = current_state
+        for subgroup in partitions:
+            # recalculate couplings cause the spins outside the subgroup
+            # might have flipped in the previous loop iteration
+            local_couplings = self.model.get_subgroup_couplings(subgroup=subgroup, current_state=working_state)
+            working_state = self.CM.update(s=working_state, subgroup_choice=subgroup, local_couplings=local_couplings, gamma=g, time=t)
 
-        return s_prime
+        return working_state
 
     def _validate_gamma(self, gamma):
         if isinstance(gamma, (float, int)):

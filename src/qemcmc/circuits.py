@@ -48,14 +48,16 @@ class CircuitMaker:
         t_val = self.time[0] if isinstance(self.time, tuple) else self.time
         self.num_trotter_steps = int(np.floor((t_val / self.delta_time)))
 
-        self._devices = {}
         self.dev = qml.device("lightning.qubit", wires=self.n_qubits)
 
+        # cache devices for dynamic subgroup sizes if needed
+        self.devices = {}
+
     def _get_device(self, num_wires: int):
-        """Gets a PennyLane device of the exact required size, or creates it if it doesn't exist."""
-        if num_wires not in self._devices:
-            self._devices[num_wires] = qml.device("lightning.qubit", wires=num_wires)
-        return self._devices[num_wires]
+        """Get or create a PennyLane device for the given number of wires."""
+        if num_wires not in self.devices:
+            self.devices[num_wires] = qml.device("lightning.qubit", wires=num_wires)
+        return self.devices[num_wires]
 
     def get_problem_hamiltonian(self, couplings, sign=-1):
         """
@@ -93,8 +95,10 @@ class CircuitMaker:
 
         return qml.Hamiltonian(coeffs, obs)
 
-    def get_mixer_hamiltonian(self, num_wires: int):
-        """Constructs the Mixer Hamiltonian: Σ X_i."""
+    def get_mixer_hamiltonian(self, num_wires: int = None):
+        """Constructs the Mixer Hamiltonian: Σ X_i (for a given full system or subgroup)"""
+        if num_wires is None:
+            num_wires = self.n_qubits
         return qml.Hamiltonian([1.0] * num_wires, [qml.PauliX(i) for i in range(num_wires)])
 
     def get_state_vector(self, s: str) -> str:
@@ -134,9 +138,10 @@ class CircuitMaker:
         s_prime = np.binary_repr(idx, width=self.model.n)
         return s_prime
 
-    def get_sample(self, s: str):
+    def get_sample(self, s_cg: str):
         """Returns a measured sample after time evolution"""
-        num_wires = len(s)
+
+        num_wires = len(s_cg)
         dev = self._get_device(num_wires)
 
         # Coefficients
@@ -146,6 +151,7 @@ class CircuitMaker:
 
         H_total = qml.Hamiltonian([coeff_mixer] + [1.0], [self.get_mixer_hamiltonian(num_wires), self.get_problem_hamiltonian(couplings=self.local_couplings, sign=coeff_problem)])
 
+        # set qnode to use our device with dynamically chosen wires
         @qml.qnode(dev, shots=1)
         def quantum_evolution(input_string):
             for i, bit in enumerate(input_string):
@@ -155,7 +161,7 @@ class CircuitMaker:
             return qml.sample()
 
         # Get the first shot from the sample
-        sample = quantum_evolution(s)[0]  # pennylane update doesnt squeeze singletons anymore
+        sample = quantum_evolution(s_cg)[0]  # pennylane update doesnt squeeze singletons anymore
         bitstring = "".join(str(int(b)) for b in sample)
         return bitstring
 
