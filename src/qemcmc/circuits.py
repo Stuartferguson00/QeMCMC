@@ -59,41 +59,91 @@ class CircuitMaker:
             self.devices[num_wires] = qml.device("lightning.qubit", wires=num_wires)
         return self.devices[num_wires]
 
-    def get_problem_hamiltonian(self, couplings, sign=-1):
+    # def get_problem_hamiltonian(self, couplings, sign=-1):
+    #     """
+    #     Construct Problem Hamiltonian from symmetric coupling tensors.
+    #     """
+    #     coeffs = []
+    #     obs = []
+
+    #     for coupling_tensor in couplings:
+    #         coupling_tensor = np.asarray(coupling_tensor)
+    #         order = coupling_tensor.ndim
+    #         if order == 0:
+    #             continue
+    #         spin_sign = (-1) ** order
+
+    #         non_zero_indices = np.transpose(np.nonzero(coupling_tensor))
+    #         for index_tuple in non_zero_indices:
+    #             index_tuple = tuple(int(i) for i in index_tuple)
+
+    #             # skip repeated indices
+    #             if len(set(index_tuple)) != len(index_tuple):
+    #                 continue
+    #             # keep only strictly increasing tuples i1 < i2 < ... < ik
+    #             if index_tuple != tuple(sorted(index_tuple)):
+    #                 continue
+    #             coeff = coupling_tensor[index_tuple]
+    #             if coeff == 0:
+    #                 continue
+
+    #             term = qml.PauliZ(index_tuple[0])
+    #             for q in index_tuple[1:]:
+    #                 term = term @ qml.PauliZ(q)
+    #             coeffs.append(sign * spin_sign * float(coeff))
+    #             obs.append(term)
+
+    #     return qml.Hamiltonian(coeffs, obs)
+
+    def get_problem_hamiltonian(self, couplings, model_type="ising", sign=1):
         """
         Construct Problem Hamiltonian from symmetric coupling tensors.
+        Supports both 'ising' (-1/+1) and 'qubo' (0/1) input tensors.
         """
-        coeffs = []
-        obs = []
+        total_hamiltonian = 0.0 * qml.Identity(0)
 
         for coupling_tensor in couplings:
             coupling_tensor = np.asarray(coupling_tensor)
             order = coupling_tensor.ndim
             if order == 0:
                 continue
-            spin_sign = (-1) ** order
 
+            spin_sign = (-1) ** order if model_type == "ising" else 1
             non_zero_indices = np.transpose(np.nonzero(coupling_tensor))
             for index_tuple in non_zero_indices:
                 index_tuple = tuple(int(i) for i in index_tuple)
 
-                # skip repeated indices
-                if len(set(index_tuple)) != len(index_tuple):
+                if len(set(index_tuple)) != len(index_tuple):  # skip repeated indices
                     continue
-                # keep only strictly increasing tuples i1 < i2 < ... < ik
-                if index_tuple != tuple(sorted(index_tuple)):
-                    continue
-                coeff = coupling_tensor[index_tuple]
-                if coeff == 0:
+                if index_tuple != tuple(sorted(index_tuple)):  # keep only strictly increasing i1 < i2 < ... < ik
                     continue
 
-                term = qml.PauliZ(index_tuple[0])
-                for q in index_tuple[1:]:
-                    term = term @ qml.PauliZ(q)
-                coeffs.append(sign * spin_sign * float(coeff))
-                obs.append(term)
+                coeff = float(coupling_tensor[index_tuple])
+                if coeff == 0.0:
+                    continue
 
-        return qml.Hamiltonian(coeffs, obs)
+                if model_type == "ising":
+                    term = qml.PauliZ(index_tuple[0])
+                    for q in index_tuple[1:]:
+                        term = term @ qml.PauliZ(q)
+
+                    total_hamiltonian += (sign * spin_sign * coeff) * term
+
+                elif model_type == "qubo":
+                    # 0.5 * (I - Z) for first variable
+                    term = 0.5 * (qml.Identity(index_tuple[0]) - qml.PauliZ(index_tuple[0]))
+
+                    # multiply by 0.5 * (I - Z) for rest
+                    for q in index_tuple[1:]:
+                        next_var = 0.5 * (qml.Identity(q) - qml.PauliZ(q))
+                        term = term @ next_var
+
+                    total_hamiltonian += (sign * coeff) * term
+
+        simplified_H = qml.simplify(total_hamiltonian)
+
+        coeffs, ops = simplified_H.terms()
+        return qml.Hamiltonian(coeffs, ops)
 
     def get_mixer_hamiltonian(self, num_wires: int = None):
         """Constructs the Mixer Hamiltonian: Σ X_i (for a given full system or subgroup)"""
@@ -124,19 +174,19 @@ class CircuitMaker:
         state_vector = quantum_evolution(s)
         return state_vector
 
-    def get_sample_from_state_vector(self, s: str) -> str:
-        """Returns a single sampled bitstring s' using the quantum distribution."""
-        # Get the full state vector probabilities
-        state_vector = self.get_state_vector(s)  # This returns the complex amplitudes
-        probs = np.abs(state_vector) ** 2
+    # def get_sample_from_state_vector(self, s: str) -> str:
+    #     """Returns a single sampled bitstring s' using the quantum distribution."""
+    #     # Get the full state vector probabilities
+    #     state_vector = self.get_state_vector(s)  # This returns the complex amplitudes
+    #     probs = np.abs(state_vector) ** 2
 
-        # Sample one index based on the probabilities
-        n_states = len(probs)
-        idx = np.random.choice(n_states, p=probs)
+    #     # Sample one index based on the probabilities
+    #     n_states = len(probs)
+    #     idx = np.random.choice(n_states, p=probs)
 
-        # Convert that index back to a bitstring (e.g., 3 -> "011")
-        s_prime = np.binary_repr(idx, width=self.model.n)
-        return s_prime
+    #     # Convert that index back to a bitstring (e.g., 3 -> "011")
+    #     s_prime = np.binary_repr(idx, width=self.model.n)
+    #     return s_prime
 
     def get_sample(self, s_cg: str):
         """Returns a measured sample after time evolution"""
