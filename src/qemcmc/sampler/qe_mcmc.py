@@ -62,7 +62,7 @@ class QeMCMC(MCMC):
         temp: float,
         delta_time: float = 0.8,
         coarse_graining=None,
-        m: int = 3,  # num of subgroups to partition into
+        m: int = 1,  # num of subgroups to partition into
     ):
         """
         Initializes an instance of the QeMCMC class.

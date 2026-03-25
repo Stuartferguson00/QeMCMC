@@ -14,7 +14,7 @@ from qemcmc.sampler.runners import ConstrainedMCMCRunner
 
 # These are object useful to store the results of the MCMC simulation
 from qemcmc.utils import plot_chains
-
+from qemcmc.utils import get_random_state
 # This helps you build an example Ising model
 from qemcmc.utils import ModelMaker
 import itertools
@@ -22,11 +22,11 @@ from qemcmc.model import EnergyModel
 
 
 # Define parameters
-n = 20  # Number of spins in the system
+n = 10  # Number of spins in the system
 coarse_graining_number = n
 n_spins = n
 reps = 5  # How many markov chains to produce
-steps = 10000  # Length of each markov chain
+steps = 300  # Length of each markov chain
 temp = 0.1  # Temperature of the system
 
 
@@ -37,7 +37,7 @@ time = (1, 20)  # Time for hamiltonian simulation
 # Make all combinations of subgroups that include coarse_graining_number of integers between 0 and n_spins -1
 # Feroz, could we add this simple functionality to ModelMaker?
 subgroups = list(itertools.combinations(range(n_spins), coarse_graining_number))
-
+print("Subgroups:", subgroups)
 
 shape_of_J = (n_spins, n_spins)
 J = np.round(np.random.normal(0, 1, shape_of_J), decimals=4)
@@ -63,7 +63,7 @@ if n%2 != 0:
 model = EnergyModel(n=n_spins, couplings=couplings)
 init_states = []
 while len(init_states) < reps:
-    state = model.get_random_state()
+    state = get_random_state(n_spins)
     if zero_magnetization_constraint(state):
         init_states.append(state)
 
@@ -104,7 +104,7 @@ for rep in range(reps):
 
 
 def run_qemcmc(rep):
-    quantum_MCMC = QeMCMC(model, gamma=gamma, time=time, temp=temp)
+    quantum_MCMC = QeMCMC(model, gamma=gamma, time=time, temp=temp, m = 1)
     return runner.run(quantum_MCMC, steps, initial_state=initial_states[rep], name="QeMCMC", verbose=True, sample_frequency=1)
 
 
@@ -120,7 +120,7 @@ plot_chains(loc_chains, "lightgreen", "classical local MCMC", plot_individual_ch
 plot_chains(loc2_chains, "darkgreen", "classical 2-local MCMC", plot_individual_chains=False)
 plot_chains(Qe_chains, "lightblue", "QeMCMC", plot_individual_chains=False)
 
-lowest_energies, degeneracies, lowest_configs = model.get_lowest_energies(10, return_configurations=True)
+lowest_energies, degeneracies, lowest_configs = model.get_lowest_energies(20, return_configurations=True)
 
 for i in range(len(lowest_energies)):
     if degeneracies[i] > 1:

@@ -5,7 +5,7 @@ import numpy as np
 import dimod
 import math
 from tqdm import tqdm
-
+from qemcmc.utils.helpers import get_random_state
 
 class EnergyModel:
     """
@@ -48,7 +48,7 @@ class EnergyModel:
         self.initial_state = []
 
         for i in range(100):
-            self.initial_state.append(self.get_random_state())
+            self.initial_state.append(get_random_state(self.n))
 
     def get_ground_state(self, num_reads=100, num_batches=10):
         """
@@ -371,5 +371,4 @@ class EnergyModel:
 
         return np.exp(-1 * beta * E, dtype=np.longdouble)
     
-    def get_random_state(self) -> str:
-        return "".join(str(i) for i in np.random.randint(0, 2, self.n, dtype=int))
+    

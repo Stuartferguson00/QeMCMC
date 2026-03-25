@@ -224,7 +224,7 @@ class CircuitMaker:
         self.time = time
         self.local_couplings = local_couplings
         self.spin_length = len(subgroup_choice)
-
+        
         # Get s_cg' for the subgroup and reconstruct full s' using s and s_cg'
         s_cg = "".join([s[i] for i in subgroup_choice])
         s_cg_prime = self.get_sample(s_cg)

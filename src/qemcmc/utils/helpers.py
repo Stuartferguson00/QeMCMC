@@ -170,10 +170,10 @@ def get_random_state(num_spins: int) -> str:
         str: A bitstring representing the random state.
     """
     # Define the size of state space
-    state_space = 2 ** (num_spins)
+    state_space = np.int64(2 ** (num_spins))
 
     # Generate a random state
-    next_state = np.random.randint(0, state_space, 1)[0]
+    next_state = np.random.randint(0, state_space, 1, dtype=np.int64)[0]
 
     # Convert the state from integer to a bitstring
     s_prime = f"{next_state:0{num_spins}b}"
