@@ -42,6 +42,8 @@ class QeMCMC(MCMC):
     coarse_graining : CoarseGraining, optional
         Optional coarse-graining scheme defining spin subgroups on which the
         quantum proposal acts.
+    m: int, optional
+        Number of subgroups to partition the spins into for sequential updates. Default is 3.
 
     Notes
     -----
@@ -71,6 +73,8 @@ class QeMCMC(MCMC):
             time (int|tuple[int, int]): The time parameter. The number of trotter steps to take. (can be sampled from range represented by tuple.)
             temp (float): The temperature parameter.
             delta_time (float, optional): The delta time parameter for length of trotter steps. Defaults to 0.8.
+            coarse_graining (CoarseGraining, optional): An optional coarse-graining object to define spin subgroups. Defaults to None.
+            m (int, optional): The number of subgroups to partition the spins into for sequential updates. Defaults to 3.
         """
 
         super().__init__(model, temp)
