@@ -1,5 +1,5 @@
 # Internal
-from qemcmc.sampler import MCMC
+from qemcmc.sampler import Proposal
 from qemcmc.model import EnergyModel
 from qemcmc.circuits import CircuitMaker
 from qemcmc.coarse_grain import CoarseGraining
@@ -11,7 +11,7 @@ import numpy as np
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 
-class QeMCMC(MCMC):
+class QeProposal(Proposal):
     """
     Quantum-enhanced Markov Chain Monte Carlo sampler.
 
@@ -35,8 +35,6 @@ class QeMCMC(MCMC):
     time : int or tuple[int, int]
         Number of Trotter steps used in the quantum evolution. If a tuple is
         provided, the number of steps is randomly sampled within the range.
-    temp : float
-        Sampling temperature of the system.
     delta_time : float, optional
         Length of each Trotter step in the quantum evolution. Default is 0.8.
     coarse_graining : CoarseGraining, optional
@@ -59,9 +57,9 @@ class QeMCMC(MCMC):
         model: EnergyModel,
         gamma: float | tuple[float, float],
         time: int | tuple[int, int],
-        temp: float,
         delta_time: float = 0.8,
         coarse_graining=None,
+        coupling_weights = None,
         m: int = 1,  # num of subgroups to partition into
     ):
         """
@@ -71,27 +69,32 @@ class QeMCMC(MCMC):
             model (Model): The model to be simulated.
             gamma (float|tuple[float, float]): The gamma parameter.
             time (int|tuple[int, int]): The time parameter. The number of trotter steps to take. (can be sampled from range represented by tuple.)
-            temp (float): The temperature parameter.
             delta_time (float, optional): The delta time parameter for length of trotter steps. Defaults to 0.8.
             coarse_graining (CoarseGraining, optional): An optional coarse-graining object to define spin subgroups. Defaults to None.
             m (int, optional): The number of subgroups to partition the spins into for sequential updates. Defaults to 3.
         """
 
-        super().__init__(model, temp)
+        super().__init__(model)
+
+        if coupling_weights is not None:
+            if len(coupling_weights) != len(model.couplings):
+                raise ValueError(f"Length of coupling_weights must match number of couplings in the model. Expected {len(model.couplings)}, got {len(coupling_weights)}.")
+            self.coupling_weights = np.array(coupling_weights)
+        else:
+            self.coupling_weights = np.ones(len(model.couplings))
 
         self.gamma = self._validate_gamma(gamma)
         self.time = self._validate_time(time)
         self.delta_time = delta_time
         self.m = m
 
-        # check
-        self.update = self.get_s_prime
+        #self.update = self.get_s_prime
         self.method = "quantum"
 
-        self.CM = CircuitMaker(self.model, self.gamma, self.time, delta_time=self.delta_time)
+        self.CM = CircuitMaker(self.model, delta_time=self.delta_time)
         self.cg = coarse_graining or CoarseGraining(model.n)
 
-    def get_s_prime(self, current_state: str) -> str:
+    def update(self, current_state: str) -> str:
         """
         Perform 'm' sequential quantum updates across
         non-overlapping subgroups to produce a macro-proposal s_prime.
@@ -110,7 +113,7 @@ class QeMCMC(MCMC):
         for subgroup in partitions:
             # recalculate couplings cause the spins outside the subgroup
             # might have flipped in the previous loop iteration
-            local_couplings = self.model.get_subgroup_couplings(subgroup=subgroup, current_state=working_state)
+            local_couplings = self.model.get_subgroup_couplings(subgroup=subgroup, current_state=working_state, coupling_weights=self.coupling_weights)
             working_state = self.CM.update(s=working_state, subgroup_choice=subgroup, local_couplings=local_couplings, gamma=g, time=t)
 
         return working_state

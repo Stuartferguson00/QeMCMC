@@ -47,7 +47,8 @@ class EnergyModel:
         self.n_spins = n
         self.couplings = couplings
         self.name = name
-        self.alpha = self.calculate_alpha(n, couplings)
+        self.alphas = self.calculate_alpha(n, couplings)
+        self.normalised_couplings = [self.couplings[i] * self.alphas[i] for i in range(len(self.couplings))]
         self.cost_function_signs = cost_function_signs
         self.initial_state = []
 
@@ -157,24 +158,30 @@ class EnergyModel:
 
         return total_energy
 
-    def get_subgroup_couplings(self, subgroup: List[int], current_state: str):
+    def get_subgroup_couplings(self, subgroup: List[int], current_state: str, coupling_weights: List[float] = None):
         """
         Calculates local couplings for a subgroup.
         Spins outside the group are treated as frozen constants.
+        coupling_weights adds in the option to weight the couplings, which can be used to effectively remove certain couplings from the proposal (e.g. constraints) by setting their weight to 0. 
+        Very important to NOT normalise after this ste though. (There are reasons why I [SF] did the weighting at this point)
         """
+        if coupling_weights is None:
+            coupling_weights = [1.0] * len(subgroup)
+
         n_sub = len(subgroup)
         subgroup_set = set(subgroup)
         g_to_l = {g_idx: l_idx for l_idx, g_idx in enumerate(subgroup)}
 
         # Map bitstring '0'/'1' to spin values -1/+1
         state_vals = np.array([1 if b == "1" else -1 for b in current_state])
-        max_order = max(c.ndim for c in self.couplings)
+        max_order = max(c.ndim for c in self.normalised_couplings)
         new_couplings = [np.zeros((n_sub,) * d) for d in range(1, max_order + 1)]
 
-        for coupling in self.couplings:
+        for couplings_index, coupling in enumerate(self.normalised_couplings):
+            coupling = np.array(coupling) * coupling_weights[couplings_index]
             # only loop over elements that actually exist (non-zero)
             non_zero_indices = np.transpose(np.nonzero(coupling))
-
+            
             for indices in non_zero_indices:
                 indices = tuple(indices)
                 coeff = coupling[indices]
@@ -196,7 +203,7 @@ class EnergyModel:
 
         return new_couplings
 
-    def calculate_alpha(self, n, couplings, eps: float = 1e-15) -> float:
+    def calculate_alpha(self, n: int, couplings, eps: float = 1e-15) -> float:
         """
         Compute alpha = sqrt(n) / sqrt(sum of squares of UNIQUE coupling coefficients),
         assuming coupling tensors are symmetric representations.
@@ -205,6 +212,8 @@ class EnergyModel:
 
         Parameters
         ----------
+        n : int
+            Number of spins.
         couplings : list[np.ndarray] | None
             Couplings to use. Defaults to self.couplings.
         eps : float
@@ -213,18 +222,19 @@ class EnergyModel:
         Returns
         -------
         float : alpha
+            normalising factor for each term in the coupligs list
         """
         if couplings is None:
             couplings = self.couplings
 
-        norm_sq = 0.0
-
-        for T in couplings:
+        norm_sq_arr = np.zeros(len(couplings))
+        for T_ind, T in enumerate(couplings):
+            norm_sq = 0.0
             T = np.asarray(T)
             order = T.ndim
 
             if order == 0:
-                continue
+                pass
 
             # 1-body: h_i
             if order == 1:
@@ -233,7 +243,6 @@ class EnergyModel:
                 for i in range(n):
                     c = float(T[i])
                     norm_sq += c * c
-                continue
 
             # 2-body: symmetric J
             if order == 2:
@@ -250,7 +259,7 @@ class EnergyModel:
                         c = float(T[i, j])
                         if c != 0.0:
                             norm_sq += c * c
-                continue
+                
 
             # Order >= 3: count each unordered interaction once using i1<i2<...<ik
             if T.shape != (n,) * order:
@@ -260,11 +269,13 @@ class EnergyModel:
                 c = float(T[comb])
                 if c != 0.0:
                     norm_sq += c * c
+            norm_sq_arr[T_ind] = norm_sq
 
-        if norm_sq < eps:
+        norm_sq_tot = np.sum(norm_sq_arr)
+        if norm_sq_tot < eps:
             raise ValueError("Cannot compute alpha: no nonzero (non-constant) couplings found.")
 
-        return np.sqrt(n / norm_sq)
+        return np.sqrt(n / norm_sq_arr)
 
     def get_energy(self, state: str) -> float:
         """

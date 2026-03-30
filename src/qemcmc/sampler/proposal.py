@@ -1,4 +1,6 @@
 # Internal
+from abc import abstractmethod
+
 from qemcmc.utils import MCMCChain, MCMCState, get_random_state
 from qemcmc.model import EnergyModel
 
@@ -42,3 +44,13 @@ class Proposal:
 
         self.model = model
         self.n_spins = model.n_spins
+        pass
+    
+    @abstractmethod
+    def update(self, state: MCMCState) -> MCMCState:
+        """
+        Generate a candidate state from the current state using the proposal mechanism.
+        This method should be implemented by subclasses to define the specific proposal strategy
+        (e.g., single-spin flips, block updates, or quantum proposals).
+        """
+        pass

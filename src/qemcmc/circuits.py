@@ -1,6 +1,6 @@
 import pennylane as qml
 import numpy as np
-
+from qemcmc.model.energy_model import EnergyModel
 
 class CircuitMaker:
     """
@@ -18,8 +18,8 @@ class CircuitMaker:
     ----------
     model : EnergyModel
         Energy model defining the problem Hamiltonian.
-    gamma : float
-        Strength of the transverse-field (mixer) term in the Hamiltonian.
+    gamma : list[float]
+        Strengths of the terms mixing Hamiltonian.
     time : int or tuple[int, int]
         Total evolution time or range of evolution times used in the simulation.
     delta_time : float, optional
@@ -37,16 +37,11 @@ class CircuitMaker:
     using Trotterisation via ``qml.ApproxTimeEvolution``.
     """
 
-    def __init__(self, model, gamma, time, delta_time=0.8):
+    def __init__(self, model:EnergyModel, delta_time=0.8):
         self.model = model
-        self.gamma = gamma
-        self.time = time
         self.delta_time = delta_time
         self.n_qubits = model.n
 
-        # Calculate number of Trotter steps
-        t_val = self.time[0] if isinstance(self.time, tuple) else self.time
-        self.num_trotter_steps = int(np.floor((t_val / self.delta_time)))
 
         self.dev = qml.device("lightning.qubit", wires=self.n_qubits)
         self.model_type = model.model_type
@@ -101,7 +96,6 @@ class CircuitMaker:
         Supports both 'ising' (-1/+1) and 'qubo' (0/1) input tensors.
         """
         total_hamiltonian = 0.0 * qml.Identity(0)
-
         for coupling_tensor in couplings:
             coupling_tensor = np.asarray(coupling_tensor)
             order = coupling_tensor.ndim
@@ -126,8 +120,8 @@ class CircuitMaker:
                     term = qml.PauliZ(index_tuple[0])
                     for q in index_tuple[1:]:
                         term = term @ qml.PauliZ(q)
-
                     total_hamiltonian += (sign * spin_sign * coeff) * term
+                    
 
                 elif self.model_type == "qubo":
                     # 0.5 * (I - Z) for first variable
@@ -139,7 +133,6 @@ class CircuitMaker:
                         term = term @ next_var
 
                     total_hamiltonian += (sign * coeff) * term
-
         simplified_H = qml.simplify(total_hamiltonian)
 
         coeffs, ops = simplified_H.terms()
@@ -158,6 +151,7 @@ class CircuitMaker:
         # Coefficients
         #alpha = self.model.calculate_alpha(couplings=self.local_couplings)
         alpha = self.model.calculate_alpha(n=len(s), couplings=self.model.couplings) # dummy alpha for testing spectral gap, should not affect results
+        
         coeff_mixer = self.gamma
         coeff_problem = -(1 - self.gamma) * alpha
 
@@ -188,19 +182,22 @@ class CircuitMaker:
     #     s_prime = np.binary_repr(idx, width=self.model.n)
     #     return s_prime
 
-    def get_sample(self, s_cg: str):
+    def get_sample(self, s_cg: str) -> str:
         """Returns a measured sample after time evolution"""
 
         num_wires = len(s_cg)
         dev = self._get_device(num_wires)
-
+        
         # Coefficients
-        alpha = self.model.calculate_alpha(n=self.spin_length, couplings=self.local_couplings)
+        # We need to be careful NIT to normalise again, as we have already added the coefficients
+
+        #alphas = self.model.alphas#calculate_alpha(n=self.spin_length, couplings=self.local_couplings)
         coeff_mixer = self.gamma
-        coeff_problem = -(1 - self.gamma) * alpha
+        coeff_problem = -(1 - self.gamma)
 
-        H_total = qml.Hamiltonian([coeff_mixer] + [1.0], [self.get_mixer_hamiltonian(num_wires), self.get_problem_hamiltonian(couplings=self.local_couplings, sign=coeff_problem)])
-
+        # Do each hamiltonian term seperately, including those from each coupling tensor
+        H_total = qml.Hamiltonian([coeff_mixer] + list(np.ones(len(self.local_couplings))), [self.get_mixer_hamiltonian(num_wires)]+ [self.get_problem_hamiltonian(couplings=[self.local_couplings[i],], sign=coeff_problem) for i in range(len(self.local_couplings))])
+        
         # set qnode to use our device with dynamically chosen wires
         @qml.qnode(dev, shots=1)
         def quantum_evolution(input_string):
@@ -219,9 +216,12 @@ class CircuitMaker:
         """
         Performs time evolution on coarse grained hamiltonian update to get s' from s
         """
+        
         self._assert_bitstring(s)
+
         self.gamma = gamma
         self.time = time
+        self.num_trotter_steps = int(np.floor((self.time / self.delta_time)))
         self.local_couplings = local_couplings
         self.spin_length = len(subgroup_choice)
         

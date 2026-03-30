@@ -1,5 +1,5 @@
 import numpy as np
-from .sampler import MCMC
+from .sampler import Proposal
 from tqdm import tqdm
 import scipy as sp
 
@@ -9,8 +9,8 @@ class SpectralGap:
     Class that finds the spectral gap, and the acceptance and proposal matrices for a given mcmc.
     """
 
-    def __init__(self, mcmc: MCMC):
-        self.mcmc = mcmc
+    def __init__(self, proposal: Proposal):
+        self.proposal = proposal
         
 
     def find_acceptance_matrix(self):
@@ -22,16 +22,16 @@ class SpectralGap:
 
         """
 
-        num_states = 2**self.mcmc.n_spins
+        num_states = 2**self.proposal.n_spins
 
         A = np.zeros((num_states, num_states))
 
-        energies = self.mcmc.model.get_all_energies()
+        energies = self.proposal.model.get_all_energies()
 
         for i in range(num_states):
             for j in range(num_states):
                 if i != j:
-                    A[i][j] = self.mcmc.test_probs(energies[i], energies[j])
+                    A[i][j] = self.proposal.test_probs(energies[i], energies[j])
                 else:
                     A[i][j] = 0
 
@@ -44,17 +44,17 @@ class SpectralGap:
             Q (np.ndarray): The Q matrix for local proposal
         """
 
-        possible_states = self.mcmc.model.S
+        possible_states = self.proposal.model.S
         # TODO: define S separately, not inside the model since S is the state space and will be pretty inefficient otherwise
 
-        Q = np.zeros((2**self.mcmc.n_spins, 2**self.mcmc.n_spins))
+        Q = np.zeros((2**self.proposal.n_spins, 2**self.proposal.n_spins))
 
         # loop throguh and find the difference in bitstrings.
         # When the ith bitstring is different (by a valua of 1) from the jth bitstring add 1 to Q[i,j]
-        for i in range(2**self.mcmc.n_spins):
-            for j in range(2**self.mcmc.n_spins):
+        for i in range(2**self.proposal.n_spins):
+            for j in range(2**self.proposal.n_spins):
                 sm = 0
-                for k in range(self.mcmc.n_spins):
+                for k in range(self.proposal.n_spins):
                     sm += abs(int(possible_states[i][k]) - int(possible_states[j][k]))
 
                 # ie if the number of different strings is the size of the cluster (= 1 for local)
@@ -74,7 +74,7 @@ class SpectralGap:
             Q (np.ndarray): The Q matrix for uniform proposal
         """
 
-        Q = np.ones((2**self.mcmc.n_spins, 2**self.mcmc.n_spins)) / (self.mcmc.n_spins**2 - 1)
+        Q = np.ones((2**self.proposal.n_spins, 2**self.proposal.n_spins)) / (self.proposal.n_spins**2 - 1)
         row_sums = Q.sum(axis=1)
         Q = Q / row_sums[:, np.newaxis]
 
@@ -88,25 +88,25 @@ class SpectralGap:
             Q (np.ndarray): The Q matrix for quantum proposal
         """
 
-        Q = np.zeros((2**self.mcmc.n_spins, 2**self.mcmc.n_spins))
+        Q = np.zeros((2**self.proposal.n_spins, 2**self.proposal.n_spins))
 
-        for i in range(2**self.mcmc.n_spins):
+        for i in range(2**self.proposal.n_spins):
             for _ in range(multiples):
-                Q[i, :] += abs(self.mcmc.CM.get_state_vector(self.mcmc.model.S[i]))**2
-                #get_output_statevector(self.mcmc.model.S[i])
+                Q[i, :] += abs(self.proposal.CM.get_state_vector(self.proposal.model.S[i]))**2
+                #get_output_statevector(self.proposal.model.S[i])
         Q = Q / multiples
 
         return Q
 
     def find_proposal_matrix_brute_force(self, multiple=100):
-        num_states = 2**self.mcmc.n_spins
-        possible_states = self.mcmc.model.S
+        num_states = 2**self.proposal.n_spins
+        possible_states = self.proposal.model.S
 
         Q = np.zeros((num_states, num_states))
 
         for i, s in tqdm(enumerate(possible_states), total=num_states, desc="Processing Q brute force"):
             for _ in range(multiple):
-                s_prime = self.mcmc.update(s)
+                s_prime = self.proposal.mcmc.update(s)
                 j = int(s_prime, 2)
                 Q[i][j] += 1
         Q = Q / multiple
@@ -119,11 +119,11 @@ class SpectralGap:
         This is not done by brute force
         """
 
-        if self.mcmc.method == "local":
+        if self.proposal.method == "local":
             Q = self.find_prob_matrix_local()
-        elif self.mcmc.method == "uniform":
+        elif self.proposal.method == "uniform":
             Q = self.find_prob_matrix_uniform()
-        elif self.mcmc.method == "quantum":
+        elif self.proposal.method == "quantum":
             Q = self.find_prob_matrix_quantum(multiples=10)
         else:
             raise ValueError("Method not recognised. Only 'local', 'uniform' or 'quantum' proposal methods are implimented in find_proposal_method.")

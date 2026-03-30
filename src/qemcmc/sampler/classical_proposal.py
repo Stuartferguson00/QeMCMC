@@ -1,13 +1,13 @@
 # Internal
 from qemcmc.utils import get_random_state
 from qemcmc.model import EnergyModel
-from qemcmc.sampler import MCMC
+from qemcmc.sampler import Proposal
 
 # External
 import numpy as np
 
 
-class ClassicalMCMC(MCMC):
+class ClassicalProposal(Proposal):
     """
     Classical Markov Chain Monte Carlo sampler.
 
@@ -30,16 +30,15 @@ class ClassicalMCMC(MCMC):
         Default is ``"uniform"``.
     """
 
-    def __init__(self, model: EnergyModel, temp, method="uniform"):
+    def __init__(self, model: EnergyModel, method="uniform"):
         """
         Initialize the MCMC routine for the Ising model.
 
         Args:
         model (IsingEnergyFunction): The energy function of the Ising model.
-        temp (float): The temperature of the system.
         method (str, optional): The update method to use. Options are "uniform", "local" or "2-local". Default is "uniform".
         """
-        super().__init__(model, temp)
+        super().__init__(model)
 
         self.method = method
 

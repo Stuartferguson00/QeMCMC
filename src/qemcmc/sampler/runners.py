@@ -1,13 +1,14 @@
 import numpy as np
 from tqdm.auto import tqdm
 from typing import Optional, Callable
+from qemcmc.model.energy_model import EnergyModel
 from qemcmc.utils import MCMCChain, MCMCState, get_random_state
 
 
 class Runner:
     """
-    Base class for running MCMC sampling routines. 
-    Subclasses implement specific MCMC .
+    Base class for running MCMC routines. 
+    Subclasses implement specific MCMC based algorithms .
     """
     def __init__(self):
         pass
@@ -61,7 +62,7 @@ class Runner:
 
 class MCMCRunner(Runner):
     
-    def __init__(self, model, temp):
+    def __init__(self, model:EnergyModel, temp:float):
         """
         Orchestrates the standard MCMC run loop for a given Proposal sampler and EnergyModel. It manages the state updates, energy evaluations, and Metropolis acceptance tests, while recording the Markov chain of states.
         The sampler targets the Boltzmann distribution
@@ -71,18 +72,19 @@ class MCMCRunner(Runner):
         where ``E(s)`` is the energy of configuration ``s`` provided by the energy model.
         """
         
-        super().__init__(model)
+        super().__init__()
+        self.model = model
         self.temp = temp
 
     
 
-    def run(self, sampler, n_hops: int, initial_state: Optional[str] = None, name: Optional[str] = None, verbose: bool = False, sample_frequency: int = 1):
+    def run(self, proposer, n_hops: int, initial_state: Optional[str] = None, name: Optional[str] = None, verbose: bool = False, sample_frequency: int = 1):
         if name is None:
-            name = getattr(sampler, "method", "Standard") + " MCMC"
+            name = getattr(proposer, "method", "Standard") + " MCMC"
 
         # Either get a random state or use initial state given
         if initial_state is None:
-            initial_state_obj = MCMCState(get_random_state(sampler.n_spins), accepted=True, position=0)
+            initial_state_obj = MCMCState(get_random_state(self.model.n_spins), accepted=True, position=0)
         else:
             initial_state_obj = MCMCState(initial_state, accepted=True, position=0)
 
@@ -100,13 +102,13 @@ class MCMCRunner(Runner):
         # run MCMC
         for i in tqdm(range(0, n_hops), desc="Run " + name, disable=not verbose):
             # Propose a new state via the decoupled sampler
-            s_prime = sampler.update(current_state.bitstring)
+            s_prime = proposer.update(current_state.bitstring)
 
             # Find energy of the new state
             energy_sprime = self.model.get_energy(s_prime)
 
             # Decide whether to accept the new state
-            accepted = sampler.test_accept(energy_s, energy_sprime, temperature=self.temp)
+            accepted = self.test_accept(energy_s, energy_sprime, temperature=self.temp)
 
             # If accepted, update current_state
             if accepted:
@@ -121,28 +123,31 @@ class MCMCRunner(Runner):
 
 
 class ConstrainedMCMCRunner(Runner):
-    """
-    Orchestrates an MCMC run loop but enforces a hard constraint on the proposed states.
-    If a proposed state does not satisfy the constraint, it is immediately rejected
-    without computing its energy or testing the Metropolis criteria.
-    """
-    def __init__(self, constraint_func: Callable[[str], bool]):
+
+    def __init__(self, model:EnergyModel, temp:float, constraint_func: Callable[[str], bool]):
         """
+        Orchestrates an MCMC run loop but enforces a hard constraint on the proposed states.
+        If a proposed state does not satisfy the constraint, it is immediately rejected
+        without computing its energy or testing the Metropolis criteria.
         Args:
             constraint_func (Callable): A function that takes a bitstring (str) 
                                         and returns True if valid, False otherwise.
         """
 
+        super().__init__()
+        self.model = model
+        self.temp = temp
         self.constraint_func = constraint_func
 
-    def run(self, sampler, n_hops: int, initial_state: Optional[str] = None, name: Optional[str] = None, verbose: bool = False, sample_frequency: int = 1):
+
+    def run(self, proposer, n_hops: int, initial_state: Optional[str] = None, name: Optional[str] = None, verbose: bool = False, sample_frequency: int = 1):
         if name is None:
-            name = getattr(sampler, "method", "Constrained") + " MCMC"
+            name = getattr(proposer, "method", "Constrained") + " MCMC"
 
         if initial_state is None:
             # Attempt to find a random initial state that meets the constraint
             for _ in range(1000):
-                candidate = get_random_state(sampler.n_spins)
+                candidate = get_random_state(self.model.n_spins)
                 if self.constraint_func(candidate):
                     initial_state = candidate
                     break
@@ -154,13 +159,15 @@ class ConstrainedMCMCRunner(Runner):
 
         initial_state_obj = MCMCState(initial_state, accepted=True, position=0)
         current_state = initial_state_obj
-        energy_s = sampler.model.get_energy(current_state.bitstring)
+
+
+        energy_s = self.model.get_energy(current_state.bitstring)
         initial_state_obj.energy = energy_s
 
         mcmc_chain = MCMCChain([current_state], name=name)
         constraint_rejections = 0
         for i in tqdm(range(0, n_hops), desc="Run " + name, disable=not verbose):
-            s_prime = sampler.update(current_state.bitstring)
+            s_prime = proposer.update(current_state.bitstring)
 
             # 1. Constraint Check FIRST
             if not self.constraint_func(s_prime):
@@ -168,8 +175,8 @@ class ConstrainedMCMCRunner(Runner):
                 constraint_rejections += 1
             else:
                 # 2. Standard Metropolis-Hastings Check
-                energy_sprime = sampler.model.get_energy(s_prime)
-                accepted = sampler.test_accept(energy_s, energy_sprime, temperature=sampler.temp)
+                energy_sprime = self.model.get_energy(s_prime)
+                accepted = self.test_accept(energy_s, energy_sprime, temperature=self.temp)
 
             if accepted:
                 energy_s = energy_sprime
