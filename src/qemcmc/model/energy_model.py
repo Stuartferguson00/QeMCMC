@@ -24,7 +24,10 @@ class EnergyModel:
         Optional label for the model (used in plotting / logging).
     cost_function_signs:
         Sign convention(s) used by downstream components (e.g. proposal/acceptance conventions).
-
+    model_type: str
+        Type of model, either 'ising' or 'qubo'. This determines how the binary states are interpreted
+        and how the energy is calculated. 'ising' models use spin values {-1, +1}, while 'qubo'
+        models use binary values {0, 1}.
     Notes
     -----
     - Energies are computed by mapping binary states ``{0,1}`` to spin values ``{-1,+1}`` internally.
@@ -38,6 +41,7 @@ class EnergyModel:
         couplings: List[np.ndarray] = [],
         name: str = None,
         cost_function_signs: list = [-1, -1],
+        model_type: str = "ising"
     ):
         self.n = n
         self.n_spins = n
@@ -46,6 +50,11 @@ class EnergyModel:
         self.alpha = self.calculate_alpha(n, couplings)
         self.cost_function_signs = cost_function_signs
         self.initial_state = []
+
+        if model_type not in ["ising", "binary"]:
+            raise ValueError(f"Invalid model_type '{model_type}'. Expected 'ising' or 'binary'.")
+        else:
+            self.model_type = model_type
 
         for i in range(100):
             self.initial_state.append(get_random_state(self.n))
@@ -78,7 +87,7 @@ class EnergyModel:
 
         return best_energy
 
-    def calculate_energy(self, state, couplings, spin_type="binary", sign=1):
+    def calculate_energy(self, state, couplings):
         """
         Calculate the energy of a given state for an arbitrary-order Ising/QUBO model.
 
@@ -109,26 +118,44 @@ class EnergyModel:
         else:
             state = np.array(state)
 
-        if spin_type == "binary":
-            state = 2 * state - 1
-
+        #print("state before:", state)
+        if self.model_type == "binary":
+            if not np.all(np.isin(state, [0, 1])):
+                # If not already in binary format, try interpreting as spin values and converting
+                if not np.all(np.isin(state, [-1, 1])):
+                    # not in spin format either?
+                    raise ValueError("Spin configuration must be in spin (-1/+1) or binary (0/1) format, but got values outside these sets.")
+                else:
+                    # Convert to binary
+                    state = np.array([(spin + 1) // 2 for spin in state])
+        elif self.model_type == "ising":
+            if not np.all(np.isin(state, [-1, 1])):
+                # If not already in spin format, try interpreting as binary and converting
+                if not np.all(np.isin(state, [0, 1])):
+                    # not in binary format either?
+                    raise ValueError("Spin configuration must be in binary (0/1) or spin (-1/+1) format, but got values outside these sets.")
+                else:
+                    # Convert to spin
+                    state = np.array([2 * int(bit) - 1 for bit in state])
+        
+        #print("state after:", state)
         total_energy = 0.0
-        for coupling in couplings:
+        for term_index, coupling in enumerate(couplings):
             coupling = np.array(coupling)
             order = coupling.ndim
 
             if order == 1:
-                total_energy += np.dot(coupling, state)
+                total_energy += self.cost_function_signs[term_index] * np.dot(coupling, state)
             elif order == 2:
-                total_energy += 0.5 * np.einsum("ij, i, j->", coupling, state, state)
+                total_energy += self.cost_function_signs[term_index] * 0.5 * np.einsum("ij, i, j->", coupling, state, state)
             else:
                 # General case for any order >=3 (cubic, quartic etc.)
                 indices = "".join(chr(97 + i) for i in range(order))  # 'abc...', 'ijkl...'
                 einsum_str = f"{indices}," + ",".join([indices[i] for i in range(order)]) + "->"
                 coefficient = 1.0 / math.factorial(order)
-                total_energy += coefficient * np.einsum(einsum_str, coupling, *([state] * order))
+                total_energy += self.cost_function_signs[term_index] * coefficient * np.einsum(einsum_str, coupling, *([state] * order))
 
-        return sign * total_energy
+        return total_energy
 
     def get_subgroup_couplings(self, subgroup: List[int], current_state: str):
         """

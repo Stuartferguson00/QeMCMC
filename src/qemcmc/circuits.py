@@ -49,7 +49,7 @@ class CircuitMaker:
         self.num_trotter_steps = int(np.floor((t_val / self.delta_time)))
 
         self.dev = qml.device("lightning.qubit", wires=self.n_qubits)
-
+        self.model_type = model.model_type
         # cache devices for dynamic subgroup sizes if needed
         self.devices = {}
 
@@ -95,7 +95,7 @@ class CircuitMaker:
 
     #     return qml.Hamiltonian(coeffs, obs)
 
-    def get_problem_hamiltonian(self, couplings, model_type="ising", sign=1):
+    def get_problem_hamiltonian(self, couplings, sign=1):
         """
         Construct Problem Hamiltonian from symmetric coupling tensors.
         Supports both 'ising' (-1/+1) and 'qubo' (0/1) input tensors.
@@ -108,7 +108,7 @@ class CircuitMaker:
             if order == 0:
                 continue
 
-            spin_sign = (-1) ** order if model_type == "ising" else 1
+            spin_sign = (-1) ** order if self.model_type == "ising" else 1
             non_zero_indices = np.transpose(np.nonzero(coupling_tensor))
             for index_tuple in non_zero_indices:
                 index_tuple = tuple(int(i) for i in index_tuple)
@@ -122,14 +122,14 @@ class CircuitMaker:
                 if coeff == 0.0:
                     continue
 
-                if model_type == "ising":
+                if self.model_type == "ising":
                     term = qml.PauliZ(index_tuple[0])
                     for q in index_tuple[1:]:
                         term = term @ qml.PauliZ(q)
 
                     total_hamiltonian += (sign * spin_sign * coeff) * term
 
-                elif model_type == "qubo":
+                elif self.model_type == "qubo":
                     # 0.5 * (I - Z) for first variable
                     term = 0.5 * (qml.Identity(index_tuple[0]) - qml.PauliZ(index_tuple[0]))
 

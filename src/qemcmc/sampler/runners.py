@@ -1,14 +1,80 @@
 import numpy as np
-from tqdm import tqdm
+from tqdm.auto import tqdm
 from typing import Optional, Callable
 from qemcmc.utils import MCMCChain, MCMCState, get_random_state
 
-class MCMCRunner:
+
+class Runner:
     """
-    Orchestrates the standard MCMC run loop for a given sampler.
+    Base class for running MCMC sampling routines. 
+    Subclasses implement specific MCMC .
     """
     def __init__(self):
         pass
+    
+    def test_probs(self, energy_s: float, energy_sprime: float) -> float:
+        """
+        Calculate the probability ratio between two states based on their energies.
+        This function computes the exponential factor used in the Metropolis-Hastings
+        algorithm to determine the acceptance probability of a new state s' given
+        the current state s. The probability ratio is calculated as exp(-(E(s') - E(s)) / T),
+        where E(s) and E(s') are the energies of the current and proposed states, respectively,
+        and T is the temperature.
+        Args:
+            energy_s (float): The energy of the current state s.
+            energy_sprime (float): The energy of the proposed state s'.
+        Returns:
+            float: The probability ratio exp(-(E(s') - E(s)) / T).
+        """
+
+        delta_energy = energy_sprime - energy_s  # E(s')-E(s)
+        if energy_sprime < energy_s:
+            exp_factor = 1
+        else:
+            exp_factor = np.exp(-delta_energy / self.temp)
+
+        acceptance = min(1, exp_factor)
+        return acceptance
+
+    def test_accept(self, energy_s: float, energy_sprime: float, temperature: float = 1.0) -> MCMCState:
+        """
+        Accepts the state "sprime" with probability A ( i.e. min(1,exp(-(E(s')-E(s))/ temp) )
+        and s_init with probability 1-A.
+        """
+        delta_energy = energy_sprime - energy_s  # E(s')-E(s)
+        # with warnings.catch_warnings():
+        #    warnings.simplefilter("error", RuntimeWarning)
+        try:
+            exp_factor = np.exp(-delta_energy / temperature)
+        except RuntimeWarning:
+            if energy_sprime < energy_s:
+                exp_factor = 1
+            else:
+                exp_factor = 0
+
+            # print("Error in exponantial: delta_energy = ", delta_energy, "temperature = ", temperature, " energy_s = ", energy_s, " energy_sprime = ", energy_sprime)
+
+        acceptance = min(1, exp_factor)  # for both QC case as well as uniform random strategy, the transition matrix Pij is symmetric!
+
+        return acceptance > np.random.rand()
+
+
+class MCMCRunner(Runner):
+    
+    def __init__(self, model, temp):
+        """
+        Orchestrates the standard MCMC run loop for a given Proposal sampler and EnergyModel. It manages the state updates, energy evaluations, and Metropolis acceptance tests, while recording the Markov chain of states.
+        The sampler targets the Boltzmann distribution
+
+            p(s) ∝ exp(-E(s) / T)
+
+        where ``E(s)`` is the energy of configuration ``s`` provided by the energy model.
+        """
+        
+        super().__init__(model)
+        self.temp = temp
+
+    
 
     def run(self, sampler, n_hops: int, initial_state: Optional[str] = None, name: Optional[str] = None, verbose: bool = False, sample_frequency: int = 1):
         if name is None:
@@ -22,7 +88,7 @@ class MCMCRunner:
 
         # set initial state
         current_state = initial_state_obj
-        energy_s = sampler.model.get_energy(current_state.bitstring)
+        energy_s = self.model.get_energy(current_state.bitstring)
         initial_state_obj.energy = energy_s
 
         if verbose:
@@ -37,10 +103,10 @@ class MCMCRunner:
             s_prime = sampler.update(current_state.bitstring)
 
             # Find energy of the new state
-            energy_sprime = sampler.model.get_energy(s_prime)
+            energy_sprime = self.model.get_energy(s_prime)
 
             # Decide whether to accept the new state
-            accepted = sampler.test_accept(energy_s, energy_sprime, temperature=sampler.temp)
+            accepted = sampler.test_accept(energy_s, energy_sprime, temperature=self.temp)
 
             # If accepted, update current_state
             if accepted:
@@ -54,7 +120,7 @@ class MCMCRunner:
         return mcmc_chain
 
 
-class ConstrainedMCMCRunner:
+class ConstrainedMCMCRunner(Runner):
     """
     Orchestrates an MCMC run loop but enforces a hard constraint on the proposed states.
     If a proposed state does not satisfy the constraint, it is immediately rejected
@@ -66,6 +132,7 @@ class ConstrainedMCMCRunner:
             constraint_func (Callable): A function that takes a bitstring (str) 
                                         and returns True if valid, False otherwise.
         """
+
         self.constraint_func = constraint_func
 
     def run(self, sampler, n_hops: int, initial_state: Optional[str] = None, name: Optional[str] = None, verbose: bool = False, sample_frequency: int = 1):
@@ -91,13 +158,14 @@ class ConstrainedMCMCRunner:
         initial_state_obj.energy = energy_s
 
         mcmc_chain = MCMCChain([current_state], name=name)
-
+        constraint_rejections = 0
         for i in tqdm(range(0, n_hops), desc="Run " + name, disable=not verbose):
             s_prime = sampler.update(current_state.bitstring)
 
             # 1. Constraint Check FIRST
             if not self.constraint_func(s_prime):
                 accepted = False # Instant rejection, no energy calculations performed
+                constraint_rejections += 1
             else:
                 # 2. Standard Metropolis-Hastings Check
                 energy_sprime = sampler.model.get_energy(s_prime)
@@ -110,5 +178,5 @@ class ConstrainedMCMCRunner:
             if i // sample_frequency == i / sample_frequency and i != 0:
                 mcmc_chain.add_state(MCMCState(current_state.bitstring, True, energy_s, position=i))
 
-        return mcmc_chain
+        return mcmc_chain, constraint_rejections
     
