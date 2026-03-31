@@ -1,4 +1,4 @@
-from .energy_model import EnergyModel
+from .energy_model import EnergyModel, ConstraintModel
 
 
-__all__ = ["EnergyModel"]
+__all__ = ["EnergyModel", "ConstraintModel"]

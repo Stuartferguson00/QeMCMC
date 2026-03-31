@@ -144,18 +144,26 @@ class CircuitMaker:
             num_wires = self.n_qubits
         return qml.Hamiltonian([1.0] * num_wires, [qml.PauliX(i) for i in range(num_wires)])
 
-    def get_state_vector(self, s: str) -> str:
+    def get_state_vector(self, s: str, gamma: float, time: float) -> str:
         """Return the state vector."""
+
+        
         num_wires = len(s)
         dev = self._get_device(num_wires)
         # Coefficients
         #alpha = self.model.calculate_alpha(couplings=self.local_couplings)
-        alpha = self.model.calculate_alpha(n=len(s), couplings=self.model.couplings) # dummy alpha for testing spectral gap, should not affect results
+        #alpha = self.model.calculate_alpha(n=len(s), couplings=self.model.couplings) # dummy alpha for testing spectral gap, should not affect results
+        self.gamma = gamma
+        self.time = time
+        self.num_trotter_steps = int(np.floor((self.time / self.delta_time)))
         
         coeff_mixer = self.gamma
-        coeff_problem = -(1 - self.gamma) * alpha
+        coeff_problem = -(1 - self.gamma)
 
-        H_total = qml.Hamiltonian([coeff_mixer] + [1.0], [self.get_mixer_hamiltonian(num_wires), self.get_problem_hamiltonian(couplings=self.model.couplings, sign=coeff_problem)])
+        # Do each hamiltonian term seperately, including those from each coupling tensor
+        H_total = qml.Hamiltonian([coeff_mixer] + list(np.ones(len(self.model.couplings))), [self.get_mixer_hamiltonian(num_wires)]+ [self.get_problem_hamiltonian(couplings=[self.model.couplings[i],], sign=coeff_problem) for i in range(len(self.model.couplings))])
+        
+
 
         @qml.qnode(dev)
         def quantum_evolution(input_string):

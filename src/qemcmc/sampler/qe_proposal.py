@@ -77,11 +77,11 @@ class QeProposal(Proposal):
         super().__init__(model)
 
         if coupling_weights is not None:
-            if len(coupling_weights) != len(model.couplings):
-                raise ValueError(f"Length of coupling_weights must match number of couplings in the model. Expected {len(model.couplings)}, got {len(coupling_weights)}.")
+            if len(coupling_weights) != len(model.normalised_couplings):
+                raise ValueError(f"Length of coupling_weights must match number of couplings in the model. Expected {len(model.normalised_couplings)}, got {len(coupling_weights)}. Note that this includes constraint terms")
             self.coupling_weights = np.array(coupling_weights)
         else:
-            self.coupling_weights = np.ones(len(model.couplings))
+            self.coupling_weights = np.ones(len(model.normalised_couplings))
 
         self.gamma = self._validate_gamma(gamma)
         self.time = self._validate_time(time)

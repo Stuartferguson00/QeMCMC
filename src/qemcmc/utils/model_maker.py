@@ -28,8 +28,12 @@ class ModelMaker:
             self.make_fully_connected_ising()
         elif model_type == "1D Ising":
             self.make_1D_Ising()
+        elif model_type == "Random Local spin constraint":
+            self.make_local_spin_constraint()
         else:
             raise ValueError(f"Unknown model_type: {model_type}")
+
+    
 
     def make_fully_connected_ising(self):
         shape_of_J = (self.n_spins, self.n_spins)

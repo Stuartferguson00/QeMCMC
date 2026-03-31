@@ -1,7 +1,7 @@
 import numpy as np
 from tqdm.auto import tqdm
 from typing import Optional, Callable
-from qemcmc.model.energy_model import EnergyModel
+from qemcmc.model.energy_model import EnergyModel, ConstraintModel
 from qemcmc.utils import MCMCChain, MCMCState, get_random_state
 
 
@@ -13,7 +13,7 @@ class Runner:
     def __init__(self):
         pass
     
-    def test_probs(self, energy_s: float, energy_sprime: float) -> float:
+    def test_probs(self, energy_s: float, energy_sprime: float, temperature: float = 1.0) -> float:
         """
         Calculate the probability ratio between two states based on their energies.
         This function computes the exponential factor used in the Metropolis-Hastings
@@ -32,7 +32,7 @@ class Runner:
         if energy_sprime < energy_s:
             exp_factor = 1
         else:
-            exp_factor = np.exp(-delta_energy / self.temp)
+            exp_factor = np.exp(-delta_energy / temperature)
 
         acceptance = min(1, exp_factor)
         return acceptance
@@ -124,20 +124,29 @@ class MCMCRunner(Runner):
 
 class ConstrainedMCMCRunner(Runner):
 
-    def __init__(self, model:EnergyModel, temp:float, constraint_func: Callable[[str], bool]):
+    def __init__(self, model:ConstraintModel, temp:float, reject_invalid: bool = True):
         """
         Orchestrates an MCMC run loop but enforces a hard constraint on the proposed states.
         If a proposed state does not satisfy the constraint, it is immediately rejected
         without computing its energy or testing the Metropolis criteria.
         Args:
-            constraint_func (Callable): A function that takes a bitstring (str) 
-                                        and returns True if valid, False otherwise.
+            model (ConstraintModel): An model that includes a constraint function.
+            temp (float): The temperature for the Metropolis acceptance test.
+            reject_invalid (bool): If True, proposed states that do not satisfy the constraint are rejected. 
+                If False, they are accepted. Defaults to True.
         """
+        if not isinstance(model, ConstraintModel):
+            if isinstance(model, EnergyModel):
+                raise TypeError("Model must be an instance of ConstraintModel, not EnergyModel.")
 
         super().__init__()
         self.model = model
         self.temp = temp
-        self.constraint_func = constraint_func
+        self.constraint_func = self.model.constraint_func
+        self.reject_invalid = reject_invalid
+
+
+        
 
 
     def run(self, proposer, n_hops: int, initial_state: Optional[str] = None, name: Optional[str] = None, verbose: bool = False, sample_frequency: int = 1):
@@ -145,6 +154,8 @@ class ConstrainedMCMCRunner(Runner):
             name = getattr(proposer, "method", "Constrained") + " MCMC"
 
         if initial_state is None:
+            if verbose:
+                print("no initial state provided, attempting to find a random state that satisfies the constraint...")
             # Attempt to find a random initial state that meets the constraint
             for _ in range(1000):
                 candidate = get_random_state(self.model.n_spins)
@@ -153,6 +164,7 @@ class ConstrainedMCMCRunner(Runner):
                     break
             if initial_state is None:
                 raise ValueError("Could not find a valid initial state satisfying the constraint. Please provide one manually.")
+        
         else:
             if not self.constraint_func(initial_state):
                 raise ValueError(f"Provided initial state {initial_state} does not satisfy the constraint.")
@@ -170,7 +182,7 @@ class ConstrainedMCMCRunner(Runner):
             s_prime = proposer.update(current_state.bitstring)
 
             # 1. Constraint Check FIRST
-            if not self.constraint_func(s_prime):
+            if self.reject_invalid and not self.constraint_func(s_prime):
                 accepted = False # Instant rejection, no energy calculations performed
                 constraint_rejections += 1
             else:

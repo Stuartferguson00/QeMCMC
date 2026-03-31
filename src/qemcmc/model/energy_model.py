@@ -50,15 +50,22 @@ class EnergyModel:
         self.alphas = self.calculate_alpha(n, couplings)
         self.normalised_couplings = [self.couplings[i] * self.alphas[i] for i in range(len(self.couplings))]
         self.cost_function_signs = cost_function_signs
-        self.initial_state = []
 
         if model_type not in ["ising", "binary"]:
             raise ValueError(f"Invalid model_type '{model_type}'. Expected 'ising' or 'binary'.")
         else:
             self.model_type = model_type
 
-        for i in range(100):
-            self.initial_state.append(get_random_state(self.n))
+        #for i in range(100):
+        #    self.initial_state.append(get_random_state(self.n))
+        self.initial_state = self.get_initial_states(num_initial_states=100)
+
+    def get_initial_states(self, num_initial_states:int):
+        init_states = []
+        while len(init_states) < num_initial_states:
+            state = get_random_state(self.n_spins)
+            init_states.append(state)
+        return init_states
 
     def get_ground_state(self, num_reads=100, num_batches=10):
         """
@@ -88,7 +95,7 @@ class EnergyModel:
 
         return best_energy
 
-    def calculate_energy(self, state, couplings):
+    def calculate_energy(self, state, couplings, cost_function_signs):
         """
         Calculate the energy of a given state for an arbitrary-order Ising/QUBO model.
 
@@ -146,15 +153,15 @@ class EnergyModel:
             order = coupling.ndim
 
             if order == 1:
-                total_energy += self.cost_function_signs[term_index] * np.dot(coupling, state)
+                total_energy += cost_function_signs[term_index] * np.dot(coupling, state)
             elif order == 2:
-                total_energy += self.cost_function_signs[term_index] * 0.5 * np.einsum("ij, i, j->", coupling, state, state)
+                total_energy += cost_function_signs[term_index] * 0.5 * np.einsum("ij, i, j->", coupling, state, state)
             else:
                 # General case for any order >=3 (cubic, quartic etc.)
                 indices = "".join(chr(97 + i) for i in range(order))  # 'abc...', 'ijkl...'
                 einsum_str = f"{indices}," + ",".join([indices[i] for i in range(order)]) + "->"
                 coefficient = 1.0 / math.factorial(order)
-                total_energy += self.cost_function_signs[term_index] * coefficient * np.einsum(einsum_str, coupling, *([state] * order))
+                total_energy += cost_function_signs[term_index] * coefficient * np.einsum(einsum_str, coupling, *([state] * order))
 
         return total_energy
 
@@ -283,7 +290,7 @@ class EnergyModel:
         """
         if not isinstance(state, str):
             raise TypeError(f"State must be a string, but got {type(state)}")
-        energy = self.calculate_energy(state, self.couplings)
+        energy = self.calculate_energy(state, self.couplings, self.cost_function_signs)
         return energy
 
     def get_all_energies(self) -> np.ndarray:
@@ -299,7 +306,7 @@ class EnergyModel:
         self.S = ["".join(i) for i in itertools.product("01", repeat=self.n)]
         all_energies = np.zeros(len(self.S))
         for state in self.S:
-            all_energies[int(state, 2)] = self.calculate_energy(state, self.couplings)
+            all_energies[int(state, 2)] = self.calculate_energy(state, self.couplings, self.cost_function_signs)
         return all_energies
 
     def get_lowest_energies(self, num_states: int, return_configurations: bool = False) -> typing.Tuple[np.ndarray, np.ndarray]:
@@ -409,4 +416,100 @@ class EnergyModel:
 
         return np.exp(-1 * beta * E, dtype=np.longdouble)
     
+class ConstraintModel(EnergyModel):
+    """
+    A subclass of EnergyModel that incorporates a constraint function to define valid configurations.
+    The constraint function takes a state as input and returns True if the state is valid (satisfies the constraint) and False otherwise. The energy of invalid states is set to infinity, effectively excluding them from the Boltzmann distribution.
+
+    Parameters
+    ----------
+    n : int
+        Number of spins in the model.
+    constraint_func : callable
+        A function that takes a state (string representation of spin configuration) and returns True if the state satisfies the constraint, and False otherwise.
+    constraint_couplings : list
+        List of coupling tensors (numpy arrays) defining the constraint.
+    couplings : list
+        List of coupling tensors (numpy arrays) defining the energy function.
+    name:
+        Optional label for the model (used in plotting / logging).
+    constraint_signs:
+        Sign convention(s) for the constraint couplings.
+    cost_function_signs:
+        Sign convention(s) used by downstream components (e.g. proposal/acceptance conventions).
+    model_type: str
+        Type of model, either 'ising' or 'qubo'. This determines how the binary states are interpreted
+        and how the energy is calculated. 'ising' models use spin values {-1, +1}, while 'qubo'
+        models use binary values {0, 1}.
+
+        
+    name : str, optional
+        An optional name for the model.
+
+    Notes
+    -----
+    - The energy of any state that does not satisfy the constraint is set to infinity, which means such states will have zero probability in the Boltzmann distribution.
+    - This class can be used to model systems with hard constraints on the configurations, such as certain combinatorial optimization problems or physical systems with forbidden states.
+    """
+
+    def __init__(self, n: int, constraint_couplings: list, constraint_signs: list, couplings: list, constraint_func: callable,  **kwargs):
+        if constraint_func is not None:
+            if not callable(constraint_func):
+                raise ValueError("constraint_func must be a callable function that takes a state as input and returns True/False.")
+            self.constraint_func = constraint_func
+        else: # constraint_func is None
+            raise  ValueError("No constraint function provided.")
+        self.get_initial_states = self.get_initial_states_constraint
+        super().__init__(n=n, couplings=couplings, **kwargs)
+        self.constraint_couplings = constraint_couplings
+        self.constraint_signs = constraint_signs
+        
+            
+        self.constraint_coupling_alphas = self.calculate_alpha(n, constraint_couplings)
+        self.normalised_couplings = [self.couplings[i] * self.alphas[i] for i in range(len(self.couplings))] + [self.constraint_couplings[i] * self.constraint_coupling_alphas[i] for i in range(len(self.constraint_couplings))]
+        self.total_couplings = self.couplings + self.constraint_couplings
+        
+
+        self.initial_state = self.get_initial_states(num_initial_states=20)
+
+    def get_initial_states_constraint(self, num_initial_states:int):
+        init_states = []
+        counter = 0
+        while len(init_states) < num_initial_states:
+            state = get_random_state(self.n_spins)
+            if self.constraint_func(state):
+                init_states.append(state)
+            counter += 1
+            if counter > 1000:
+                print(f"Could not find enough valid initial states satisfying the constraint. Please provide some manually if you want more than the ones found here. Found {len(init_states)} valid states after 1000 attempts.")
+                break
+        return init_states
+
+
+
+    def get_constraint_energy(self, state: str) -> float:
+        """
+        Calculate the energy contribution from the constraint couplings for a given state.
+
+        Args:
+            state (str): The state for which to calculate the constraint energy.
+
+        Returns:
+            float: The energy contribution from the constraint couplings for the given state.
+        """
+        return self.calculate_energy(state, self.constraint_couplings, self.constraint_signs)  # Assuming constraint couplings contribute positively to energy
+    
+    def get_total_energy(self, state: str) -> float:
+        """
+        Calculate the total energy of a given state, including both the regular energy and the constraint energy.
+
+        Args:
+            state (str): The state for which to calculate the total energy.
+
+        Returns:
+            float: The total energy of the given state, including contributions from both the regular couplings and the constraint couplings.
+        """
+        return self.get_energy(state) + self.get_constraint_energy(state)
+    
+
     
