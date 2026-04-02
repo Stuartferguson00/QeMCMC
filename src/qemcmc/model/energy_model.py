@@ -513,8 +513,7 @@ class ConstraintModel(EnergyModel):
         # Store the un-normalized total couplings
         self.total_couplings = self.couplings + self.constraint_couplings
 
-        # Generate initial states that satisfy the constraint
-        self.initial_state = self.get_initial_states(num_initial_states=20)
+
 
     def get_initial_states_constraint(self, num_initial_states:int):
         """

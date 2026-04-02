@@ -113,7 +113,7 @@ class QeProposal(Proposal):
         
         final_coupling_weights, g, t = self.sample_hyperparams()
 
-
+        print(f"Sampled hyperparameters for this proposal step: gamma={g:.3f}, time={t}, coupling_weights={final_coupling_weights}")
 
         working_state = current_state
         for subgroup in partitions:
