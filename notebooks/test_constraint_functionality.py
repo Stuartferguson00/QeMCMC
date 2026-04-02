@@ -33,6 +33,9 @@ for i in range(n_spins):
         if u < 0.05:# 10% chance of adding a constraint between these spins
             J_constraint[i, j] = 1
             J_constraint[j, i] = 1
+# To ensure non-constant constraint
+J_constraint[0,1] = 1
+J_constraint[1,0] = 1
 print("Constraint Couplings:\n", J_constraint)
 
 
@@ -45,9 +48,7 @@ def constraint_checker_func(bitstring: str) -> bool:
             if bitstring[i] != bitstring[j]:
                 sum += J_constraint[i, j]
 
-    # To ensure non-constant constraint
-    J_constraint[0,1] = 1
-    J_constraint[1,0] = 1
+    
     return sum == 0
 
 constraint_model = ConstraintModel(n, constraint_couplings = [J_constraint,], couplings = model.couplings, name="Constraint Model", cost_function_signs=model.cost_function_signs, constraint_func=constraint_checker_func, constraint_signs = [-1,])

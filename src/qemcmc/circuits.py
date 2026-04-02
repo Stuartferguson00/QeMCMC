@@ -18,10 +18,6 @@ class CircuitMaker:
     ----------
     model : EnergyModel
         Energy model defining the problem Hamiltonian.
-    gamma : list[float]
-        Strengths of the terms mixing Hamiltonian.
-    time : int or tuple[int, int]
-        Total evolution time or range of evolution times used in the simulation.
     delta_time : float, optional
         Duration of each Trotter step used in the approximate time evolution.
         Default is 0.8.
@@ -144,8 +140,41 @@ class CircuitMaker:
             num_wires = self.n_qubits
         return qml.Hamiltonian([1.0] * num_wires, [qml.PauliX(i) for i in range(num_wires)])
 
-    def get_state_vector(self, s: str, gamma: float, time: float) -> str:
-        """Return the state vector."""
+    def get_state_vector(self, s: str, gammas: float, time: float, gamma_mix: float) -> str:
+        """
+        
+        Return the state vector.
+
+
+        Parameters
+        ----------
+        s : str
+            Input bitstring representing the initial state of the system.
+        gammas : list of float
+            List of coefficients for the input Hamiltonian terms. Length should match the number of coupling tensors in the model.
+        time : float
+            Total evolution time for the quantum circuit.
+        gamma_mix : float
+            Coefficient for the mixer Hamiltonian. Should be between 0 and 1.
+        
+        Notes
+        -----
+        The total Hamiltonian simulated by the circuit is a weighted sum of the problem Hamiltonian terms and the mixer Hamiltonian:
+        
+        In Ferguson et al. (2025) [arXiv:2506.19538], we use gammas to weight the entire problem Hamiltonian vs the mixer vs the constraint Hamiltonian, such that the total Hamiltonian is:
+        
+        H = g_p * H_p + g_m * H_m + g_c * H_c
+
+        but here we allow for separate weights for each coupling tensor term, as well as a separate gamma for the mixer. The total Hamiltonian is then:
+
+        H = (w_b1*H_b1+ w_b2*H_b2 +...+w_b2*H_bm) + g_m * H_m
+
+        In other words, the constraint hamiltonian is absorbed in the coupling list, and weighted by the corresponding gamma in the gammas list. 
+        This allows for more flexible weighting of different terms, and also allows us to use the same code for both constrained and unconstrained problems (by simply including or excluding the constraint Hamiltonian in the coupling list and adjusting the gammas accordingly).
+        
+        Note that it is assumed that each term is already normalised appropriately, so the gammas can be interpreted as the relative weights of each term in the total Hamiltonian.
+
+        """
 
         
         num_wires = len(s)
@@ -153,18 +182,26 @@ class CircuitMaker:
         # Coefficients
         #alpha = self.model.calculate_alpha(couplings=self.local_couplings)
         #alpha = self.model.calculate_alpha(n=len(s), couplings=self.model.couplings) # dummy alpha for testing spectral gap, should not affect results
-        self.gamma = gamma
+        self.gammas = gammas
+        
+        if gamma_mix < 0 or gamma_mix > 1:
+            raise ValueError("gamma_mix must be between 0 and 1. Got gamma_mix:", gamma_mix)
+        mixing_gamma = gamma_mix
+        
+        if np.any(np.array(self.gammas) < 0):
+            raise ValueError("Gammas must be non-negative. Got gammas:", self.gammas)
+        
         self.time = time
         self.num_trotter_steps = int(np.floor((self.time / self.delta_time)))
         
-        coeff_mixer = self.gamma
-        coeff_problem = -(1 - self.gamma)
+        coeff_mixer = mixing_gamma
+        coeff_problem = self.gammas#-(1 - self.gammas)
 
         # Do each hamiltonian term seperately, including those from each coupling tensor
-        H_total = qml.Hamiltonian([coeff_mixer] + list(np.ones(len(self.model.couplings))), [self.get_mixer_hamiltonian(num_wires)]+ [self.get_problem_hamiltonian(couplings=[self.model.couplings[i],], sign=coeff_problem) for i in range(len(self.model.couplings))])
-        
-
-
+        #H_total = qml.Hamiltonian([coeff_mixer] , [self.get_mixer_hamiltonian(num_wires)])
+        H_total = qml.Hamiltonian([coeff_mixer] + list(np.ones(len(self.model.normalised_couplings))), [self.get_mixer_hamiltonian(num_wires)]+ [self.get_problem_hamiltonian(couplings=[self.model.normalised_couplings[i],], sign=coeff_problem[i]) for i in range(len(self.model.normalised_couplings))])
+        #H_total = qml.Hamiltonian([coeff_mixer] + [1.,] , [self.get_mixer_hamiltonian(num_wires)]+ [self.get_problem_hamiltonian(couplings=self.model.normalised_couplings, sign=coeff_problem)])
+        #H_total = qml.Hamiltonian([coeff_mixer] + [1.,] , [self.get_mixer_hamiltonian(num_wires)]+ [self.get_problem_hamiltonian(couplings=[self.model.normalised_couplings[0],], sign=coeff_problem[0])])
         @qml.qnode(dev)
         def quantum_evolution(input_string):
             for i, bit in enumerate(input_string):
@@ -190,8 +227,49 @@ class CircuitMaker:
     #     s_prime = np.binary_repr(idx, width=self.model.n)
     #     return s_prime
 
-    def get_sample(self, s_cg: str) -> str:
-        """Returns a measured sample after time evolution"""
+    def get_sample(self, s_cg: str, time: float, gamma_mix: float, local_couplings: list, weights: float = None) -> str:
+        
+        """
+        
+        Returns a measured sample after time evolution
+
+
+        Parameters
+        ----------
+        s : str
+            Input bitstring representing the initial state of the system.
+        time : float
+            Total evolution time for the quantum circuit.
+        gamma_mix : float
+            Coefficient for the mixer Hamiltonian. Should be between 0 and 1.
+        local_couplings : list of coupling tensors
+            List of coupling tensors defining the problem Hamiltonian for the current subgroup.
+        weights : list of float, optional
+            List of coefficients for the input Hamiltonian terms. Length should match the number of coupling tensors in the model.
+            Note that these weights are for the problem hamiltonian terms, and the mixer term is weighted separately by gamma_mix.
+            Note that this weighting is optional, as somethings it may be required to weight the terms at a different point in the algorithm. See energy_model.get_subgroup_couplings for example of why we may need to apply the weighting at an unorthodox point.
+            defaults to None, in which case no weighting is applied (equivalent to weights of 1 for all terms).
+        
+        Notes
+        -----
+        The total Hamiltonian simulated by the circuit is a weighted sum of the problem Hamiltonian terms and the mixer Hamiltonian:
+        
+        In Ferguson et al. (2025) [arXiv:2506.19538], we use gammas to weight the entire problem Hamiltonian vs the mixer vs the constraint Hamiltonian, such that the total Hamiltonian is:
+        
+        H = g_p * H_p + g_m * H_m + g_c * H_c
+
+        but here we allow for separate gammas for each coupling tensor term, as well as a separate gamma for the mixer. The total Hamiltonian is then:
+
+        H = (w_b1*H_b1+ w_b2*H_b2 +...+w_b2*H_bm) + g_m * H_m
+
+        In other words, the constraint hamiltonian is absorbed in the coupling list, and weighted by the corresponding gamma in the gammas list. 
+        This allows for more flexible weighting of different terms, and also allows us to use the same code for both constrained and unconstrained problems (by simply including or excluding the constraint Hamiltonian in the coupling list and adjusting the gammas accordingly).
+        
+        Note that it is assumed that each term is already normalised appropriately, so the gammas can be interpreted as the relative weights of each term in the total Hamiltonian.
+        """
+        if weights is None:
+            weights = np.ones(len(local_couplings))
+
 
         num_wires = len(s_cg)
         dev = self._get_device(num_wires)
@@ -200,19 +278,40 @@ class CircuitMaker:
         # We need to be careful NIT to normalise again, as we have already added the coefficients
 
         #alphas = self.model.alphas#calculate_alpha(n=self.spin_length, couplings=self.local_couplings)
-        coeff_mixer = self.gamma
-        coeff_problem = -(1 - self.gamma)
+        # coeff_mixer = self.gamma
+        # coeff_problem = -(1 - self.gamma)
+
+        # # Do each hamiltonian term seperately, including those from each coupling tensor
+        # H_total = qml.Hamiltonian([coeff_mixer] + list(np.ones(len(self.local_couplings))), [self.get_mixer_hamiltonian(num_wires)]+ [self.get_problem_hamiltonian(couplings=[self.local_couplings[i],], sign=coeff_problem) for i in range(len(self.local_couplings))])
+        
+        
+        if gamma_mix < 0 or gamma_mix > 1:
+            raise ValueError("gamma_mix must be between 0 and 1. Got gamma_mix:", gamma_mix)
+        mixing_gamma = gamma_mix
+        
+        if np.any(np.array(weights) < 0):
+            raise ValueError("Gammas must be non-negative. Got gammas:", weights)
+        
+        #self.time = time
+        num_trotter_steps = int(np.floor((time / self.delta_time)))
+        
+        coeff_mixer = mixing_gamma
+        coeff_problem = weights#-(1 - self.gammas)
 
         # Do each hamiltonian term seperately, including those from each coupling tensor
-        H_total = qml.Hamiltonian([coeff_mixer] + list(np.ones(len(self.local_couplings))), [self.get_mixer_hamiltonian(num_wires)]+ [self.get_problem_hamiltonian(couplings=[self.local_couplings[i],], sign=coeff_problem) for i in range(len(self.local_couplings))])
-        
+        #H_total = qml.Hamiltonian([coeff_mixer] + list(np.ones(len(self.model.normalised_couplings))), [self.get_mixer_hamiltonian(num_wires)]+ [self.get_problem_hamiltonian(couplings=[self.model.normalised_couplings[i],], sign=coeff_problem[i]) for i in range(len(self.model.normalised_couplings))])
+        H_total = qml.Hamiltonian([coeff_mixer] + list(np.ones(len(local_couplings))), [self.get_mixer_hamiltonian(num_wires)]+ [self.get_problem_hamiltonian(couplings=[local_couplings[i],], sign=coeff_problem[i]) for i in range(len(local_couplings))])
+
+
+
+
         # set qnode to use our device with dynamically chosen wires
         @qml.qnode(dev, shots=1)
         def quantum_evolution(input_string):
             for i, bit in enumerate(input_string):
                 if bit == "1":
                     qml.PauliX(i)
-            qml.ApproxTimeEvolution(H_total, self.time, self.num_trotter_steps)
+            qml.ApproxTimeEvolution(H_total, time, num_trotter_steps)
             return qml.sample()
 
         # Get the first shot from the sample
@@ -227,15 +326,15 @@ class CircuitMaker:
         
         self._assert_bitstring(s)
 
-        self.gamma = gamma
-        self.time = time
-        self.num_trotter_steps = int(np.floor((self.time / self.delta_time)))
-        self.local_couplings = local_couplings
-        self.spin_length = len(subgroup_choice)
+        # self.gamma = gamma
+        # self.time = time
+        # self.num_trotter_steps = int(np.floor((self.time / self.delta_time)))
+        # self.local_couplings = local_couplings
+        #self.spin_length = len(subgroup_choice)
         
         # Get s_cg' for the subgroup and reconstruct full s' using s and s_cg'
         s_cg = "".join([s[i] for i in subgroup_choice])
-        s_cg_prime = self.get_sample(s_cg)
+        s_cg_prime = self.get_sample(s_cg, time, gamma, local_couplings)
 
         s_list = list(s)
         for i, global_index in enumerate(subgroup_choice):

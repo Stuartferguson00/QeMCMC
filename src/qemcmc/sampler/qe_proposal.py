@@ -71,6 +71,9 @@ class QeProposal(Proposal):
             time (int|tuple[int, int]): The time parameter. The number of trotter steps to take. (can be sampled from range represented by tuple.)
             delta_time (float, optional): The delta time parameter for length of trotter steps. Defaults to 0.8.
             coarse_graining (CoarseGraining, optional): An optional coarse-graining object to define spin subgroups. Defaults to None.
+            coupling_weights (list of float or list of tuple[float, float], optional): Optional list of weights for the coupling tensors in the model. 
+                Length should match the number of coupling tensors in the model. Defaults to None (no weighting). If tuple provided, weight is sampled uniformly from the range for each coupling tensor at each step.
+                Any identical coupling weights will be sampled together, so if you want to e.g. weight all the constraint couplings the same, you can just set those weights to be the same value or tuple, and this will be respected in the sampling.
             m (int, optional): The number of subgroups to partition the spins into for sequential updates. Defaults to 3.
         """
 
@@ -79,9 +82,9 @@ class QeProposal(Proposal):
         if coupling_weights is not None:
             if len(coupling_weights) != len(model.normalised_couplings):
                 raise ValueError(f"Length of coupling_weights must match number of couplings in the model. Expected {len(model.normalised_couplings)}, got {len(coupling_weights)}. Note that this includes constraint terms")
-            self.coupling_weights = np.array(coupling_weights)
+            self.coupling_weights = coupling_weights
         else:
-            self.coupling_weights = np.ones(len(model.normalised_couplings))
+            self.coupling_weights = list(np.ones(len(model.normalised_couplings)))
 
         self.gamma = self._validate_gamma(gamma)
         self.time = self._validate_time(time)
@@ -109,11 +112,33 @@ class QeProposal(Proposal):
         # Generate m disjoint partitions (e.g., if n=10, m=3 -> [[3,8,1,9], [0,4,2], [5,6,7]])
         partitions = self.cg.get_partitions(m=self.m)
 
+        unique_items = list(set(self.coupling_weights))
+        # cant use np.where directly on list of floats and tuples, so have to do this weird list comprehension to get the indices of the unique items
+
+        unique_index = [[i for i, x in enumerate(self.coupling_weights) if x == item] for item in unique_items]
+
+
+        unique_items_floats = np.ones(len(self.coupling_weights), dtype=float) 
+        for o, cw in enumerate(unique_items):           
+            if isinstance(cw, (int, float)):
+                unique_items_floats[o] = cw
+            elif isinstance(cw, tuple):
+                unique_items_floats[o] = np.random.uniform(*cw)
+
+
+        coupling_weights = np.ones(len(self.coupling_weights))
+        for o, unique_item in enumerate(unique_items):
+            indices = unique_index[o]
+            for index in indices:   
+                coupling_weights[index] = unique_items_floats[o]
+
+
+
         working_state = current_state
         for subgroup in partitions:
             # recalculate couplings cause the spins outside the subgroup
             # might have flipped in the previous loop iteration
-            local_couplings = self.model.get_subgroup_couplings(subgroup=subgroup, current_state=working_state, coupling_weights=self.coupling_weights)
+            local_couplings = self.model.get_subgroup_couplings(subgroup=subgroup, current_state=working_state, coupling_weights=coupling_weights)
             working_state = self.CM.update(s=working_state, subgroup_choice=subgroup, local_couplings=local_couplings, gamma=g, time=t)
 
         return working_state

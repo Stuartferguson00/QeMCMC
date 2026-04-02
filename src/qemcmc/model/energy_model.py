@@ -170,7 +170,9 @@ class EnergyModel:
         Calculates local couplings for a subgroup.
         Spins outside the group are treated as frozen constants.
         coupling_weights adds in the option to weight the couplings, which can be used to effectively remove certain couplings from the proposal (e.g. constraints) by setting their weight to 0. 
-        Very important to NOT normalise after this ste though. (There are reasons why I [SF] did the weighting at this point)
+        Very important to NOT normalise after this ste though. 
+        
+        It might seem off to do the reweighting at this point, but here are reasons why I [SF] did it! Basically, when you get the subgroup couplings, the terms jumble up, so the returned local coupling list necessarily does not respect the order etc. of the different terms in the original.
         """
         if coupling_weights is None:
             coupling_weights = [1.0] * len(subgroup)
