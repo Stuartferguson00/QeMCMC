@@ -1,14 +1,15 @@
 from .sampler import Proposal, ClassicalProposal, QeProposal
-from .model import EnergyModel
+from .model import EnergyModel, ConstraintModel, ModelMaker
 from .circuits import CircuitMaker
-from .utils import MCMCState, MCMCChain, plot_chains, get_random_state, get_all_possible_states, ModelMaker
+from .utils import MCMCState, MCMCChain, plot_chains, get_random_state, get_all_possible_states
 from .spectralgap import SpectralGap
 
 __all__ = [
     "EnergyModel",
-    "MCMC",
-    "ClassicalMCMC",
-    "QeMCMC",
+    "ConstraintModel",
+    "Proposal",
+    "ClassicalProposal",
+    "QeProposal",
     "MCMCState",
     "MCMCChain",
     "ModelMaker",

@@ -1,9 +1,6 @@
-# Internal
-from qemcmc.utils import get_random_state
 from qemcmc.model import EnergyModel
 from qemcmc.sampler import Proposal
-
-# External
+from qemcmc.utils import get_random_state
 import numpy as np
 
 
@@ -13,33 +10,25 @@ class ClassicalProposal(Proposal):
 
     This class implements purely classical proposal mechanisms for MCMC.
     New candidate states are generated either by sampling a completely
-    random (uniform) configuration or by performing a local single-spin flip.
+    random (uniform) configuration, or by performing a local single-spin or 
+    two-spin flip.
 
     Parameters
     ----------
     model : EnergyModel
         Energy model defining the target Boltzmann distribution.
-    temp : float
-        Sampling temperature of the system.
     method : str, optional
         Proposal mechanism used to generate candidate states.
 
         - ``"uniform"`` : propose a completely random spin configuration.
         - ``"local"`` : flip a single randomly chosen spin.
+        - ``"2-local"`` : flip two randomly chosen spins.
 
         Default is ``"uniform"``.
     """
 
-    def __init__(self, model: EnergyModel, method="uniform"):
-        """
-        Initialize the MCMC routine for the Ising model.
-
-        Args:
-        model (IsingEnergyFunction): The energy function of the Ising model.
-        method (str, optional): The update method to use. Options are "uniform", "local" or "2-local". Default is "uniform".
-        """
+    def __init__(self, model: EnergyModel, method: str = "uniform"):
         super().__init__(model)
-
         self.method = method
 
         if self.method == "uniform":
@@ -49,28 +38,38 @@ class ClassicalProposal(Proposal):
         elif self.method == "2-local":
             self.update = self.update_2local
         else:
-            print("method must be 'uniform' or 'local'")
+            raise ValueError(f"Method '{method}' is not supported. Choose from 'uniform', 'local', or '2-local'.")
 
     def update_uniform(self, current_state_bitstring: str) -> str:
         """
-        Updates the current state bitstring by generating a new random state bitstring of the same length.
-        Args:
-            current_state_bitstring (str): The current state represented as a bitstring.
-        Returns:
-            str: A new random state bitstring of the same length as the input.
+        Proposes a new state by generating a random bitstring.
+
+        Parameters
+        ----------
+        current_state_bitstring : str
+            The current state represented as a bitstring (not used, but required by the API).
+
+        Returns
+        -------
+        str
+            A new random state bitstring of the same length.
         """
-        s_prime = get_random_state(len(current_state_bitstring))
-        return s_prime
+        return get_random_state(len(current_state_bitstring))
 
     def update_local(self, current_state_bitstring: str) -> str:
         """
-        Update the local state by flipping a randomly chosen spin in the current state bitstring.
-        Args:
-            current_state_bitstring (str): The current state represented as a bitstring.
-        Returns:
-            str: The new state bitstring after flipping a randomly chosen spin.
-        """
+        Proposes a new state by flipping a single randomly chosen spin.
 
+        Parameters
+        ----------
+        current_state_bitstring : str
+            The current state represented as a bitstring.
+
+        Returns
+        -------
+        str
+            The new state bitstring after flipping one spin.
+        """
         # Randomly choose which spin to flip
         choice = np.random.randint(0, self.n_spins)
 
@@ -79,18 +78,22 @@ class ClassicalProposal(Proposal):
         c_s[choice] = str(int(c_s[choice]) ^ 1)
 
         # Return the new state as a bitstring
-        s_prime = "".join(c_s)
-        return s_prime
+        return "".join(c_s)
 
     def update_2local(self, current_state_bitstring: str) -> str:
         """
-        Update the local state by flipping two randomly chosen spins in the current state bitstring.
-        Args:
-            current_state_bitstring (str): The current state represented as a bitstring.
-        Returns:
-            str: The new state bitstring after flipping two randomly chosen spins.
-        """
+        Proposes a new state by flipping two randomly chosen spins.
 
+        Parameters
+        ----------
+        current_state_bitstring : str
+            The current state represented as a bitstring.
+
+        Returns
+        -------
+        str
+            The new state bitstring after flipping two spins.
+        """
         # Randomly choose which two spins to flip
         choices = np.random.choice(self.n_spins, size=2, replace=False)
 
@@ -100,5 +103,4 @@ class ClassicalProposal(Proposal):
             c_s[choice] = str(int(c_s[choice]) ^ 1)
 
         # Return the new state as a bitstring
-        s_prime = "".join(c_s)
-        return s_prime
+        return "".join(c_s)
