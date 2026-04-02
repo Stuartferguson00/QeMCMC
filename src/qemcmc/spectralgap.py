@@ -97,7 +97,7 @@ class SpectralGap(Runner):
         Q = np.zeros((2**self.model.n_spins, 2**self.model.n_spins))
 
         for i in range(2**self.model.n_spins):
-            Q[i, :] += abs(self.proposal.CM.get_state_vector(self.model.S[i], self.proposal.gamma, self.proposal.time, self.proposal.coupling_weights))**2
+            Q[i, :] += abs(self.proposal.CM.get_state_vector(self.model.S[i], self.proposal.coupling_weights, self.proposal.time, self.proposal.gamma))**2
             #get_output_statevector(self.proposal.model.S[i])
         Q = Q
 
