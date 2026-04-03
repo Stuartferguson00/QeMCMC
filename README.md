@@ -16,7 +16,7 @@ The implementation is inspired by the numerics in [Layden's work on QeMCMC](http
 - **Arbitrary Energy Models:** Define any classical Ising or QUBO-like model using a simple list of coupling tensors (example: 2D Ising `h`, `J` etc). A universal energy calculator handles arbitrary-order interactions
 - **Automatic Hamiltonian Construction:** Build the corresponding **quantum Hamiltonian** based on the given couplings and run **Trotterised time evolution** with PennyLane's lightining qubit simulator
 - **Coarse Graining**: Optionally use local updates on chosen subgroups of spins to scale proposals
-
+- **Constraining**: Flexibly implementat of hard and soft constraints
 
 ## Installation
 
@@ -35,7 +35,9 @@ This project uses [`uv`](https://astral.sh/uv), an extremely fast Python package
     ```
     This will create a local `.venv` folder and install all required dependencies from `pyproject.toml` and `uv.lock`.
 
-## Quick Start - Example 2D Ising Model
+## Quick Start 
+
+See notebooks\Basics\basic_QeMCMC.ipynb for an example MCMC on a fully connected Ising Model
 
 
 <!-- `model/energy_model.py`
@@ -56,25 +58,14 @@ This energy model is the target distribution that the QeMCMC sampler will explor
 
 
 ```python
-import numpy as np
-from qemcmc.model import EnergyModel
+from qemcmc.model import EnergyModel, ModelMaker
+n = 10 # Number of spins in the system
 
-n = 4
-h = np.array([-1.0, 0.5, 0.0, 2.0])
-
-# Symmetric J
-J = np.array([
-    [0.0, 1.2, 0.0, 0.0],
-    [1.2, 0.0, -0.7, 0.0],
-    [0.0, -0.7, 0.0, 0.4],
-    [0.0, 0.0, 0.4, 0.0],
-])
-
-couplings = [h, J]
-
-model = EnergyModel(n=n, couplings=couplings, name="my_ising")
+# Build an Ising model to test the algorithms on
+model_type = "Fully Connected Ising"
+name = "Example Ising model"
+model = ModelMaker(n, model_type, name).model
 ```
-Here, h represents local fields and J encodes pairwise interactions in a standard Ising formulation. Higher-order coupling tensors can also be supplied.
 
 ### 2. (Optional) Define coarse graining
 Coarse graining allows the sampler to propose local multi-spin updates on predefined subgroups, rather than updating all spins at once.
@@ -93,22 +84,27 @@ At each MCMC step, a subgroup is sampled according to subgroup_probs.
 ### 3. Create and run QeMCMC
 Finally, we initialise the quantum-enhanced Markov chain and generate a single proposal using simulated quantum time evolution.
 ```python
-from qemcmc.qemcmc import QeMCMC
+from qemcmc.sampler import QeProposal
+from qemcmc.sampler.runners import MCMCRunner
+reps = 5 # How many markov chains to produce
+steps = 300 # Length of each markov chain
+temp = 0.1 # Temperature of the system
 
-sampler = QeMCMC(
-    model=model,
-    gamma=(0.3, 0.6),     
-    time=(1, 5),          
-    temp=1.0,
-    delta_time=0.8,
-    coarse_graining=cg,
-)
 
-s = "01010"
-s_prime = sampler.get_s_prime(s)
-print("proposal:", s, "->", s_prime)
+# Define your MCMC algorithm runner
+runner = MCMCRunner(model, temp)
+
+# Define Quantum parameters
+gamma = (0.3,0.6)# Relative strength of mixer hamiltonian 
+time = (1,10) # Time for hamiltonian simulation
+
+# Define your quantum proposal
+quantum_proposal = QeProposal(model, gamma=gamma, time=time)
+
+# Run the sampler
+runner.run(quantum_proposal, steps, name="QeMCMC", verbose=True)
+
 ```
-Here, each call to get_s_prime runs a quantum circuit to generate a proposal state conditioned on the current configuration.
 
 ## Coarse Graining
 To do coarse graining, a list of subgroups and it's corresponding probabilities along with the couplings list should be passed in as parameters when initializing a coarse graining object. The subgroup list should contain lists of spin indices that belong to each subgroup. For example, for a system with 6 spins divided into 2 subgroups of 3 spins each, the subgroup list would be `[[0, 1, 2], [3, 4, 5]]`. 
@@ -140,6 +136,7 @@ For questions, suggestions, or collaboration, please feel free to contact the au
 -   [pafloxy/quMCMC](https://github.com/pafloxy/quMCMC) for the foundational code.
 -   [Quantum-enhanced Markov Chain Monte Carlo](https://www.nature.com/articles/s41586-023-06095-4) by David Layden et al.
 -   [Quantum-enhanced MCMC for systems larger than your Quantum Computer](https://arxiv.org/abs/2405.04247) by S. Ferguson and P. Wallden.
+-
 
 ---
 ![alt text](logo-qsl.jpeg)
