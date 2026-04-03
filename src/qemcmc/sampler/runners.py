@@ -1,7 +1,7 @@
 import numpy as np
 from tqdm.auto import tqdm
 from typing import Optional, Callable, Tuple
-from qemcmc.model.energy_model import EnergyModel, ConstraintModel
+from qemcmc.model import EnergyModel, ConstraintModel
 from qemcmc.utils import MCMCChain, MCMCState, get_random_state
 from qemcmc.sampler.proposal import Proposal
 
@@ -168,7 +168,7 @@ class ConstrainedMCMCRunner(Runner):
         self.constraint_func = self.model.constraint_func
         self.reject_invalid = reject_invalid
 
-    def run(self, proposer: Proposal, n_hops: int, initial_state: Optional[str] = None, name: Optional[str] = None, verbose: bool = False, sample_frequency: int = 1) -> Tuple[MCMCChain, int]:
+    def run(self, proposer: Proposal, n_hops: int, initial_state: Optional[str] = None, name: Optional[str] = None, verbose: bool = False, sample_frequency: int = 1, return_rejections: bool = True) -> Tuple[MCMCChain, int]:
         """
         Run the constrained MCMC simulation.
 
@@ -187,11 +187,13 @@ class ConstrainedMCMCRunner(Runner):
             If True, enables progress bar and print statements.
         sample_frequency : int, optional
             The frequency at which to sample states for the chain.
+        return_rejections : bool, optional
+            If True, also return the number of rejections due to constraint violations.
 
         Returns
         -------
         tuple[MCMCChain, int]
-            A tuple containing the generated Markov chain and the number of rejections due to constraints.
+            A tuple containing the generated Markov chain and the number of rejections due to constraints. If return_rejections is False, only the MCMCChain is returned.
         """
         if name is None:
             name = getattr(proposer, "method", "Constrained") + " MCMC"
@@ -234,5 +236,8 @@ class ConstrainedMCMCRunner(Runner):
             if i % sample_frequency == 0 and i != 0:
                 mcmc_chain.add_state(MCMCState(current_state.bitstring, True, energy_s, position=i))
 
-        return mcmc_chain, constraint_rejections
+        if return_rejections:
+            return mcmc_chain, constraint_rejections
+        else:
+            return mcmc_chain
     
