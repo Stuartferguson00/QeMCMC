@@ -158,6 +158,7 @@ class SpectralGap(Runner):
             s = np.sum(P[i, :]) - P[i, i]
             P[i, i] = 1 - s
 
+
         # find eigenvalues
         e_vals, e_vecs = sp.linalg.eig(P)
         e_vals = np.flip(np.sort(abs(e_vals)))

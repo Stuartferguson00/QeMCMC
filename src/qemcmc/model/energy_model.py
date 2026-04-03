@@ -131,8 +131,12 @@ class EnergyModel:
         """
         if isinstance(state, str):
             state = np.array([int(bit) for bit in state])
-        else:
+        if isinstance(state, (list, tuple, np.ndarray)):
             state = np.array(state)
+            if state.dtype == np.bool_:
+                state = state.astype(int)
+        else:
+            raise TypeError(f"State must be a string, list, tuple, or numpy array, but got {type(state)}")
 
         if self.model_type == "binary":
             if not np.all(np.isin(state, [0, 1])):

@@ -26,10 +26,8 @@ class ModelMaker:
 
         if model_type == "Fully Connected Ising":
             self.make_fully_connected_ising()
-        elif model_type == "1D Ising":
-            self.make_1D_Ising()
-        elif model_type == "Random Local spin constraint":
-            self.make_local_spin_constraint()
+        elif model_type == "Fully Connected QUBO":
+            self.make_fully_connected_binary()
         else:
             raise ValueError(f"Unknown model_type: {model_type}")
 
@@ -47,4 +45,28 @@ class ModelMaker:
         couplings = [h, J]
         self.model = EnergyModel(n=self.n_spins, couplings=couplings, name=self.name)
 
+    def make_fully_connected_binary(self):
+        """
+        Transforms the existing Ising couplings into an mathematically 
+        equivalent QUBO model via s = 2x - 1.
+        """
+        shape_of_J = (self.n_spins, self.n_spins)
+        J = np.round(np.random.normal(0, 1, shape_of_J), decimals=4)
+        J_tril = np.tril(J, -1)
+        J_triu = J_tril.transpose()
+        J_ising = J_tril + J_triu
+
+        h_ising = np.round(np.random.normal(0, 1, self.n_spins), decimals=4)
+
+        
     
+        Q_binary = 4 * J_ising
+        q_binary = 2 * h_ising - 2 * np.sum(J_ising, axis=1)
+        binary_couplings = [np.round(q_binary, 4), np.round(Q_binary, 4)]
+        
+        self.model = EnergyModel(
+            n=self.n_spins, 
+            couplings=binary_couplings, 
+            name=self.name, 
+            model_type="binary"
+        )

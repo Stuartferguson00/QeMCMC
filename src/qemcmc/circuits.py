@@ -100,7 +100,6 @@ class CircuitMaker:
                 elif self.model_type == "binary":
                     # 0.5 * (I - Z) for first variable
                     term = 0.5 * (qml.Identity(index_tuple[0]) - qml.PauliZ(index_tuple[0]))
-
                     # multiply by 0.5 * (I - Z) for rest
                     for q in index_tuple[1:]:
                         next_var = 0.5 * (qml.Identity(q) - qml.PauliZ(q))
@@ -186,7 +185,9 @@ class CircuitMaker:
         self.num_trotter_steps = int(np.floor((self.time / self.delta_time)))
         
         coeff_mixer = mix_weight
-        coeff_problem = weights
+        coeff_problem = weights 
+
+
 
         H_total = qml.Hamiltonian(
             [coeff_mixer] + list(np.ones(len(self.model.normalised_couplings))), 
