@@ -55,19 +55,26 @@ class ConstraintModel(EnergyModel):
         # This model requires a special way to generate initial states that respect the constraint.
         self.get_initial_states = self.get_initial_states_constraint
         
-        super().__init__(n=n, couplings=couplings, **kwargs)
-        
+        if couplings is not None:
+            super().__init__(n=n, couplings=couplings, **kwargs)
+        else:
+            super().__init__(n=n, couplings = [], **kwargs)
+
         self.constraint_couplings = constraint_couplings
         self.constraint_signs = constraint_signs
         
         # Calculate normalization factors for constraint couplings
         self.constraint_coupling_alphas = self.calculate_alpha(n, constraint_couplings)
         
+
+        # These are the couplings used in quantum proposals
         # Combine and normalize the energy and constraint couplings
         self.normalised_couplings = (
             [self.couplings[i] * self.alphas[i] for i in range(len(self.couplings))] +
+            #[self.constraint_couplings[i] for i in range(len(self.constraint_couplings))]
             [self.constraint_couplings[i] * self.constraint_coupling_alphas[i] for i in range(len(self.constraint_couplings))]
         )
+
         
         # Store the un-normalized total couplings
         self.total_couplings = self.couplings + self.constraint_couplings

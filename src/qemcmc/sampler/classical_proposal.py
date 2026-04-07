@@ -6,7 +6,7 @@ import numpy as np
 
 class ClassicalProposal(Proposal):
     """
-    Classical Markov Chain Monte Carlo sampler.
+    Classical Markov Chain Monte Carlo proposer.
 
     This class implements purely classical proposal mechanisms for MCMC.
     New candidate states are generated either by sampling a completely

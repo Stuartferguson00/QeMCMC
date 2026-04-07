@@ -246,12 +246,18 @@ class CircuitMaker:
         coeff_mixer = mix_weight
         coeff_problem = weights
 
+        #coeff_problem = [coeff for i, coeff in enumerate(coeff_problem) if local_couplings[i].ndim > 0 and np.any(local_couplings[i] != 0)]
+        #local_couplings = [coupling for coupling in local_couplings if coupling.ndim > 0 and np.any(coupling != 0)]
+        if len(local_couplings) == 0:
+            # If there are no local couplings, just return the input state
+            print("no non-zero local couplings, skipping evolution and returning input state")
+            return s_cg
+        
         H_total = qml.Hamiltonian(
             [coeff_mixer] + list(np.ones(len(local_couplings))), 
             [self.get_mixer_hamiltonian(num_wires)] + 
             [self.get_problem_hamiltonian(couplings=[local_couplings[i]], sign=coeff_problem[i]) for i in range(len(local_couplings))]
         )
-
         # set qnode to use our device with dynamically chosen wires
         @qml.qnode(dev, shots=1)
         def quantum_evolution(input_string):

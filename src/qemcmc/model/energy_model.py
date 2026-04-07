@@ -50,6 +50,8 @@ class EnergyModel:
         self.couplings = couplings
         self.name = name
         self.alphas = self.calculate_alpha(n, couplings)
+
+
         self.normalised_couplings = [self.couplings[i] * self.alphas[i] for i in range(len(self.couplings))]
         self.cost_function_signs = cost_function_signs
 
@@ -161,8 +163,9 @@ class EnergyModel:
         for term_index, coupling in enumerate(couplings):
             coupling = np.array(coupling)
             order = coupling.ndim
-
-            if order == 1:
+            if order == 0:
+                total_energy += cost_function_signs[term_index] * coupling
+            elif order == 1:
                 total_energy += cost_function_signs[term_index] * np.dot(coupling, state)
             elif order == 2:
                 total_energy += cost_function_signs[term_index] * 0.5 * np.einsum("ij, i, j->", coupling, state, state)
@@ -243,7 +246,6 @@ class EnergyModel:
                     new_order = len(in_group)
                     local_indices = tuple(g_to_l[i] for i in in_group)
                     new_couplings[new_order - 1][local_indices] += effective_coeff
-
         return new_couplings
 
     def calculate_alpha(self, n: int, couplings: list = None, eps: float = 1e-15) -> np.ndarray:
@@ -316,7 +318,9 @@ class EnergyModel:
 
         norm_sq_tot = np.sum(norm_sq_arr)
         if norm_sq_tot < eps:
-            raise ValueError("Cannot compute alpha: no nonzero (non-constant) couplings found.")
+            print("Warning: Couplings are all zero (or very close to zero). Returning alpha=1 to avoid division by zero.")
+            print("Input of a zero-coupling may be intended to sample Uniform distributions, however if this is not your intention, please check your couplings.")
+            #return np.ones(len(couplings))
 
         return np.sqrt(n / norm_sq_arr)
 

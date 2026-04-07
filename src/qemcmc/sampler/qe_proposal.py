@@ -86,6 +86,8 @@ class QeProposal(Proposal):
         self.method = "quantum"
 
         self.CM = CircuitMaker(self.model, delta_time=self.delta_time)
+
+        
         self.cg = coarse_graining or CoarseGraining(model.n_spins)
 
     def update(self, current_state: str) -> str:
@@ -113,7 +115,8 @@ class QeProposal(Proposal):
         
         final_coupling_weights, g, t = self.sample_hyperparams()
 
-        #print(f"Sampled hyperparameters for this proposal step: gamma={g:.3f}, time={t}, coupling_weights={final_coupling_weights}")
+
+
 
         working_state = current_state
         for subgroup in partitions:

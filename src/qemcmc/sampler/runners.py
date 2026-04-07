@@ -35,7 +35,7 @@ class Runner:
             The acceptance probability.
         """
         delta_energy = energy_sprime - energy_s
-        if energy_sprime < energy_s:
+        if energy_sprime <= energy_s:
             return 1.0
         else:
             exp_factor = np.exp(-delta_energy / temperature)
@@ -219,20 +219,33 @@ class ConstrainedMCMCRunner(Runner):
 
         mcmc_chain = MCMCChain([current_state], name=name)
         constraint_rejections = 0
-        for i in tqdm(range(0, n_hops), desc="Run " + name, disable=not verbose):
+        self_rejections = 0
+        MH_rejects = 0
+        s_prime = None
+        pbar = tqdm(range(0, n_hops), desc="Run " + name, disable=not verbose)
+        E_diffs = [] # energy difference in proposal
+        h_diffs = [] # Hamming distance difference in proposal
+        for i in pbar:
             s_prime = proposer.update(current_state.bitstring)
-
-            if self.reject_invalid and not self.constraint_func(s_prime):
+            pbar.set_description(f"Run {name} | current state: {current_state.bitstring} | proposing: {s_prime} | avgEdiff: {np.mean(np.abs(E_diffs)):.4f} | avgHdiff: {np.mean(h_diffs):.2f} | constrejecects: {constraint_rejections} | selfrejects: {self_rejections} | MHrejects: {MH_rejects}")
+            if s_prime == current_state.bitstring:
+                accepted = False
+                energy_sprime = energy_s
+                self_rejections += 1
+            elif self.reject_invalid and not self.constraint_func(s_prime):
                 accepted = False
                 constraint_rejections += 1
             else:
                 energy_sprime = self.model.get_energy(s_prime)
                 accepted = self.test_accept(energy_s, energy_sprime, temperature=self.temp)
-
+                E_diffs.append(energy_s - energy_sprime)
+                h_diffs.append(sum(c1 != c2 for c1, c2 in zip(current_state.bitstring, s_prime)))
+                if not accepted:
+                    MH_rejects += 1
             if accepted:
                 energy_s = energy_sprime
                 current_state = MCMCState(s_prime, accepted, energy_s, position=i)
-
+                
             if i % sample_frequency == 0 and i != 0:
                 mcmc_chain.add_state(MCMCState(current_state.bitstring, True, energy_s, position=i))
 
