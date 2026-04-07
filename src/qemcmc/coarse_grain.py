@@ -57,5 +57,5 @@ class CoarseGraining:
         if self.repeated:
             return chunks
         else:
-            return chunks[0]
+            return [chunks[0],]
 
