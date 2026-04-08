@@ -16,7 +16,7 @@ class ModelMaker:
     coupling tensors and initialises an :class:`EnergyModel` instance.
     """
 
-    def __init__(self, n_spins: int, model_type: str, name: str, coarse_graining_number: int = 1, cost_function_signs: list = [-1, -1]):
+    def __init__(self, n_spins: int, model_type: str, name: str, cost_function_signs: list = [-1, -1]):
         self.name = name
         self.n_spins = n_spins
         self.cost_function_signs = cost_function_signs or [-1, -1]
@@ -26,12 +26,12 @@ class ModelMaker:
 
         if model_type == "Fully Connected Ising":
             self.make_fully_connected_ising()
-        elif model_type == "Coarse Grained Ising":
-            self.make_coarse_grained_ising(coarse_graining_number)
-        elif model_type == "1D Ising":
-            self.make_1D_Ising()
+        elif model_type == "Fully Connected QUBO":
+            self.make_fully_connected_binary()
         else:
             raise ValueError(f"Unknown model_type: {model_type}")
+
+    
 
     def make_fully_connected_ising(self):
         shape_of_J = (self.n_spins, self.n_spins)
@@ -45,18 +45,28 @@ class ModelMaker:
         couplings = [h, J]
         self.model = EnergyModel(n=self.n_spins, couplings=couplings, name=self.name)
 
-    def make_coarse_grained_ising(self, coarse_graining_number):
-        # I define an energy model with the couplings and subgroups list explicitly specified in the parameters of EnergyModel object
-        # This kind of initialization of an EnergyModel is required to run the CM.update() method for coarse graining
+    def make_fully_connected_binary(self):
+        """
+        Transforms the existing Ising couplings into an mathematically 
+        equivalent QUBO model via s = 2x - 1.
+        """
         shape_of_J = (self.n_spins, self.n_spins)
         J = np.round(np.random.normal(0, 1, shape_of_J), decimals=4)
         J_tril = np.tril(J, -1)
         J_triu = J_tril.transpose()
-        J = J_tril + J_triu
+        J_ising = J_tril + J_triu
 
-        h = np.round(np.random.normal(0, 1, self.n_spins), decimals=4)
+        h_ising = np.round(np.random.normal(0, 1, self.n_spins), decimals=4)
 
-        couplings = [h, J]
-        subgroups = list(itertools.combinations(range(self.n_spins), coarse_graining_number))
-        self.model = EnergyModel(n=self.n_spins, couplings=couplings, name=self.name)
-        self.cg = CoarseGraining(n=self.n_spins, subgroups=subgroups)
+        
+    
+        Q_binary = 4 * J_ising
+        q_binary = 2 * h_ising - 2 * np.sum(J_ising, axis=1)
+        binary_couplings = [np.round(q_binary, 4), np.round(Q_binary, 4)]
+        
+        self.model = EnergyModel(
+            n=self.n_spins, 
+            couplings=binary_couplings, 
+            name=self.name, 
+            model_type="binary"
+        )

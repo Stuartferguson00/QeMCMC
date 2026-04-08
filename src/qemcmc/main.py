@@ -1,5 +1,6 @@
 # Internal
 from qemcmc.sampler import ClassicalMCMC, QeMCMC
+from qemcmc.sampler.runners import MCMCRunner
 from qemcmc.utils import ModelMaker, MCMCChain
 from qemcmc.coarse_grain import CoarseGraining
 
@@ -44,7 +45,7 @@ def plot_thermalisation(chains_dict, n_spins, temp, exact_energy=None, lowest_le
 
 if __name__ == "__main__":
     n = 24
-    steps = 2000
+    steps = 10
     reps = 10
     temp = 0.1
 
@@ -58,6 +59,7 @@ if __name__ == "__main__":
     colors = ["purple", "red", "pink", "green", "orange"]
 
     results_dict = {}
+    runner = MCMCRunner()
 
     # --- 1. Run Classical Baselines ---
     print("--- Running Classical Baselines ---")
@@ -65,7 +67,7 @@ if __name__ == "__main__":
     # Uniform
     def run_uniform(rep):
         sampler = ClassicalMCMC(model, temp, method="uniform")
-        return sampler.run(steps, initial_state=initial_states[rep], verbose=True)
+        return runner.run(sampler, steps, initial_state=initial_states[rep], verbose=True)
 
     uni_chains = list(tqdm(Parallel(n_jobs=-1, return_as="generator")(delayed(run_uniform)(rep) for rep in range(reps)), total=reps, desc="Running Uniform chains", leave=False))
     results_dict["Uniform"] = (np.mean([c.get_current_energy_array() for c in uni_chains], axis=0), "darkorange")
@@ -73,7 +75,7 @@ if __name__ == "__main__":
     # Local
     def run_local(rep):
         sampler = ClassicalMCMC(model, temp, method="local")
-        return sampler.run(steps, initial_state=initial_states[rep], verbose=True)
+        return runner.run(sampler, steps, initial_state=initial_states[rep], verbose=True)
 
     loc_chains = list(tqdm(Parallel(n_jobs=-1, return_as="generator")(delayed(run_local)(rep) for rep in range(reps)), total=reps, desc="Running Local chains", leave=False))
     results_dict["Local"] = (np.mean([c.get_current_energy_array() for c in loc_chains], axis=0), "forestgreen")
@@ -94,7 +96,8 @@ if __name__ == "__main__":
                 coarse_graining=cg,
                 m=m,
             )
-            return sampler.run(
+            return runner.run(
+                sampler,
                 steps,
                 initial_state=initial_states[rep],
                 name=f"QeMCMC m={m}",

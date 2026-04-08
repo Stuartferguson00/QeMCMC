@@ -151,11 +151,12 @@ class MCMCChain:
         return accepted_dict
 
 
-def plot_chains(chains: list[MCMCChain], color: str, label: str):
+def plot_chains(chains: list[MCMCChain], color: str, label: str, plot_individual_chains: bool = True):
     for chain in chains:
         energies = chain.get_current_energy_array()
         pos = chain.get_pos_array()
-        plt.plot(pos, energies, color=color, alpha=0.1)
+        if plot_individual_chains:
+            plt.plot(pos, energies, color=color, alpha=0.1)
     avg_energy = sum(chain.get_current_energy_array() for chain in chains) / len(chains)
     plt.plot(pos, avg_energy, color=color, label=f"Average {label}")
 
@@ -168,14 +169,16 @@ def get_random_state(num_spins: int) -> str:
     Returns:
         str: A bitstring representing the random state.
     """
-    # Define the size of state space
-    state_space = 2 ** (num_spins)
-
+    #state_space = int(2 ** (num_spins))
     # Generate a random state
-    next_state = np.random.randint(0, state_space, 1)[0]
-
+    #next_state = np.random.randint(0, state_space, 1, dtype=np.int64)[0]
     # Convert the state from integer to a bitstring
-    s_prime = f"{next_state:0{num_spins}b}"
+
+    
+    next_state = np.random.randint(0, 2, size=num_spins, dtype=np.int8)
+    
+    #s_prime = f"{next_state:0{num_spins}b}"
+    s_prime = ''.join(str(bit) for bit in next_state)
     return s_prime
 
 

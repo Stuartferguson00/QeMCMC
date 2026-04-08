@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.13"
 resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'win32'",
@@ -313,6 +313,32 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/81/e1/56027a71e31b02ddc53c7d65b01e68edf64dea2932122fe7746a516f75d5/dill-0.4.1.tar.gz", hash = "sha256:423092df4182177d4d8ba8290c8a5b640c66ab35ec7da59ccfa00f6fa3eea5fa", size = 187315, upload-time = "2026-01-19T02:36:56.85Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/1e/77/dc8c558f7593132cf8fefec57c4f60c83b16941c574ac5f619abb3ae7933/dill-0.4.1-py3-none-any.whl", hash = "sha256:1e1ce33e978ae97fcfcff5638477032b801c46c7c65cf717f95fbc2248f79a9d", size = 120019, upload-time = "2026-01-19T02:36:55.663Z" },
+]
+
+[[package]]
+name = "dimod"
+version = "0.12.21"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/20/a2/5171e9c6df4d8492e238b837c96a27f68e98e67bf8138f3ee50b124a39bb/dimod-0.12.21.tar.gz", hash = "sha256:95c0e6b96a21d42fdf87a2ee123d3d0d4776eab9cbe1b1fa9521b5bba0242e5a", size = 3141251, upload-time = "2025-08-20T17:56:00.006Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c3/1d/dae40f229354506200ec2797a1511e9d3396ad419ea680c72692dbc6076c/dimod-0.12.21-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:d83c44a3386cfc30a58dadf12de4f8445e7a0e600ae90f9f3a5061afbbb27a62", size = 5443204, upload-time = "2025-08-20T17:55:28.173Z" },
+    { url = "https://files.pythonhosted.org/packages/bb/94/0df13e68af74d237c45baa63c4f841aba724938831706b6e5d76ea517788/dimod-0.12.21-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:318cb40a86f9442d383f02ee48f7bb399fc9674c30b369ba8577b9aaf0bd8f6e", size = 5280501, upload-time = "2025-08-20T17:55:29.564Z" },
+    { url = "https://files.pythonhosted.org/packages/ff/b3/ac2f74eae6b6ff2d55d1807becb7541a910bb8b992f8f0d1dca25f7b6db5/dimod-0.12.21-cp313-cp313-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:10aa470a9b050fe29b3f742e78e4c864efe2ce40eda82b42540eaa221cd51f7e", size = 8783479, upload-time = "2025-08-20T17:55:31.291Z" },
+    { url = "https://files.pythonhosted.org/packages/17/12/4429a73dddee6c49f012a176710763a10c71208654aa39d1ddee49b6a5ba/dimod-0.12.21-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:146a7d979efbbd7c614361c0f17b52deb9000708687cdf7b7f294022058414ef", size = 8907028, upload-time = "2025-08-20T17:55:33.065Z" },
+    { url = "https://files.pythonhosted.org/packages/1f/69/6b6fcce55113d6ac81a4077d13e56a079e0ef4dacae8537f89ed0ee01e29/dimod-0.12.21-cp313-cp313-win_amd64.whl", hash = "sha256:56c9711998c7a6577b69897244a9b7272f1ce109421483604e5c3dc42ca1920c", size = 5157964, upload-time = "2025-08-20T17:55:34.884Z" },
+    { url = "https://files.pythonhosted.org/packages/f5/33/4d4fdba22e55b11aa5b034992865661a83a62f077578627e34c2f993c50a/dimod-0.12.21-cp314-cp314-macosx_10_13_x86_64.whl", hash = "sha256:d7d4a0ba19481e66accff3a1ac5540c422c615d01b8113dc3b4a17f09ac02931", size = 5440837, upload-time = "2025-08-20T17:55:36.159Z" },
+    { url = "https://files.pythonhosted.org/packages/0f/82/07d7f55a4405de9507ff6ba8c4c4ba070a2d7a6c6935cd6b36882624e3b6/dimod-0.12.21-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:1ad23c121819015b4b55681d9dfce967f70f9c1e5628eff3f4ad3310bb049d7b", size = 5288154, upload-time = "2025-08-20T17:55:37.575Z" },
+    { url = "https://files.pythonhosted.org/packages/6b/72/0f9acf6d0707049224a304a07a47ae08e7c5e23755e57df3b1d4cee895f0/dimod-0.12.21-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:9b177717ea52aef7d66f161d337fffb44be1ba5a747c986e8fdf8561ae61f7f0", size = 8851643, upload-time = "2025-08-20T17:55:38.855Z" },
+    { url = "https://files.pythonhosted.org/packages/72/ce/cb03a0f6ac12da7f058814ec6030ffcc108d14bf32d071f31d15f6cba2ab/dimod-0.12.21-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:d579735425755ab3c69ec4ab98209027240ffee7337a7a36c25de18f95e8712b", size = 8924429, upload-time = "2025-08-20T17:55:40.917Z" },
+    { url = "https://files.pythonhosted.org/packages/35/cd/c4cdb5f7e4de4e75bf8e69e34c296618103d3f17acca8779ce24ed4de70c/dimod-0.12.21-cp314-cp314-win_amd64.whl", hash = "sha256:d97be7795bdfbfef65edaaddc31bc9b000ac98a9b4b1f32799f1e6370ebae47d", size = 5154571, upload-time = "2025-08-20T17:55:50.594Z" },
+    { url = "https://files.pythonhosted.org/packages/36/9d/941492d4fe35a340f737dc5502b7353d06a13597b2687ac66bd7a7b73039/dimod-0.12.21-cp314-cp314t-macosx_10_13_x86_64.whl", hash = "sha256:d98cb5ce991450c095b58e1c285a6edb945a06bf4e1eb06356521341c5209310", size = 5529565, upload-time = "2025-08-20T17:55:43.091Z" },
+    { url = "https://files.pythonhosted.org/packages/fe/a5/28d32872e9408f45486488e5c33ac685c7587acb0a0178c6285cb381a2c2/dimod-0.12.21-cp314-cp314t-macosx_11_0_arm64.whl", hash = "sha256:2afcbe1c87229c6cfb1d3a89889d818b2860572cc9861e7a8d612eea20677ab0", size = 5383061, upload-time = "2025-08-20T17:55:44.503Z" },
+    { url = "https://files.pythonhosted.org/packages/66/5d/e8f00d3deabe8b6bdb5238847a14e28e6d1856eaf477666651dbf9d585b4/dimod-0.12.21-cp314-cp314t-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:fd05ee9ecb8787dc3e9f065249efe986c55a1d755b9cf860cc68aac8331c8daa", size = 8778843, upload-time = "2025-08-20T17:55:45.922Z" },
+    { url = "https://files.pythonhosted.org/packages/8f/3d/5ca5c6ee7d7d49f4c459fe9b6869a287b65e6fcaa6b41a44d5cd16dc65a6/dimod-0.12.21-cp314-cp314t-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:f0ed1cb06b9fb2e9f54f089cb9cbb264bdf26f6693847374827436083ce595d7", size = 8981720, upload-time = "2025-08-20T17:55:47.68Z" },
+    { url = "https://files.pythonhosted.org/packages/bd/15/8e224361276a2e1ac3a3c8633e1ac59c38a6b4e750059a6ce5ec599f0431/dimod-0.12.21-cp314-cp314t-win_amd64.whl", hash = "sha256:abd6a4324ce733cb2118b1950c633d82a4109be19646247b5e4b590f7dd0f50a", size = 5537237, upload-time = "2025-08-20T17:55:49.332Z" },
 ]
 
 [[package]]
@@ -1027,9 +1053,9 @@ wheels = [
 
 [[package]]
 name = "qemcmc"
-version = "0.0.0"
 source = { editable = "." }
 dependencies = [
+    { name = "dimod" },
     { name = "iprogress" },
     { name = "ipykernel" },
     { name = "ipywidgets" },
@@ -1042,11 +1068,13 @@ dependencies = [
     { name = "qiskit" },
     { name = "qiskit-aer" },
     { name = "spyder-kernels" },
+    { name = "tabulate" },
     { name = "tqdm" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "dimod", specifier = "==0.12.21" },
     { name = "iprogress" },
     { name = "ipykernel" },
     { name = "ipywidgets", specifier = ">=8.1.7" },
@@ -1059,6 +1087,7 @@ requires-dist = [
     { name = "qiskit", specifier = "==2.2" },
     { name = "qiskit-aer", specifier = ">=0.17.0" },
     { name = "spyder-kernels", specifier = "==2.4" },
+    { name = "tabulate", specifier = ">=0.10.0" },
     { name = "tqdm", specifier = ">=4.67.1" },
 ]
 
@@ -1261,6 +1290,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/a2/6d/90764092216fa560f6587f83bb70113a8ba510ba436c6476a2b47359057c/stevedore-5.7.0.tar.gz", hash = "sha256:31dd6fe6b3cbe921e21dcefabc9a5f1cf848cf538a1f27543721b8ca09948aa3", size = 516200, upload-time = "2026-02-20T13:27:06.765Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/69/06/36d260a695f383345ab5bbc3fd447249594ae2fa8dfd19c533d5ae23f46b/stevedore-5.7.0-py3-none-any.whl", hash = "sha256:fd25efbb32f1abb4c9e502f385f0018632baac11f9ee5d1b70f88cc5e22ad4ed", size = 54483, upload-time = "2026-02-20T13:27:05.561Z" },
+]
+
+[[package]]
+name = "tabulate"
+version = "0.10.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/46/58/8c37dea7bbf769b20d58e7ace7e5edfe65b849442b00ffcdd56be88697c6/tabulate-0.10.0.tar.gz", hash = "sha256:e2cfde8f79420f6deeffdeda9aaec3b6bc5abce947655d17ac662b126e48a60d", size = 91754, upload-time = "2026-03-04T18:55:34.402Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/99/55/db07de81b5c630da5cbf5c7df646580ca26dfaefa593667fc6f2fe016d2e/tabulate-0.10.0-py3-none-any.whl", hash = "sha256:f0b0622e567335c8fabaaa659f1b33bcb6ddfe2e496071b743aa113f8774f2d3", size = 39814, upload-time = "2026-03-04T18:55:31.284Z" },
 ]
 
 [[package]]

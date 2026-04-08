@@ -1,6 +1,6 @@
-from .mcmc import MCMC
-from .classical_mcmc import ClassicalMCMC
-from .qe_mcmc import QeMCMC
+from .proposal import Proposal
+from .classical_proposal import ClassicalProposal
+from .qe_proposal import QeProposal
 
 
-__all__ = ["MCMC", "ClassicalMCMC", "QeMCMC"]
+__all__ = ["Proposal", "ClassicalProposal", "QeProposal"]
