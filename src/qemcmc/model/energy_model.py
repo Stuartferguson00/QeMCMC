@@ -358,16 +358,19 @@ class EnergyModel:
         """
         Retrieve the lowest energy states and their degeneracies.
         This method computes all possible energies and then finds the specified number
-        of lowest energy states along with their degeneracies. Note that this method
-        is intended for small instances due to its brute-force nature, which is extremely
-        memory intensive and slow.
-        Args:
+        of lowest energy states along with their degeneracies.
+
+        Parameters
             num_states (int): The number of lowest energy states to retrieve.
             return_configurations (bool): Whether to also return the corresponding configurations of the lowest energy states. Defaults to False.
-        Returns:
+
+        Returns
             Two numpy arrays:
                 - The first array contains the lowest energy values.
                 - The second array contains the degeneracies of the corresponding energy values.
+
+        Notes
+            This method is intended for small instances due to its brute-force nature, which is extremely memory intensive and slow.
         """
         # only to be used for small instances, it is just brute force so extremely memory intensive and slow
         all_energies = self.get_all_energies()
@@ -389,14 +392,14 @@ class EnergyModel:
         """
         Find the lowest unique values in an array and their degeneracies.
 
-        Args:
+        Parameters
             arr (np.ndarray): The input array from which to find the lowest values.
             num_values (int, optional): The number of lowest unique values to find. Defaults to 5.
 
-        Returns:
-        tuple: A tuple containing two numpy arrays:
-            - lowest_values (np.ndarray): The lowest unique values in the array.
-            - degeneracy (np.ndarray): The counts of each of the lowest unique values.
+        Returns
+            tuple: A tuple containing two numpy arrays:
+                - lowest_values (np.ndarray): The lowest unique values in the array.
+                - degeneracy (np.ndarray): The counts of each of the lowest unique values.
         """
         # Count the occurrences of each value
         unique_values, counts = np.unique(arr, return_counts=True)
@@ -415,9 +418,11 @@ class EnergyModel:
         This method uses a brute force approach to find the lowest energy,
         making it extremely memory intensive and slow. It is recommended
         to use this method only for small instances.
-        Returns:
+
+        Returns
             float: The lowest energy value.
-        Notes:
+
+        Notes
             If the lowest energy has already been calculated and stored
             in `self.lowest_energy`, it will return that value directly
             to save computation time.
@@ -437,11 +442,11 @@ class EnergyModel:
         """
         Get un-normalised boltzmann probability of a given state
 
-        Args:
+        Parameters
             state (str): configuration of spins for which probability is to be calculated
             beta (float): inverse temperature (1/T) at which the probability is to be calculated.
 
-        Returns:
+        Returns
             float corresponding to the un-normalised boltzmann probability of the given state.
         """
         E = self.get_energy(state)
@@ -453,11 +458,11 @@ class EnergyModel:
         """
         Get un-normalized Boltzmann probability for a given energy.
 
-        Args:
+        Parameters
             E (float): Energy for which the Boltzmann factor is to be calculated.
             beta (float): Inverse temperature (1/T) at which the probability is to be calculated.
 
-        Returns:
+        Returns
             float: The un-normalized Boltzmann probability for the given energy.
         """
 
