@@ -41,6 +41,8 @@ class CircuitMaker:
 
 
         self.dev = qml.device("lightning.qubit", wires=self.n_qubits)
+        #self.dev = qml.device("default.tensor", wires=self.n_qubits, method="mps", max_bond_dim=2, contract="auto-mps")
+
         self.model_type = model.model_type
         # cache devices for dynamic subgroup sizes if needed
         self.devices = {}
@@ -49,6 +51,7 @@ class CircuitMaker:
         """Get or create a PennyLane device for the given number of wires."""
         if num_wires not in self.devices:
             self.devices[num_wires] = qml.device("lightning.qubit", wires=num_wires)
+            #self.devices[num_wires] = qml.device("default.tensor", wires=num_wires, method="mps", max_bond_dim=2, contract="auto-mps")
         return self.devices[num_wires]
 
     def get_problem_hamiltonian(self, couplings: List[np.ndarray], sign: int = 1) -> qml.Hamiltonian:
@@ -266,9 +269,27 @@ class CircuitMaker:
                     qml.PauliX(i)
             qml.ApproxTimeEvolution(H_total, time, num_trotter_steps)
             return qml.sample()
+        """print(f"Simulating quantum circuit with {num_wires} qubits, time={time}, num_trotter_steps={num_trotter_steps}")
+        compiled_circuit = qml.compile(quantum_evolution)
 
+        specs_dict = qml.specs(compiled_circuit)(s_cg)
+        specs_dict = specs_dict['resources']
+        # 3. Print the relevant metrics
+        print(f"Circuit Depth: {specs_dict['depth']}")
+        print(f"Total Gates:   {specs_dict['num_gates']}")
+
+        # To see the count of two-qubit gates specifically:
+        two_qubit_gates = specs_dict['gate_sizes'].get(2, 0)
+        print(f"Two-qubit Gates: {two_qubit_gates}")
+
+        # To see the breakdown by gate type (e.g., CNOT, RZ, etc.)
+        print("\nGate Breakdown:")
+        for gate, count in specs_dict['gate_types'].items():
+            print(f"- {gate}: {count}")"""
         # Get the first shot from the sample
-        sample = quantum_evolution(s_cg)[0]
+        compiled_circuit = qml.compile(quantum_evolution)
+        sample = compiled_circuit(s_cg)[0]
+        #sample = quantum_evolution(s_cg)[0]
         bitstring = "".join(str(int(b)) for b in sample)
         return bitstring
 
