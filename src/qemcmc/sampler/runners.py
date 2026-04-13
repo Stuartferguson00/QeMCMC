@@ -1,23 +1,25 @@
 import numpy as np
 from tqdm.auto import tqdm
-from typing import Optional, Callable, Tuple
+from typing import Optional, Tuple
 from qemcmc.model import EnergyModel, ConstraintModel
 from qemcmc.utils import MCMCChain, MCMCState, get_random_state
 from qemcmc.sampler.proposal import Proposal
 
+
 class Runner:
     """
-    Base class for running MCMC routines. 
+    Base class for running MCMC routines.
     Subclasses implement specific MCMC based algorithms.
     """
+
     def __init__(self):
         pass
-    
+
     def test_probs(self, energy_s: float, energy_sprime: float, temperature: float = 1.0) -> float:
         """
         Calculate the Metropolis acceptance probability.
 
-        This computes exp(-(E(s') - E(s)) / T), used to determine the acceptance 
+        This computes exp(-(E(s') - E(s)) / T), used to determine the acceptance
         probability of a new state s' given the current state s.
 
         Parameters
@@ -39,7 +41,7 @@ class Runner:
             return 1.0
         else:
             exp_factor = np.exp(-delta_energy / temperature)
-        
+
         return min(1.0, exp_factor)
 
     def test_accept(self, energy_s: float, energy_sprime: float, temperature: float = 1.0) -> bool:
@@ -81,12 +83,21 @@ class MCMCRunner(Runner):
     temp : float
         The temperature for the Metropolis acceptance criterion.
     """
+
     def __init__(self, model: EnergyModel, temp: float):
         super().__init__()
         self.model = model
         self.temp = temp
 
-    def run(self, proposer: Proposal, n_hops: int, initial_state: Optional[str] = None, name: Optional[str] = None, verbose: bool = False, sample_frequency: int = 1) -> MCMCChain:
+    def run(
+        self,
+        proposer: Proposal,
+        n_hops: int,
+        initial_state: Optional[str] = None,
+        name: Optional[str] = None,
+        verbose: bool = False,
+        sample_frequency: int = 1,
+    ) -> MCMCChain:
         """
         Run the MCMC simulation.
 
@@ -136,6 +147,7 @@ class MCMCRunner(Runner):
                 energy_s = energy_sprime
                 current_state = MCMCState(s_prime, accepted, energy_s, position=i)
 
+            # TODO: What is this doing? Why are we ignoring the step at i=0?
             if i % sample_frequency == 0 and i != 0:
                 mcmc_chain.add_state(MCMCState(current_state.bitstring, True, energy_s, position=i))
 
@@ -158,6 +170,7 @@ class ConstrainedMCMCRunner(Runner):
     reject_invalid : bool, optional
         If True (default), proposed states that violate the constraint are rejected.
     """
+
     def __init__(self, model: ConstraintModel, temp: float, reject_invalid: bool = True):
         if not isinstance(model, ConstraintModel):
             raise TypeError("Model must be an instance of ConstraintModel.")
@@ -168,7 +181,16 @@ class ConstrainedMCMCRunner(Runner):
         self.constraint_func = self.model.constraint_func
         self.reject_invalid = reject_invalid
 
-    def run(self, proposer: Proposal, n_hops: int, initial_state: Optional[str] = None, name: Optional[str] = None, verbose: bool = False, sample_frequency: int = 1, return_rejections: bool = True) -> Tuple[MCMCChain, int]:
+    def run(
+        self,
+        proposer: Proposal,
+        n_hops: int,
+        initial_state: Optional[str] = None,
+        name: Optional[str] = None,
+        verbose: bool = False,
+        sample_frequency: int = 1,
+        return_rejections: bool = True,
+    ) -> Tuple[MCMCChain, int]:
         """
         Run the constrained MCMC simulation.
 
@@ -195,6 +217,7 @@ class ConstrainedMCMCRunner(Runner):
         tuple[MCMCChain, int]
             A tuple containing the generated Markov chain and the number of rejections due to constraints. If return_rejections is False, only the MCMCChain is returned.
         """
+
         if name is None:
             name = getattr(proposer, "method", "Constrained") + " MCMC"
 
@@ -208,7 +231,7 @@ class ConstrainedMCMCRunner(Runner):
                     break
             if initial_state is None:
                 raise ValueError("Could not find a valid initial state. Please provide one.")
-        
+
         elif not self.constraint_func(initial_state):
             raise ValueError(f"Provided initial state {initial_state} does not satisfy the constraint.")
 
@@ -223,11 +246,13 @@ class ConstrainedMCMCRunner(Runner):
         MH_rejects = 0
         s_prime = None
         pbar = tqdm(range(0, n_hops), desc="Run " + name, disable=not verbose)
-        E_diffs = [] # energy difference in proposal
-        h_diffs = [] # Hamming distance difference in proposal
+        E_diffs = []  # energy difference in proposal
+        h_diffs = []  # Hamming distance difference in proposal
         for i in pbar:
             s_prime = proposer.update(current_state.bitstring)
-            pbar.set_description(f"Run {name} | current state: {current_state.bitstring} | proposing: {s_prime} | avgEdiff: {np.mean(np.abs(E_diffs)):.4f} | avgHdiff: {np.mean(h_diffs):.2f} | constrejecects: {constraint_rejections} | selfrejects: {self_rejections} | MHrejects: {MH_rejects}")
+            pbar.set_description(
+                f"Run {name} | current state: {current_state.bitstring} | proposing: {s_prime} | avgEdiff: {np.mean(np.abs(E_diffs)):.4f} | avgHdiff: {np.mean(h_diffs):.2f} | constrejecects: {constraint_rejections} | selfrejects: {self_rejections} | MHrejects: {MH_rejects}"
+            )
             if s_prime == current_state.bitstring:
                 accepted = False
                 energy_sprime = energy_s
@@ -245,7 +270,8 @@ class ConstrainedMCMCRunner(Runner):
             if accepted:
                 energy_s = energy_sprime
                 current_state = MCMCState(s_prime, accepted, energy_s, position=i)
-                
+
+            # TODO: What is this doing? Why are we ignoring the step at i=0?
             if i % sample_frequency == 0 and i != 0:
                 mcmc_chain.add_state(MCMCState(current_state.bitstring, True, energy_s, position=i))
 
@@ -253,4 +279,3 @@ class ConstrainedMCMCRunner(Runner):
             return mcmc_chain, constraint_rejections
         else:
             return mcmc_chain
-    
