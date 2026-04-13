@@ -20,6 +20,8 @@ class CoarseGraining:
 
     def __init__(self, n, subgroups=None, subgroup_probs=None, repeated=True):
 
+        self._user_specified = subgroups is not None
+
         if subgroups is None:
             subgroups = [list(range(n))]
             subgroup_probs = [1.0]
@@ -34,20 +36,31 @@ class CoarseGraining:
         self.subgroup_probs = subgroup_probs
         self.repeated = repeated
 
-    def sample(self, rng=np.random):
+    def sample(self) -> list[int]:
         """
         Randomly samples a subgroup according to the specified probability distribution.
         """
-        idx = rng.choice(len(self.subgroups), p=self.subgroup_probs)
+        idx = np.random.choice(len(self.subgroups), p=self.subgroup_probs)
         return self.subgroups[idx]
 
-    def get_partitions(self, m: int, rng=np.random):
+    def get_partitions(self, m: int) -> list[list[int]]:
         """
-        Randomly partitions the n spins into m disjoint subgroups.
-        Sizes will be approximately n/m.
+        Returns partitions of spins for sequential quantum updates.
+
+        If the user provided explicit subgroups at initialisation, those are
+        returned directly (all if ``repeated=True``, otherwise just the first).
+        If no subgroups were specified, random disjoint partitions of
+        approximate size n/m are generated.
         """
+
+        if self._user_specified:
+            if self.repeated:
+                return self.subgroups
+            else:
+                return [self.subgroups[0]]
+
         spins = np.arange(self.n)
-        rng.shuffle(spins)
+        np.random.shuffle(spins)
         # array_split handles uneven divisions gracefully
         chunks = [list(chunk) for chunk in np.array_split(spins, m)]
         if self.repeated:
