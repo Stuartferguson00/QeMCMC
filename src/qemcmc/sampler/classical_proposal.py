@@ -10,7 +10,7 @@ class ClassicalProposal(Proposal):
 
     This class implements purely classical proposal mechanisms for MCMC.
     New candidate states are generated either by sampling a completely
-    random (uniform) configuration, or by performing a local single-spin or 
+    random (uniform) configuration, or by performing a local single-spin or
     two-spin flip.
 
     Parameters
