@@ -25,6 +25,30 @@ class MCMCState:
     position: int = None
 
 
+# TODO: update this
+# class MCMCState:
+#     def __init__(self, bits):
+#         # Store the "source of truth" as a compact array
+#         self._bits = np.asanyarray(bits, dtype=np.int8)
+
+#     @property
+#     def bits(self) -> np.ndarray:
+#         return self._bits
+
+#     @property
+#     def spinstring(self) -> str:
+#         # Map 0 -> +1, 1 -> -1 (or vice versa) and join
+#         spins = np.where(self._bits == 0, '+', '-')
+#         return "".join(spins)
+
+#     @property
+#     def bitstring(self) -> str:
+#         return "".join(self._bits.astype(str))
+
+#     @property
+#     def spins(self) -> np.ndarray:
+#         return 1 - 2 * self._bits
+
 @dataclass(init=True)
 class MCMCChain:
     """
