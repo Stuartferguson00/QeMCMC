@@ -1,7 +1,7 @@
 # Example 2D Ising Model
 
 
-##### 1. Initialise an energy model
+<!-- ##### 1. Initialise an energy model
 In this step, we define a classical energy function over binary spin configurations.
 This energy model is the target distribution that the QeMCMC sampler will explore.
 
@@ -45,7 +45,7 @@ At each MCMC step, a subgroup is sampled according to subgroup_probs.
 ##### 3. Create and run QeMCMC
 Finally, we initialise the quantum-enhanced Markov chain and generate a single proposal using simulated quantum time evolution.
 ```python
-from qemcmc.qemcmc import QeMCMC
+from qemcmc import QeMCMC
 
 sampler = QeMCMC(
     model=model,
@@ -60,4 +60,4 @@ s = "01010"
 s_prime = sampler.get_s_prime(s)
 print("proposal:", s, "->", s_prime)
 ```
-Here, each call to get_s_prime runs a quantum circuit to generate a proposal state conditioned on the current configuration.
+Here, each call to get_s_prime runs a quantum circuit to generate a proposal state conditioned on the current configuration. -->
