@@ -1,13 +1,11 @@
-from abc import abstractmethod
-from typing import Optional
-
+from abc import abstractmethod, ABC
 from qemcmc.model import EnergyModel
 from qemcmc.utils import MCMCState
 
 
-class Proposal:
+class Proposal(ABC):
     """
-    Base class for producing proposals for Markov Chain Monte Carlo algorithms.
+    Abstract base class for producing proposals for Markov Chain Monte Carlo algorithms.
 
     Subclasses implement the proposal mechanism by defining an
     ``update(state)`` method that generates a candidate state from the current one
@@ -30,7 +28,7 @@ class Proposal:
 
         This method should be implemented by subclasses to define the specific proposal strategy
         (e.g., single-spin flips, block updates, or quantum proposals).
-        
+
         Parameters
         ----------
         state : MCMCState
