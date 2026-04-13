@@ -6,7 +6,7 @@ import dimod
 import math
 from tqdm import tqdm
 from qemcmc.utils.helpers import get_random_state
-import warnings
+
 
 class EnergyModel:
     """
@@ -37,20 +37,13 @@ class EnergyModel:
       small systems.
     """
 
-    def __init__(
-        self,
-        n: int,
-        couplings: List[np.ndarray] = [],
-        name: str = None,
-        cost_function_signs: list = [-1, -1],
-        model_type: str = "ising"
-    ):
+    def __init__(self, n: int, couplings: List[np.ndarray] = [], name: str = None, cost_function_signs: list = [-1, -1], model_type: str = "ising"):
         self.n = n
         self.n_spins = n
         self.couplings = couplings
         self.name = name
         self.alphas = self.calculate_alpha(n, couplings)
-
+        self.lowest_energy = None
 
         self.normalised_couplings = [self.couplings[i] * self.alphas[i] for i in range(len(self.couplings))]
         self.cost_function_signs = cost_function_signs
@@ -62,10 +55,10 @@ class EnergyModel:
 
         self.initial_state = self.get_initial_states(num_initial_states=100)
 
-    def get_initial_states(self, num_initial_states:int):
+    def get_initial_states(self, num_initial_states: int):
         """
         Generates a list of random initial states.
-        
+
         Parameters
         ----------
         num_initial_states:
@@ -114,7 +107,7 @@ class EnergyModel:
         """
         Calculate the energy of a given state for an arbitrary-order Ising/binary model.
 
-        Parameters:
+        Parameters
         -----------
             state : array-like (str, list, tuple, np.array)
                 State configuration. Can be:
@@ -127,7 +120,7 @@ class EnergyModel:
                 - 2D arrays represent quadratic terms (J_ij)
                 - 3D arrays represent cubic terms, etc.
 
-        Returns:
+        Returns
         --------
             float : Total energy of the state
         """
@@ -158,7 +151,7 @@ class EnergyModel:
                 else:
                     # Convert to spin
                     state = np.array([2 * int(bit) - 1 for bit in state])
-        
+
         total_energy = 0.0
         for term_index, coupling in enumerate(couplings):
             coupling = np.array(coupling)
@@ -205,14 +198,13 @@ class EnergyModel:
 
         Notes
         -----
-                It might seem off to do the reweighting at this point, but here are reasons why I [SF] did it! 
-                Basically, when you get the subgroup couplings, the terms jumble up, so the returned local 
+                It might seem off to do the reweighting at this point, but here are reasons why I [SF] did it!
+                Basically, when you get the subgroup couplings, the terms jumble up, so the returned local
                 coupling list necessarily does not respect the order etc. of the different terms in the original.
         """
 
-        
         if coupling_weights is None:
-            coupling_weights = [1.0] * len(subgroup)
+            coupling_weights = [1.0] * len(self.normalised_couplings)
 
         n_sub = len(subgroup)
         subgroup_set = set(subgroup)
@@ -227,7 +219,7 @@ class EnergyModel:
             coupling = np.array(coupling) * coupling_weights[couplings_index]
             # only loop over elements that actually exist (non-zero)
             non_zero_indices = np.transpose(np.nonzero(coupling))
-            
+
             for indices in non_zero_indices:
                 indices = tuple(indices)
                 coeff = coupling[indices]
@@ -246,6 +238,7 @@ class EnergyModel:
                     new_order = len(in_group)
                     local_indices = tuple(g_to_l[i] for i in in_group)
                     new_couplings[new_order - 1][local_indices] += effective_coeff
+
         return new_couplings
 
     def calculate_alpha(self, n: int, couplings: list = None, eps: float = 1e-15) -> np.ndarray:
@@ -266,13 +259,14 @@ class EnergyModel:
 
         Returns
         -------
-        np.ndarray : 
+        np.ndarray :
             An array of normalising factors for each term in the couplings list.
         """
         if couplings is None:
             couplings = self.couplings
 
         norm_sq_arr = np.zeros(len(couplings))
+
         for T_ind, T in enumerate(couplings):
             norm_sq = 0.0
             T = np.asarray(T)
@@ -282,7 +276,7 @@ class EnergyModel:
                 pass
 
             # 1-body: h_i
-            if order == 1:
+            elif order == 1:
                 if T.shape != (n,):
                     raise ValueError(f"1-body tensor has shape {T.shape}, expected ({n},)")
                 for i in range(n):
@@ -290,11 +284,11 @@ class EnergyModel:
                     norm_sq += c * c
 
             # 2-body: symmetric J
-            if order == 2:
+            elif order == 2:
                 if T.shape != (n, n):
                     raise ValueError(f"2-body tensor has shape {T.shape}, expected ({n},{n})")
 
-                # Enforce symmetry (rejects pure upper/lower triangular)
+                # Enforce symmetry (reject pure upper/lower triangular)
                 if not np.allclose(T, T.T):
                     raise ValueError("Non-symmetric J provided. This alpha function only accepts symmetric J.")
 
@@ -304,11 +298,11 @@ class EnergyModel:
                         c = float(T[i, j])
                         if c != 0.0:
                             norm_sq += c * c
-                
 
             # Order >= 3: count each unordered interaction once using i1<i2<...<ik
-            if T.shape != (n,) * order:
-                raise ValueError(f"{order}-body tensor has shape {T.shape}, expected {(n,) * order}")
+            else:
+                if T.shape != (n,) * order:
+                    raise ValueError(f"{order}-body tensor has shape {T.shape}, expected {(n,) * order}")
 
             for comb in itertools.combinations(range(n), order):
                 c = float(T[comb])
@@ -320,9 +314,20 @@ class EnergyModel:
         if norm_sq_tot < eps:
             print("Warning: Couplings are all zero (or very close to zero). Returning alpha=1 to avoid division by zero.")
             print("Input of a zero-coupling may be intended to sample Uniform distributions, however if this is not your intention, please check your couplings.")
-            #return np.ones(len(couplings))
+            return np.ones(len(couplings))
 
         return np.sqrt(n / norm_sq_arr)
+
+        # TODO: is this check required? test code with and without.
+        # alpha_arr = np.zeros(len(couplings))
+        # for i, val in enumerate(norm_sq_arr):
+        #     if val < eps:
+        #         print(f"Warning: Coupling at index {i} is all zero (or close to zero). Returning alpha=1 for this term.")
+        #         alpha_arr[i] = 1.0
+        #     else:
+        #         alpha_arr[i] = np.sqrt(n / val)
+
+        # return alpha_arr
 
     def get_energy(self, state: str) -> float:
         """
@@ -425,7 +430,7 @@ class EnergyModel:
             all_energies = self.get_all_energies()
 
         lowest_energy = np.min(all_energies)
-
+        self.lowest_energy = lowest_energy
         return lowest_energy
 
     def get_boltzmann_factor(self, state: str, beta: float = 1.0) -> float:
@@ -457,4 +462,3 @@ class EnergyModel:
         """
 
         return np.exp(-1 * beta * E, dtype=np.longdouble)
-    
