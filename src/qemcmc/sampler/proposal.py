@@ -1,7 +1,6 @@
-from abc import abstractmethod, ABC
+from abc import ABC, abstractmethod
 from qemcmc.model import EnergyModel
 from qemcmc.utils import MCMCState
-from abc import ABC, abstractmethod
 
 
 class Proposal(ABC):
