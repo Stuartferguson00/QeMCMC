@@ -10,7 +10,7 @@ class ClassicalProposal(Proposal):
 
     This class implements purely classical proposal mechanisms for MCMC.
     New candidate states are generated either by sampling a completely
-    random (uniform) configuration, or by performing a local single-spin or 
+    random (uniform) configuration, or by performing a local single-spin or
     two-spin flip.
 
     Parameters
@@ -27,18 +27,21 @@ class ClassicalProposal(Proposal):
         Default is ``"uniform"``.
     """
 
+    METHODS = {"uniform", "local", "2-local"}
+
     def __init__(self, model: EnergyModel, method: str = "uniform"):
+        if method not in self.METHODS:
+            raise ValueError(f"Method '{method}' is not supported. Choose from 'uniform', 'local', or '2-local'.")
         super().__init__(model)
         self.method = method
 
+    def update(self, current_state_bitstring: str) -> str:
         if self.method == "uniform":
-            self.update = self.update_uniform
+            return self.update_uniform(current_state_bitstring)
         elif self.method == "local":
-            self.update = self.update_local
-        elif self.method == "2-local":
-            self.update = self.update_2local
+            return self.update_local(current_state_bitstring)
         else:
-            raise ValueError(f"Method '{method}' is not supported. Choose from 'uniform', 'local', or '2-local'.")
+            return self.update_2local(current_state_bitstring)
 
     def update_uniform(self, current_state_bitstring: str) -> str:
         """
