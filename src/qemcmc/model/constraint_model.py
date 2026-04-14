@@ -1,20 +1,16 @@
-import itertools
 import typing
-from typing import List
 import numpy as np
-import dimod
-import math
-from tqdm import tqdm
 from qemcmc.utils.helpers import get_random_state
 import warnings
 from .energy_model import EnergyModel
+
 
 class ConstraintModel(EnergyModel):
     """
     A subclass of EnergyModel that incorporates a constraint function to define valid configurations.
 
-    The constraint function takes a state as input and returns True if the state is valid 
-    (satisfies the constraint) and False otherwise. The energy of invalid states is set to 
+    The constraint function takes a state as input and returns True if the state is valid
+    (satisfies the constraint) and False otherwise. The energy of invalid states is set to
     infinity, effectively excluding them from the Boltzmann distribution.
 
     Parameters
@@ -28,7 +24,7 @@ class ConstraintModel(EnergyModel):
     couplings : list[np.ndarray]
         List of coupling tensors (numpy arrays) defining the energy function.
     constraint_func : typing.Callable[[str], bool]
-        A function that takes a state (string representation of spin configuration) 
+        A function that takes a state (string representation of spin configuration)
         and returns True if the state satisfies the constraint, and False otherwise.
     name : str, optional
         Optional label for the model (used in plotting / logging).
@@ -41,50 +37,47 @@ class ConstraintModel(EnergyModel):
 
     Notes
     -----
-    - The energy of any state that does not satisfy the constraint is set to infinity, which means 
+    - The energy of any state that does not satisfy the constraint is set to infinity, which means
       such states will have zero probability in the Boltzmann distribution.
-    - This class can be used to model systems with hard constraints on the configurations, such as 
+    - This class can be used to model systems with hard constraints on the configurations, such as
       certain combinatorial optimization problems or physical systems with forbidden states.
     """
 
-    def __init__(self, n: int, constraint_couplings: list[np.ndarray], constraint_signs: list[float], couplings: list[np.ndarray], constraint_func: typing.Callable[[str], bool],  **kwargs):
+    def __init__(self, n: int, constraint_couplings: list[np.ndarray], constraint_signs: list[float], couplings: list[np.ndarray], constraint_func: typing.Callable[[str], bool], **kwargs):
         if not callable(constraint_func):
             raise ValueError("constraint_func must be a callable function that takes a state as input and returns True/False.")
         self.constraint_func = constraint_func
 
         # This model requires a special way to generate initial states that respect the constraint.
         self.get_initial_states = self.get_initial_states_constraint
-        
+
         if couplings is not None:
             super().__init__(n=n, couplings=couplings, **kwargs)
         else:
-            super().__init__(n=n, couplings = [], **kwargs)
+            super().__init__(n=n, couplings=[], **kwargs)
 
         self.constraint_couplings = constraint_couplings
         self.constraint_signs = constraint_signs
-        
+
         # Calculate normalization factors for constraint couplings
         self.constraint_coupling_alphas = self.calculate_alpha(n, constraint_couplings)
-        
 
         # These are the couplings used in quantum proposals
         # Combine and normalize the energy and constraint couplings
         self.normalised_couplings = (
-            [self.couplings[i] * self.alphas[i] for i in range(len(self.couplings))] +
-            #[self.constraint_couplings[i] for i in range(len(self.constraint_couplings))]
+            [self.couplings[i] * self.alphas[i] for i in range(len(self.couplings))]
+            +
+            # [self.constraint_couplings[i] for i in range(len(self.constraint_couplings))]
             [self.constraint_couplings[i] * self.constraint_coupling_alphas[i] for i in range(len(self.constraint_couplings))]
         )
 
-        
         # Store the un-normalized total couplings
         self.total_couplings = self.couplings + self.constraint_couplings
 
-
-
-    def get_initial_states_constraint(self, num_initial_states:int):
+    def get_initial_states_constraint(self, num_initial_states: int):
         """
         Generates a list of random initial states that satisfy the constraint function.
-        
+
         Parameters
         ----------
         num_initial_states:
@@ -103,7 +96,7 @@ class ConstraintModel(EnergyModel):
             if self.constraint_func(state):
                 init_states.append(state)
             counter += 1
-        
+
         if len(init_states) < num_initial_states:
             warnings.warn(
                 f"Could not find enough valid initial states satisfying the constraint. "
@@ -116,25 +109,30 @@ class ConstraintModel(EnergyModel):
         """
         Calculate the energy contribution from the constraint couplings for a given state.
 
-        Args:
-            state (str): The state for which to calculate the constraint energy.
+        Parameters
+        ----------
+        state (str):
+            The state for which to calculate the constraint energy.
 
-        Returns:
-            float: The energy contribution from the constraint couplings for the given state.
+        Returns
+        -------
+        float:
+            The energy contribution from the constraint couplings for the given state.
         """
         return self.calculate_energy(state, self.constraint_couplings, self.constraint_signs)
-    
+
     def get_total_energy(self, state: str) -> float:
         """
         Calculate the total energy of a given state, including both the regular energy and the constraint energy.
 
-        Args:
-            state (str): The state for which to calculate the total energy.
+        Parameters
+        ----------
+        state (str):
+            The state for which to calculate the total energy.
 
-        Returns:
-            float: The total energy of the given state, including contributions from both the regular couplings and the constraint couplings.
+        Returns
+        -------
+        float:
+            The total energy of the given state, including contributions from both the regular couplings and the constraint couplings.
         """
         return self.get_energy(state) + self.get_constraint_energy(state)
-    
-
-    

@@ -76,7 +76,7 @@ class MCMCRunner(Runner):
     of states. It manages state updates, energy evaluations, and Metropolis acceptance tests.
     The sampler targets the Boltzmann distribution p(s) ∝ exp(-E(s) / T).
 
-    Attributes
+    Parameters
     ----------
     model : EnergyModel
         The energy model defining the system.
@@ -160,7 +160,7 @@ class ConstrainedMCMCRunner(Runner):
     If a proposed state does not satisfy the constraint, it is immediately rejected
     without computing its energy or testing the Metropolis criterion.
 
-    Attributes
+    Parameters
     ----------
     model : ConstraintModel
         A model that includes a constraint function.

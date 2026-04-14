@@ -16,7 +16,7 @@ class CircuitMaker:
     The generated sample serves as the proposal state in the quantum-enhanced
     MCMC algorithm.
 
-    Attributes
+    Parameters
     ----------
     model : EnergyModel
         Energy model defining the problem Hamiltonian.

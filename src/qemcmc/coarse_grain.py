@@ -51,6 +51,11 @@ class CoarseGraining:
         returned directly (all if ``repeated=True``, otherwise just the first).
         If no subgroups were specified, random disjoint partitions of
         approximate size n/m are generated.
+
+        Parameters
+        ----------
+        m : int
+            The number of partitions to generate. Ignored if user-specified subgroups are provided.
         """
 
         if self._user_specified:

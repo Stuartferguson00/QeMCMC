@@ -1,7 +1,6 @@
 import warnings
 from typing import Optional
 import numpy as np
-
 from qemcmc.circuits import CircuitMaker
 from qemcmc.coarse_grain import CoarseGraining
 from qemcmc.model import EnergyModel
@@ -39,27 +38,27 @@ class QeProposal(Proposal):
         If provided, the Trotter step size is derived as Δt = t / r and
         ``r`` stays fixed while Δt varies with ``t``. A warning is issued
         at init if the resulting Δt range falls outside [0.1, 2.0].
-        By default None.
+        By default ``None``.
     delta_t : float | None, optional
         Trotter step size. Mutually exclusive with ``r``.
         If provided, the number of Trotter steps is derived as
         r = floor(t / Δt) per step, so ``r`` varies with ``t`` while
         Δt stays fixed. A warning is issued if Δt falls outside
-        [0.1, 2.0]. By default None.
+        [0.1, 2.0]. By default ``None``.
     coarse_graining : CoarseGraining | None, optional
         A coarse-graining scheme to define spin subgroups. If None, no coarse-graining
-        is used. By default None.
+        is used. By default ``None``.
     coupling_weights : list[float | tuple[float, float]] | None, optional
         Weights for the coupling tensors. If a tuple is provided, a weight is
         sampled uniformly from the range. This allows for dynamic adjustment
         of the influence of different terms in the Hamiltonian during the proposal
-        step. By default None.
+        step. By default ``None``.
         Note that this is further adjusted by (1 - gamma) to balance the influence of the
         problem Hamiltonian with the mixer term. Divide by (1 - gamma) if needed.
         Also, note that the coupling weights should include the mixing term.
     m : int, optional
         Number of subgroups to partition the spins into for sequential updates.
-        By default 1.
+        By default ``1``.
 
     Notes
     -----

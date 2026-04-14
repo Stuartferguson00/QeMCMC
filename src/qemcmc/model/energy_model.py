@@ -30,6 +30,7 @@ class EnergyModel:
         Type of model, either 'ising' or 'binary'. This determines how the binary states are interpreted
         and how the energy is calculated. 'ising' models use spin values {-1, +1}, while 'binary'
         models use binary values {0, 1}.
+
     Notes
     -----
     - Energies are computed by mapping binary states ``{0,1}`` to spin values ``{-1,+1}`` internally.
@@ -109,20 +110,22 @@ class EnergyModel:
 
         Parameters
         -----------
-            state : array-like (str, list, tuple, np.array)
-                State configuration. Can be:
-                - Binary: "011", [0,1,1], (0,1,1), etc.
-                - Spin: [-1,1,1], (-1,1,1), etc.
+        state : array-like (str, list, tuple, np.array)
 
-            couplings : list of numpy arrays
-                List of coupling tensors where:
-                - 1D arrays represent linear terms (h_i)
-                - 2D arrays represent quadratic terms (J_ij)
-                - 3D arrays represent cubic terms, etc.
+            State configuration. Can be:
+            - Binary: "011", [0,1,1], (0,1,1), etc.
+            - Spin: [-1,1,1], (-1,1,1), etc.
+
+        couplings : list of numpy arrays
+
+            List of coupling tensors where:
+            - 1D arrays represent linear terms (h_i)
+            - 2D arrays represent quadratic terms (J_ij)
+            - 3D arrays represent cubic terms, etc.
 
         Returns
-        --------
-            float : Total energy of the state
+        -------
+        float : Total energy of the state
         """
         if isinstance(state, str):
             state = np.array([int(bit) for bit in state])
@@ -198,9 +201,9 @@ class EnergyModel:
 
         Notes
         -----
-                It might seem off to do the reweighting at this point, but here are reasons why I [SF] did it!
-                Basically, when you get the subgroup couplings, the terms jumble up, so the returned local
-                coupling list necessarily does not respect the order etc. of the different terms in the original.
+            It might seem off to do the reweighting at this point, but here are reasons why I [SF] did it!
+            Basically, when you get the subgroup couplings, the terms jumble up, so the returned local
+            coupling list necessarily does not respect the order etc. of the different terms in the original.
         """
 
         if coupling_weights is None:
@@ -346,7 +349,8 @@ class EnergyModel:
 
         Returns
         -------
-            np.ndarray: An array containing the energies of all possible spin states.
+        np.ndarray :
+            An array containing the energies of all possible spin states.
         """
         self.S = ["".join(i) for i in itertools.product("01", repeat=self.n)]
         all_energies = np.zeros(len(self.S))
@@ -361,15 +365,18 @@ class EnergyModel:
         of lowest energy states along with their degeneracies.
 
         Parameters
-            num_states (int): The number of lowest energy states to retrieve.
-            return_configurations (bool): Whether to also return the corresponding configurations of the lowest energy states. Defaults to False.
+        ----------
+        num_states (int): The number of lowest energy states to retrieve.
+        return_configurations (bool): Whether to also return the corresponding configurations of the lowest energy states. Defaults to False.
 
         Returns
-            Two numpy arrays:
-                - The first array contains the lowest energy values.
-                - The second array contains the degeneracies of the corresponding energy values.
+        -------
+        Tuple[np.ndarray, np.ndarray]
+            - The first array contains the lowest energy values.
+            - The second array contains the degeneracies of the corresponding energy values.
 
         Notes
+        -----
             This method is intended for small instances due to its brute-force nature, which is extremely memory intensive and slow.
         """
         # only to be used for small instances, it is just brute force so extremely memory intensive and slow
@@ -393,13 +400,15 @@ class EnergyModel:
         Find the lowest unique values in an array and their degeneracies.
 
         Parameters
-            arr (np.ndarray): The input array from which to find the lowest values.
-            num_values (int, optional): The number of lowest unique values to find. Defaults to 5.
+        ----------
+        arr (np.ndarray): The input array from which to find the lowest values.
+        num_values (int, optional): The number of lowest unique values to find. Defaults to 5.
 
         Returns
-            tuple: A tuple containing two numpy arrays:
-                - lowest_values (np.ndarray): The lowest unique values in the array.
-                - degeneracy (np.ndarray): The counts of each of the lowest unique values.
+        -------
+        Tuple[lowest_values (np.ndarray), degeneracy (np.ndarray)]
+            - lowest_values (np.ndarray): The lowest unique values in the array.
+            - degeneracy (np.ndarray): The counts of each of the lowest unique values.
         """
         # Count the occurrences of each value
         unique_values, counts = np.unique(arr, return_counts=True)
@@ -420,12 +429,14 @@ class EnergyModel:
         to use this method only for small instances.
 
         Returns
-            float: The lowest energy value.
+        -------
+        float: The lowest energy value.
 
         Notes
-            If the lowest energy has already been calculated and stored
-            in `self.lowest_energy`, it will return that value directly
-            to save computation time.
+        -----
+        If the lowest energy has already been calculated and stored
+        in `self.lowest_energy`, it will return that value directly
+        to save computation time.
         """
 
         # Only to be used for small instances, it is just brute force so extremely memory intensive and slow
@@ -443,10 +454,14 @@ class EnergyModel:
         Get un-normalised boltzmann probability of a given state
 
         Parameters
-            state (str): configuration of spins for which probability is to be calculated
-            beta (float): inverse temperature (1/T) at which the probability is to be calculated.
+        ----------
+        state (str):
+            configuration of spins for which probability is to be calculated
+        beta (float):
+            inverse temperature (1/T) at which the probability is to be calculated.
 
         Returns
+        -------
             float corresponding to the un-normalised boltzmann probability of the given state.
         """
         E = self.get_energy(state)
@@ -459,11 +474,16 @@ class EnergyModel:
         Get un-normalized Boltzmann probability for a given energy.
 
         Parameters
-            E (float): Energy for which the Boltzmann factor is to be calculated.
-            beta (float): Inverse temperature (1/T) at which the probability is to be calculated.
+        ----------
+        E (float):
+            Energy for which the Boltzmann factor is to be calculated.
+        beta (float):
+            Inverse temperature (1/T) at which the probability is to be calculated.
 
         Returns
-            float: The un-normalized Boltzmann probability for the given energy.
+        -------
+        float:
+            The un-normalized Boltzmann probability for the given energy.
         """
 
         return np.exp(-1 * beta * E, dtype=np.longdouble)
