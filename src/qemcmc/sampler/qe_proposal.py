@@ -44,6 +44,7 @@ class QeProposal(Proposal):
         step. By default None.
         Note that this is further adjusted by (1 - gamma) to balance the influence of the
         problem Hamiltonian with the mixer term. Divide by (1 - gamma) if needed.
+        Also, note that the coupling weights should include the mixing term.
     m : int, optional
         Number of subgroups to partition the spins into for sequential updates.
         By default 1.
@@ -156,15 +157,15 @@ class QeProposal(Proposal):
                 raise ValueError(f"gamma must be in [0, 1], got {gamma}")
             return float(gamma)
 
-        if isinstance(gamma, tuple):
+        if isinstance(gamma, (tuple, list)):
             if len(gamma) != 2:
-                raise ValueError(f"gamma tuple must be (min, max), got {gamma}")
+                raise ValueError(f"gamma tuple or list must be (min, max), got {gamma}")
             g_min, g_max = gamma
             if not (0.0 <= g_min <= g_max <= 1.0):
                 raise ValueError(f"gamma range must satisfy 0 <= min <= max <= 1, got {gamma}")
             return (float(g_min), float(g_max))
 
-        raise TypeError(f"gamma must be a float or tuple[float, float], got {type(gamma)}")
+        raise TypeError(f"gamma must be a float or tuple[float, float] or list[float, float] got {type(gamma)}")
 
     def _validate_time(self, time: int | tuple[int, int]) -> int | tuple[int, int]:
         """
