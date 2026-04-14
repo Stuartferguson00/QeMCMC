@@ -25,11 +25,11 @@ class Runner:
         Parameters
         ----------
         energy_s : float
-            Energy of the current state s.
+            Energy of the current state ``s``.
         energy_sprime : float
-            Energy of the proposed state s'.
+            Energy of the proposed state ``s'``.
         temperature : float, optional
-            Temperature T, by default 1.0.
+            Temperature T, by default ``1.0``.
 
         Returns
         -------
@@ -76,7 +76,7 @@ class MCMCRunner(Runner):
     of states. It manages state updates, energy evaluations, and Metropolis acceptance tests.
     The sampler targets the Boltzmann distribution p(s) ∝ exp(-E(s) / T).
 
-    Parameters
+    Attributes
     ----------
     model : EnergyModel
         The energy model defining the system.
@@ -160,7 +160,7 @@ class ConstrainedMCMCRunner(Runner):
     If a proposed state does not satisfy the constraint, it is immediately rejected
     without computing its energy or testing the Metropolis criterion.
 
-    Parameters
+    Attributes
     ----------
     model : ConstraintModel
         A model that includes a constraint function.
