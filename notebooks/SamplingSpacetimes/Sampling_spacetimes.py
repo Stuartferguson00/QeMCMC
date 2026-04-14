@@ -1,3 +1,9 @@
+import argparse
+import sys
+import json
+import os
+import pickle
+import datetime
 import numpy as np
 from matplotlib import pyplot as plt
 from joblib import Parallel, delayed
@@ -14,95 +20,161 @@ from qemcmc.utils import plot_chains, get_random_state
 from qemcmc.model import EnergyModel, ConstraintModel, ModelMaker, constraint_model
 from CST_helpers import *
 from tabulate import tabulate
+import time
 
-C = 10# Cardinality
-n = C * (C - 1) // 2 # Number of (Qu)bits needed to represent the spacetime
-temp = 0.01
-epsilon = 0.1
+def main(config_path):
+    with open(config_path, 'r') as f:
+        config = json.load(f)
 
-print(f"Using {n} bits to represent a causal set of cardinality {C}.")
-# calculate_action
-BD_couplings = get_BD_couplings_4d(C, epsilon=epsilon)
-BD_couplings_list = [BD_couplings[0], BD_couplings[1], BD_couplings[2]]
+    C = config.get("C")
+    temp = config.get("temp")
+    epsilon = config.get("epsilon")
+    uniform = config.get("uniform")
+    
+    n = C * (C - 1) // 2 # Number of (Qu)bits needed to represent the spacetime
 
-# Make baseline Ising gmodel
-BD_action_model = EnergyModel(n, couplings = BD_couplings_list, name = "BD Action Model", cost_function_signs =[1,1,1], model_type = "binary")
-
-
-
-def constraint_checker_func(bitstring: str) -> bool:
-    """In {0, 1} representation, this constraint means no two adjacent bits can both be 1"""
-    return is_causal_matrix(bitstring_to_matrix(bitstring))
-
-
-TC_couplings = get_TC_couplings(C)
-TC_couplings_list = [TC_couplings[0], TC_couplings[1]]
-TC_model = ConstraintModel(n, constraint_couplings = [coupling for coupling in TC_couplings_list], name="TC Constraint Model", constraint_func=constraint_checker_func, constraint_signs = [1 for coupling in TC_couplings_list], couplings = None, model_type ="binary", cost_function_signs=None)
-
-
-initial_state_0 = "0"*n
-initial_state_1 = "1"*n
+    print(f"Using {n} bits to represent a causal set of cardinality {C}.")
+    print("Runnign experiment with the following parameters:")
+    # use tabulate to print parameters in a nice table format
+    params_table = [["C", C], ["temp", temp], ["epsilon", epsilon]]
+    print(tabulate(params_table, headers=["Parameter", "Value"], tablefmt="grid"))
+    # And do the same for the inidivdual expeirments
+    for exp in config.get("experiments", []):
+        exp_name = exp.get("name", "experiment")
+        exp_type = exp.get("type", "classical")
+        exp_params = exp.get("params", {})
+        print(f"\nExperiment: {exp_name} (Type: {exp_type})")
+        exp_params_table = [[k, v] for k, v in exp_params.items()]
+        print(tabulate(exp_params_table, headers=["Parameter", "Value"], tablefmt="grid"))
 
 
-# constraint_model = ConstraintModel(n, constraint_couplings = [J_constraint,], couplings = base_model.couplings, name="Constraint Model", cost_function_signs=base_model.cost_function_signs, constraint_func=constraint_checker_func, constraint_signs = [-1,])
-BD_TC_model = ConstraintModel(n, constraint_couplings = [coupling for coupling in TC_couplings_list], name="TC Constraint Model", constraint_func=constraint_checker_func, constraint_signs = [1 for coupling in TC_couplings_list], couplings = [coupling for coupling in BD_couplings_list], model_type ="binary", cost_function_signs=[1 for coupling in BD_couplings_list])
-Runner = ConstrainedMCMCRunner(BD_TC_model, temp=temp, reject_invalid=True)
+    BD_couplings = get_BD_couplings_4d(C, epsilon=epsilon)
+    BD_couplings_list = [BD_couplings[0], BD_couplings[1], BD_couplings[2]]
+
+    BD_action_model = EnergyModel(n, couplings = BD_couplings_list, name = "BD Action Model", cost_function_signs =[1,1,1], model_type = "binary")
+
+    def constraint_checker_func(bitstring: str) -> bool:
+        """In {0, 1} representation, this constraint means no two adjacent bits can both be 1"""
+        return is_causal_matrix(bitstring_to_matrix(bitstring))
+
+    TC_couplings = get_TC_couplings(C)
+    TC_couplings_list = [TC_couplings[0], TC_couplings[1]]
+    TC_model = ConstraintModel(n, constraint_couplings = [coupling for coupling in TC_couplings_list], name="TC Constraint Model", constraint_func=constraint_checker_func, constraint_signs = [1 for coupling in TC_couplings_list], couplings = None, model_type ="binary", cost_function_signs=None)
+
+    initial_states_config = config.get("initial_states", ["0", "1"])
+    initial_states = []
+    for s in initial_states_config:
+        if s == "0":
+            initial_states.append("0" * n)
+        elif s == "1":
+            initial_states.append("1" * n)
+        else:
+            initial_states.append(s)
+
+    BD_TC_model = ConstraintModel(n, constraint_couplings = [coupling for coupling in TC_couplings_list], name="TC Constraint Model", constraint_func=constraint_checker_func, constraint_signs = [1 for coupling in TC_couplings_list], couplings = [coupling for coupling in BD_couplings_list], model_type ="binary", cost_function_signs=[1 for coupling in BD_couplings_list])
+    Runner = ConstrainedMCMCRunner(BD_TC_model, temp=temp, reject_invalid=True, uniform=uniform)
+
+    num_steps_q = config.get("num_steps_q")
+    num_steps_c = config.get("num_steps_c")
+
+    def run_single_chain(exp, initial_state, chain_idx):
+        exp_type = exp.get("type", "classical")
+        params = exp.get("params", {})
+        start_time = time.time()
+        
+        print(f"Running chain {chain_idx} for experiment '{exp.get('name')}' with initial state: {initial_state[:50]}...")  # Print the first 50 bits for brevity
+        if exp_type == "qe":
+            cg = CoarseGraining(n, repeated=params.get("repeated", False))
+            try:
+                cg_time = tuple(params.get("time"))
+            except:
+                cg_time = int(params.get("time", 1))
+            proposal = QeProposal(TC_model, gamma=params.get("gamma"), time=cg_time, m=params.get("m"), coarse_graining=cg,  coupling_weights=[1 for coupling in TC_couplings_list])
+            res = Runner.run(proposal, n_hops=num_steps_q, initial_state=initial_state, verbose=True)
+        elif exp_type == "cst":
+            proposal = CSTClassicalProposal(TC_model, method=params.get("method", "link"))
+            res = Runner.run(proposal, n_hops=num_steps_c, initial_state=initial_state, verbose=True)
+        elif exp_type == "classical":
+            proposal = ClassicalProposal(TC_model, method=params.get("method", "local"))
+            res = Runner.run(proposal, n_hops=num_steps_c, initial_state=initial_state, verbose=True)
+        else:
+            return None
+        tme = time.time() - start_time
+        print(f"Finished chain {chain_idx} for experiment '{exp.get('name')}', took {tme} seconds.")
+        return (exp.get("name"), chain_idx, res)
+    
+    # Flatten all tasks into a single list for global parallelization
+    tasks = []
+    for exp in config.get("experiments", []):
+        for i, s in enumerate(initial_states):
+            tasks.append((exp, s, i))
+
+    print(f"\nRunning {len(tasks)} chains in parallel across all experiments...")
+    raw_results = Parallel(n_jobs=-1)(
+        delayed(run_single_chain)(*task) for task in tasks
+    )
+    
+    # Reconstruct the results dictionary
+    results = {}
+    for exp in config.get("experiments", []):
+        name = exp.get("name")
+        print("raw_results:", raw_results)
+        exp_chains = [r for r in raw_results if r is not None and r[0] == name]
+        print(f"Collected results for experiment '{name}': {len(exp_chains)} chains.")
+        print("exp_chains:", exp_chains)
+        results[name] = {
+            'params': exp.get("params", {}),
+            'results': {f'chain_{r[1]}': r[2][0] for r in exp_chains},
+            'constraint rejections': {f'rejections_{r[1]}': r[2][1] for r in exp_chains},
+            'self rejections': {f'self_rejections_{r[1]}': r[2][2] for r in exp_chains},
+            'MH rejections': {f'MH_rejections_{r[1]}': r[2][3] for r in exp_chains},
+        }
+
+    # Save results systematically
+    save_dir = os.path.join(os.path.dirname(__file__), "hyperparameters_saved_chains")
+
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    exp_dir = os.path.join(save_dir, f"experiments_{C}C_{temp}T_{timestamp}")
+    os.makedirs(exp_dir, exist_ok=True)
+
+    save_path = os.path.join(exp_dir, "data.pkl")
+
+    global_params = {
+        'C': C,
+        'n': n,
+        'temp': temp,
+        'epsilon': epsilon,
+        'num_steps_q': num_steps_q,
+        'num_steps_c': num_steps_c,
+        'initial_states': initial_states
+    }
+
+    save_data = {
+        'global_params': global_params,
+        'experiments': results
+    }
+
+    with open(save_path, 'wb') as f:
+        pickle.dump(save_data, f)
+
+    print(f"\nExperiments saved successfully to {save_path}\n")
+
+    
+        
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Run Spacetime Sampling Experiments")
+    parser.add_argument("--config", type=str, default= os.path.join(os.path.dirname(__file__), "experiment_config.json"), help="Path to the JSON configuration file")
+    args = parser.parse_args()
+    
+    if not os.path.exists(args.config):
+        print(f"Error: Configuration file '{args.config}' not found. Please create it or provide a valid path.")
+        sys.exit(1)
+        
+    main(args.config)
 
 
-num_steps = 1000
 
-cst_proposal_both = CSTClassicalProposal(TC_model, method="both")
-cst_chain_both_0, cst_rejections_both_0 = Runner.run(cst_proposal_both, n_hops=num_steps, initial_state=initial_state_0, verbose = True)
-cst_chain_both_1, cst_rejections_both_1 = Runner.run(cst_proposal_both, n_hops=num_steps, initial_state=initial_state_1, verbose = True)
-
-cst_proposal_link = CSTClassicalProposal(TC_model, method="link")
-cst_chain_link_0, cst_rejections_link_0 = Runner.run(cst_proposal_link, n_hops=num_steps, initial_state=initial_state_0, verbose = True)
-cst_chain_link_1, cst_rejections_link_1 = Runner.run(cst_proposal_link, n_hops=num_steps, initial_state=initial_state_1, verbose = True)
-
-cst_proposal_relation = CSTClassicalProposal(TC_model, method="relation")
-cst_chain_relation_0, cst_rejections_relation_0 = Runner.run(cst_proposal_relation, n_hops=num_steps, initial_state=initial_state_0, verbose = True)
-cst_chain_relation_1, cst_rejections_relation_1 = Runner.run(cst_proposal_relation, n_hops=num_steps, initial_state=initial_state_1, verbose = True)
-
-
-
-loc_proposal = ClassicalProposal(TC_model, method="local")
-loc_chain_0, loc_rejections_0 = Runner.run(loc_proposal, n_hops=num_steps, initial_state=initial_state_0, verbose = True)
-loc_chain_1, loc_rejections_1 = Runner.run(loc_proposal, n_hops=num_steps, initial_state=initial_state_1, verbose = True)
-
-uniform_proposal = ClassicalProposal(TC_model, method="uniform")
-uniform_chain_0, uni_rejections_0 = Runner.run(uniform_proposal, n_hops=num_steps, initial_state=initial_state_0, verbose = True)
-uniform_chain_1, uni_rejections_1 = Runner.run(uniform_proposal, n_hops=num_steps, initial_state=initial_state_1, verbose = True)
-
-
-
-num_steps_q = 2
-def run_qe(init_state):
-    cg = CoarseGraining(n, repeated=False)
-    qe_proposal = QeProposal(TC_model, gamma=0.05, time=(1, 40), m=4)
-    return Runner.run(qe_proposal, n_hops=num_steps_q, initial_state=init_state, verbose=True)
-
-print("\n--- Running Quantum Chains in Parallel ---")
-qe_results = Parallel(n_jobs=2)(
-    delayed(run_qe)(s) for s in [initial_state_0, initial_state_1]
-)
-
-(qe_chain_0, qe_re_0), (qe_chain_1, qe_re_1) = qe_results
-
-
-
-
-
-plt.title("BD action vs steps uniform sampling")
-plot_chains_BD([loc_chain_0, loc_chain_1], label="Local Proposal", color="green")
-plot_chains_BD([uniform_chain_0, uniform_chain_1], label="Uniform Proposal", color="orange")
-plot_chains_BD([qe_chain_0, qe_chain_1], label="Qe Proposal", color="blue")
-plot_chains_BD([cst_chain_link_0, cst_chain_link_1], label="CST Link Proposal", color="pink")
-plot_chains_BD([cst_chain_relation_0, cst_chain_relation_1], label="CST Relation Proposal", color="purple")
-plot_chains_BD([cst_chain_both_0, cst_chain_both_1], label="CST Both Proposal", color="red")
-plt.ylabel("BD Action")
-plt.xlabel("MCMC Step")
-plt.legend()
-plt.show()
 
 
 

@@ -1,5 +1,6 @@
 
 import itertools
+from operator import pos
 import matplotlib.pyplot as plt
 
 import numpy as np
@@ -9,6 +10,7 @@ from typing import List, Tuple, Union, Dict
 import os
 import pickle
 import numpy.typing as npt
+from tqdm import tqdm
 
 from qemcmc.utils.helpers import MCMCChain
 
@@ -218,8 +220,9 @@ def get_unique_matrices(n:int) -> Tuple[set, set]:
     except:
         num_unique = 2**((n**2-n)//2)
         
+        
         unique_matrices = set()
-        for bits in product([0, 1], repeat=(n * (n - 1)) // 2):
+        for bits in tqdm(product([0, 1], repeat=(n * (n - 1)) // 2), total=num_unique, desc=f"Generating unique matrices for n={n}"):
             matrix = np.zeros((n, n), dtype = np.int32)
             upper_tri_indices = np.triu_indices(n, 1)
             matrix[upper_tri_indices] = bits
@@ -236,21 +239,16 @@ def get_unique_matrices(n:int) -> Tuple[set, set]:
 
 
 
-        for unique_matrix in unique_matrices:
+        for unique_matrix in tqdm(unique_matrices, desc=f"Checking causal matrices for n={n}"):
             matrix = np.frombuffer(unique_matrix, dtype = dtype_).reshape(n,n)
-
-            unique_matrices.add(matrix.tobytes())
-            
-        
-
             if is_causal_matrix(matrix):
-                unique_causal_matrix.add(matrix.tobytes())
+                unique_causal_matrix.add(unique_matrix)
 
 
         unique_matrices = unique_matrices
         unique_causal_matrix = unique_causal_matrix
-        
-        
+        print(f"Number of unique matrices: {len(unique_matrices)}")
+        print(f"Number of unique causal matrices: {len(unique_causal_matrix)}")
 
         with open(os.path.join(save_path, f"unique_matrices_"+str(n)+".pkl"), "wb") as f:
             pickle.dump(unique_matrices, f)
@@ -403,7 +401,8 @@ def num_relations(matrix: npt.NDArray) -> int:
     Returns:
     int: The number of relations in the causal matrix.
     """
-    return np.sum(matrix)
+    nr = np.sum(matrix)
+    return nr
 
 
 def height(matrix: npt.NDArray) -> int:
@@ -431,7 +430,6 @@ def height(matrix: npt.NDArray) -> int:
     
     longest_chain = int(np.max(longest_path_ending_each)) +1
     #+1 as height is the number of nodes, not relations
-    
     return longest_chain
 
 def ordering_fraction(matrix: npt.NDArray) -> float:
@@ -649,8 +647,160 @@ def plot_chains_BD(chains: list[MCMCChain], color: str, label: str, plot_individ
     avg_energy = np.sum(avg_energies, axis=0)/len(chains)
     plt.plot(pos, avg_energy, color=color, label=f"Average {label}")
 
+def plot_chains_height(chains: list[MCMCChain], color: str, label: str, plot_individual_chains: bool = True, samp_freq: int = 10):
+    avg_heights = []
+    for chain in chains:
+        heights = [height(bitstring_to_matrix(state.bitstring)) for state in chain._states_accepted[0::samp_freq]]
+        pos = chain.get_pos_array()[0::samp_freq]
+        if plot_individual_chains:
+            plt.plot(pos, heights, color=color, alpha=0.1)
+        avg_heights.append(heights)
+    avg_heights = np.array(avg_heights)
+    avg_height = np.sum(avg_heights, axis=0)/len(chains)
+    plt.plot(pos, avg_height, color=color, label=f"Average {label}")
 
+
+def plot_chains_height_alt(chains: list[MCMCChain], color: str, label: str, plot_individual_chains: bool = True, samp_freq: int = 10):
+    avg_heights = []
+    for chain in chains:
+        heights = [height(bitstring_to_matrix(state.bitstring)) for state in chain._states_accepted[0::samp_freq]]
+        pos = chain.get_pos_array()[0::samp_freq]
+        if plot_individual_chains:
+            plt.plot(pos, heights, color=color, alpha=0.1, marker='o', linewidth = 0)
+        avg_heights.append(heights)
+    avg_heights = np.array(avg_heights)
+    avg_height = np.sum(avg_heights, axis=0)/len(chains)
+
+
+
+def plot_chains_mean_height(chains: list[MCMCChain], color: str, label: str, plot_individual_chains: bool = True, samp_freq: int = 10, plot_chains = True):
+    all_heights = []
+    if plot_chains:
+        plot_chains_height_alt(chains, color, "chain", plot_individual_chains, samp_freq)
+
+    print("plotting mean height for chains:", label)
+    print("of lengths: ", [len(chain._states_accepted) for chain in chains])
     
+    for chain in chains:
+        heights = [height(bitstring_to_matrix(state.bitstring)) for state in chain._states_accepted[0::samp_freq]]
+        print("Mean of last 50'%' of states: ", np.mean(np.array(heights)[len(heights)//2:]))
+         # only take every samp_freq sample
+        pos = chain.get_pos_array()[0::samp_freq]
+        
+        all_heights.append(heights)
+        # plot cumulative height average up to each point in the chain
+        cumulative_avg_heights = np.cumsum(heights) / (np.arange(len(heights)) + 1)
+        if plot_individual_chains:
+            plt.plot(pos, cumulative_avg_heights, color=color, alpha=0.1)
+            #plt.plot(pos, heights, color=color, alpha=0.1)
+        print("Mean of last 50'%' of states: ", np.mean(np.array(heights)[len(heights)//2:]))
+    all_heights = np.array(all_heights)
+    avg_height = np.sum(all_heights, axis=0)/len(chains)
+    cumulative_avg_heights = np.cumsum(avg_height) / (np.arange(len(avg_height)) + 1)
+    plt.plot(pos, cumulative_avg_heights, color=color, label=f"Average {label}")
+    print()
+
+def plot_chains_ordering_fraction(chains: list[MCMCChain], color: str, label: str, plot_individual_chains: bool = True):
+    avg_ofs = []
+    for chain in chains:
+        ofs = [ordering_fraction(bitstring_to_matrix(state.bitstring)) for state in chain._states_accepted]
+        pos = chain.get_pos_array()
+        if plot_individual_chains:
+            plt.plot(pos, ofs, color=color, alpha=0.1)
+        avg_ofs.append(ofs)
+    avg_ofs = np.array(avg_ofs)
+    avg_of = np.sum(avg_ofs, axis=0)/len(chains)
+    plt.plot(pos, avg_of, color=color, label=f"Average {label}")
+
+def plot_chains_minimal_elements(chains: list[MCMCChain], color: str, label: str, plot_individual_chains: bool = True):
+    avg_mes = []
+    for chain in chains:
+        mes = [minimal_elements(bitstring_to_matrix(state.bitstring)) for state in chain._states_accepted]
+        pos = chain.get_pos_array()
+        if plot_individual_chains:
+            plt.plot(pos, mes, color=color, alpha=0.1)
+        avg_mes.append(mes)
+    avg_mes = np.array(avg_mes)
+    avg_me = np.sum(avg_mes, axis=0)/len(chains)
+    plt.plot(pos, avg_me, color=color, label=f"Average {label}")
+
+def plot_chains_num_relations(chains: list[MCMCChain], color: str, label: str, plot_individual_chains: bool = True):
+    avg_nrs = []
+    for chain in chains:
+        nrs = [num_relations(bitstring_to_matrix(state.bitstring)) for state in chain._states_accepted]
+        pos = chain.get_pos_array()
+        if plot_individual_chains:
+            plt.plot(pos, nrs, color=color, alpha=0.1)
+        avg_nrs.append(nrs)
+    avg_nrs = np.array(avg_nrs)
+    avg_nr = np.sum(avg_nrs, axis=0)/len(chains)
+    plt.plot(pos, avg_nr, color=color, label=f"Average {label}")
+    
+
+
+def plot_chains_num_relations_hist(chains: list[MCMCChain], color: str, label: str, plot_individual_chains: bool = False, samp_freq: int = 10):
+    # change the plotting below, so that it plots the histogram data, but with a scatter plot (instead of bar chart)
+    all_nrs = []
+    for chain in chains:
+        
+        # only take every samp_freq sample
+        nrs = [num_relations(bitstring_to_matrix(state.bitstring)) for state in chain._states_accepted[::samp_freq]]
+
+        all_nrs.append(nrs)
+
+    max_h = max([max(nrs) for nrs in all_nrs])
+    for nrs in all_nrs:
+        #pos = chain.get_pos_array()[::samp_freq]
+        if plot_individual_chains:
+            bins, n = np.unique(nrs, return_counts=True)
+            N = len(nrs) 
+            plt.errorbar(bins, n/N, yerr=np.sqrt(n)/N, fmt='o', color='black')
+  
+
+
+   
+        
+    all_nrs = np.array(all_nrs)
+    
+    nrs_flattened = np.array([nrs for nrs in all_nrs]).flatten()
+    N = len(nrs_flattened)      
+    bins, n = np.unique(nrs_flattened, return_counts=True)
+    # Now we find the center of each bin from the bin edges
+    plt.errorbar(bins, n/N, yerr=np.sqrt(n)/N, fmt='o', color=color, label=f"{label}")
+
+def plot_chains_height_hist(chains: list[MCMCChain], color: str, label: str, plot_individual_chains: bool = False, samp_freq: int = 10, exact = None):
+    # change the plotting below, so that it plots the histogram data, but with a scatter plot (instead of bar chart)
+    
+    all_nrs = []
+    for chain in chains:
+        
+        # only take every samp_freq sample
+        nrs = [height(bitstring_to_matrix(state.bitstring)) for state in chain._states_accepted[::samp_freq]]
+
+        all_nrs.append(nrs)
+
+    max_h = max([max(nrs) for nrs in all_nrs])
+    for nrs in all_nrs:
+        #pos = chain.get_pos_array()[::samp_freq]
+        if plot_individual_chains:
+            n, bins = np.histogram(nrs, bins=np.arange(0.5, max_h+1.5), density=True)
+            bins_mean = [0.5 * (bins[i] + bins[i+1]) for i in range(len(n))]
+
+            N = len(nrs) 
+            plt.errorbar(bins_mean, n, yerr=np.sqrt(n)/N, fmt='o', color='black', label=f"Error bars {label}")
+
+        
+    all_nrs = np.array(all_nrs)
+    
+    nrs_flattened = np.array([nrs for nrs in all_nrs]).flatten()
+    N = len(nrs_flattened)
+    bins, n = np.unique(nrs_flattened, return_counts=True)
+    plt.errorbar(bins, n/N, yerr=np.sqrt(n)/N, fmt='o', color=color, label=f"{label}")
+    if exact is not None:
+        bins_exact, n_exact = exact
+        
+        plt.errorbar(bins_exact, n_exact, fmt='o', color='k', label=f"Exact")
+    #print("number of each height in nrs_flattened: ", np.bincount(nrs_flattened))
 
 def get_BD_couplings_4d(C, epsilon):
     """
@@ -658,7 +808,7 @@ def get_BD_couplings_4d(C, epsilon):
 
     
 
-    $$H_BD =  \frac{4}{\sqrt{6}}  \sqrt{\epsilon} *(N-  \sum_{k<m}^N C_{km} (1- 10 \epsilon \sum_{k<l<m}^N C_kl C_lm)$$
+    H_BD =  \frac{4}{\sqrt{6}}  \sqrt{\epsilon} *(N-  \sum_{k<m}^N C_{km} (1- 10 \epsilon \sum_{k<l<m}^N C_kl C_lm)
     """
     n = C * (C - 1) // 2
     q = get_upper_triangular_basis(C) 
@@ -704,3 +854,5 @@ def get_BD_couplings_4d(C, epsilon):
     #     T[a, b, c] -= 1
         
     return C_c, L, T#+ T.T
+
+
