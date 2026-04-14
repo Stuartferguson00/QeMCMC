@@ -58,10 +58,10 @@ class CircuitMaker:
 
         Parameters
         ----------
-        couplings : list of np.ndarray
+        couplings : List[np.ndarray]
             A list of coupling tensors.
         sign : int, optional
-            A sign to apply to the Hamiltonian. Default is 1.
+            A sign to apply to the Hamiltonian. Default is ``1``.
 
         Returns
         -------
@@ -325,7 +325,7 @@ class CircuitMaker:
 
     def _assert_bitstring(self, s: str, *, length: int = None):
         """
-        Validate that s is a bitstring.
+        Validate s is a bitstring.
 
         Parameters
         ----------

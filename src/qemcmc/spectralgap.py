@@ -1,5 +1,4 @@
 import numpy as np
-
 from qemcmc.model.energy_model import EnergyModel
 from qemcmc.sampler import Proposal
 from tqdm import tqdm

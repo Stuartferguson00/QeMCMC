@@ -29,7 +29,7 @@ class Runner:
         energy_sprime : float
             Energy of the proposed state ``s'``.
         temperature : float, optional
-            Temperature T, by default ``1.0``.
+            Temperature T, default is ``1.0``.
 
         Returns
         -------
@@ -57,7 +57,7 @@ class Runner:
         energy_sprime : float
             Energy of the proposed state s'.
         temperature : float, optional
-            Temperature T, by default 1.0.
+            Temperature T, default is ``1.0``.
 
         Returns
         -------
@@ -112,9 +112,9 @@ class MCMCRunner(Runner):
         name : str, optional
             A name for the MCMC chain.
         verbose : bool, optional
-            If True, enables progress bar and print statements.
+            Enable progress bar and print statements.
         sample_frequency : int, optional
-            The frequency at which to sample states for the chain.
+            The frequency at which to sample states for the chain. Default is ``1`` (every step).
 
         Returns
         -------
@@ -167,7 +167,7 @@ class ConstrainedMCMCRunner(Runner):
     temp : float
         The temperature for the Metropolis acceptance test.
     reject_invalid : bool, optional
-        If True (default), proposed states that violate the constraint are rejected.
+        Proposed states that violate the constraint are rejected. Default is ``True``.
     """
 
     def __init__(self, model: ConstraintModel, temp: float, reject_invalid: bool = True, uniform: bool = False):
@@ -202,15 +202,15 @@ class ConstrainedMCMCRunner(Runner):
             The number of MCMC steps to perform.
         initial_state : str, optional
             The starting bitstring for the chain. Must satisfy the constraint.
-            If None, a valid random state is sought.
+            If None, a valid random state is sought. Default is ``None``.
         name : str, optional
-            A name for the MCMC chain.
+            A name for the MCMC chain. Default is ``None`` and later derived from the proposer method.
         verbose : bool, optional
-            If True, enables progress bar and print statements.
+            Enables progress bar and print statements. Default is ``False``.
         sample_frequency : int, optional
-            The frequency at which to sample states for the chain.
+            The frequency at which to sample states for the chain. Default is ``1``.
         return_rejections : bool, optional
-            If True, also return the number of rejections due to constraint violations.
+            Return the number of rejections due to constraint violations. Default is ``True``.
 
         Returns
         -------

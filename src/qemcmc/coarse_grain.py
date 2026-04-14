@@ -15,7 +15,7 @@ class CoarseGraining:
     subgroup_probs : list[float], optional
         A list of probabilities corresponding to each subgroup, used for weighted random selection. Must sum to 1. If None, subgroups are selected uniformly at random.
     repeated : bool, optional
-        If True, then multiple subgroups are run on the quantum computer in serial, if not then only one subgroup is selected at random and run on the quantum computer. Default is True.
+        If True, then multiple subgroups are run on the quantum computer in serial, if not then only one subgroup is selected at random and run on the quantum computer. Default is ``True``.
     """
 
     def __init__(self, n, subgroups=None, subgroup_probs=None, repeated=True):

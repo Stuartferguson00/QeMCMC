@@ -455,9 +455,9 @@ class EnergyModel:
 
         Parameters
         ----------
-        state (str):
+        state : str
             configuration of spins for which probability is to be calculated
-        beta (float):
+        beta : float
             inverse temperature (1/T) at which the probability is to be calculated.
 
         Returns
@@ -475,9 +475,9 @@ class EnergyModel:
 
         Parameters
         ----------
-        E (float):
+        E : float
             Energy for which the Boltzmann factor is to be calculated.
-        beta (float):
+        beta : float
             Inverse temperature (1/T) at which the probability is to be calculated.
 
         Returns

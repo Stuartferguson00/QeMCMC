@@ -111,7 +111,7 @@ class ConstraintModel(EnergyModel):
 
         Parameters
         ----------
-        state (str):
+        state : str
             The state for which to calculate the constraint energy.
 
         Returns
@@ -127,7 +127,7 @@ class ConstraintModel(EnergyModel):
 
         Parameters
         ----------
-        state (str):
+        state : str
             The state for which to calculate the total energy.
 
         Returns
