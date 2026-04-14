@@ -158,11 +158,11 @@ class CircuitMaker:
 
         In Ferguson et al. (2025) [arXiv:2506.19538], we use gammas to weight the entire problem Hamiltonian vs the mixer vs the constraint Hamiltonian, such that the total Hamiltonian is:
 
-        H = g_p * H_p + g_m * H_m + g_c * H_c
+        ``H = g_p * H_p + g_m * H_m + g_c * H_c``
 
         but here we allow for separate weights for each coupling tensor term, as well as a separate gamma for the mixer. The total Hamiltonian is then:
 
-        H = (w_b1*H_b1+ w_b2*H_b2 +...+w_b2*H_bm) + g_m * H_m
+        ``H = (w_b1*H_b1 + w_b2*H_b2 + ... + w_b2*H_bm) + g_m * H_m``
 
         In other words, the constraint hamiltonian is absorbed in the coupling list, and weighted by the corresponding gamma in the gammas list.
         This allows for more flexible weighting of different terms, and also allows us to use the same code for both constrained and unconstrained problems (by simply including or excluding the constraint Hamiltonian in the coupling list and adjusting the gammas accordingly).
