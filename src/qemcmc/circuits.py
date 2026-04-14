@@ -20,9 +20,6 @@ class CircuitMaker:
     ----------
     model : EnergyModel
         Energy model defining the problem Hamiltonian.
-    delta_time : float, optional
-        Duration of each Trotter step used in the approximate time evolution.
-        Default is 0.8.
 
     Notes
     -----
@@ -31,13 +28,14 @@ class CircuitMaker:
         H = γ H_mixer + (1 - γ) α H_problem
 
     where ``H_problem`` encodes the classical energy model and ``H_mixer``
-    corresponds to a transverse-field term. The evolution is approximated
+    corresponds to a transverse-field term. The evolution time ``t`` and
+    number of Trotter steps ``r`` are passed per call, giving an effective
+    Trotter step size of ``δt = t / r``. The evolution is approximated
     using Trotterisation via ``qml.ApproxTimeEvolution``.
     """
 
-    def __init__(self, model: EnergyModel, delta_time: float = 0.8):
+    def __init__(self, model: EnergyModel):
         self.model = model
-        self.delta_time = delta_time
         self.n_qubits = model.n
         self.dev = qml.device("lightning.qubit", wires=self.n_qubits)
         #self.dev = qml.device("default.tensor", wires=self.n_qubits, method="mps", max_bond_dim=2, contract="auto-mps")
@@ -131,7 +129,7 @@ class CircuitMaker:
             num_wires = self.n_qubits
         return qml.Hamiltonian([1.0] * num_wires, [qml.PauliX(i) for i in range(num_wires)])
 
-    def get_state_vector(self, s: str, weights: List[float], time: float, mix_weight: float) -> np.ndarray:
+    def get_state_vector(self, s: str, weights: List[float], time: float, r: int, mix_weight: float) -> np.ndarray:
         """
         Evolve the initial state and return the final state vector.
 
@@ -143,6 +141,8 @@ class CircuitMaker:
             Coefficients for the problem Hamiltonian terms.
         time : float
             Total evolution time.
+        r : int
+            Number of Trotter steps for the approximate time evolution.
         mix_weight : float
             Coefficient for the mixer Hamiltonian (between 0 and 1).
 
@@ -180,9 +180,6 @@ class CircuitMaker:
         if np.any(np.array(weights) < 0):
             raise ValueError(f"Weights must be non-negative. Got {weights}")
 
-        self.time = time
-        self.num_trotter_steps = int(np.floor((self.time / self.delta_time)))
-
         coeff_mixer = mix_weight
         coeff_problem = weights
 
@@ -197,13 +194,13 @@ class CircuitMaker:
             for i, bit in enumerate(input_string):
                 if bit == "1":
                     qml.PauliX(i)
-            qml.ApproxTimeEvolution(H_total, self.time, self.num_trotter_steps)
+            qml.ApproxTimeEvolution(H_total, time, r)
             return qml.state()
 
         state_vector = quantum_evolution(s)
         return state_vector
 
-    def get_sample(self, s_cg: str, time: float, mix_weight: float, local_couplings: list, weights: List[float] = None) -> str:
+    def get_sample(self, s_cg: str, time: float, r: int, mix_weight: float, local_couplings: list, weights: List[float] = None) -> str:
         """
         Generate a single sample by evolving the system and measuring.
 
@@ -213,6 +210,8 @@ class CircuitMaker:
             Input bitstring for the subgroup.
         time : float
             Total evolution time.
+        r : int
+            Number of Trotter steps for the approximate time evolution.
         mix_weight : float
             Coefficient for the mixer Hamiltonian.
         local_couplings : list
@@ -237,8 +236,6 @@ class CircuitMaker:
         if np.any(np.array(weights) < 0):
             raise ValueError(f"Weights must be non-negative. Got {weights}")
 
-        num_trotter_steps = int(np.floor((time / self.delta_time)))
-
         coeff_mixer = mix_weight
         coeff_problem = weights
 
@@ -260,8 +257,9 @@ class CircuitMaker:
             for i, bit in enumerate(input_string):
                 if bit == "1":
                     qml.PauliX(i)
-            qml.ApproxTimeEvolution(H_total, time, num_trotter_steps)
+            qml.ApproxTimeEvolution(H_total, time, r)
             return qml.sample()
+            
         """print(f"Simulating quantum circuit with {num_wires} qubits, time={time}, num_trotter_steps={num_trotter_steps}")
         compiled_circuit = qml.compile(quantum_evolution)
 
@@ -286,7 +284,7 @@ class CircuitMaker:
         bitstring = "".join(str(int(b)) for b in sample)
         return bitstring
 
-    def update(self, s: str, subgroup_choice: List[int], local_couplings: list, gamma: float, time: float) -> str:
+    def update(self, s: str, subgroup_choice: List[int], local_couplings: list, gamma: float, time: float, r: int) -> str:
         """
         Update a bitstring by evolving a subgroup.
 
@@ -304,6 +302,8 @@ class CircuitMaker:
             Mixing parameter.
         time : float
             Evolution time.
+        r : int
+            Number of Trotter steps for the approximate time evolution.
 
         Returns
         -------
@@ -315,7 +315,7 @@ class CircuitMaker:
 
         # Get s_cg' for the subgroup and reconstruct full s' using s and s_cg'
         s_cg = "".join([s[i] for i in subgroup_choice])
-        s_cg_prime = self.get_sample(s_cg, time, gamma, local_couplings)
+        s_cg_prime = self.get_sample(s_cg, time, r, gamma, local_couplings)
 
         s_list = list(s)
         for i, global_index in enumerate(subgroup_choice):
