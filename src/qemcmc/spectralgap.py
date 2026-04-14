@@ -5,13 +5,15 @@ from qemcmc.sampler import Proposal
 from tqdm import tqdm
 import scipy as sp
 from qemcmc.sampler.runners import Runner
+from qemcmc.sampler.qe_proposal import DEFAULT_DELTA_T
+
 
 class SpectralGap(Runner):
     """
     Class that finds the spectral gap, and the acceptance and proposal matrices for a given mcmc.
     """
 
-    def __init__(self, proposal: Proposal, model:EnergyModel, temp: float = 1.0):
+    def __init__(self, proposal: Proposal, model: EnergyModel, temp: float = 1.0):
         self.proposal = proposal
         self.model = model
         self.temp = temp
@@ -92,13 +94,21 @@ class SpectralGap(Runner):
         """
         if not isinstance(self.proposal.gamma, (int, float)):
             raise ValueError("gamma must be a float to find the proposal matrix for quantum proposal, not a tuple. Got: ", self.proposal.gamma, "of type: ", type(self.proposal.gamma))
-        if not isinstance(self.proposal.time, int):
-            raise ValueError("time must be an integer to find the proposal matrix for quantum proposal, not a tuple. Got: ", self.proposal.time, "of type: ", type(self.proposal.time) )
+        if not isinstance(self.proposal.time, (int, float)):
+            raise ValueError("time must be a number to find the proposal matrix for quantum proposal, not a tuple. Got: ", self.proposal.time, "of type: ", type(self.proposal.time))
+
+        # Determine r to compute spectral gap
+        if self.proposal.r is not None:
+            r = self.proposal.r
+        else:
+            dt = self.proposal.delta_t if self.proposal.delta_t is not None else DEFAULT_DELTA_T
+            r = max(1, int(np.floor(self.proposal.time / dt)))
+
         Q = np.zeros((2**self.model.n_spins, 2**self.model.n_spins))
 
         for i in range(2**self.model.n_spins):
-            Q[i, :] += abs(self.proposal.CM.get_state_vector(self.model.S[i], self.proposal.coupling_weights, self.proposal.time, self.proposal.gamma))**2
-            #get_output_statevector(self.proposal.model.S[i])
+            Q[i, :] += abs(self.proposal.CM.get_state_vector(self.model.S[i], self.proposal.coupling_weights, self.proposal.time, r, self.proposal.gamma)) ** 2
+            # get_output_statevector(self.proposal.model.S[i])
         Q = Q
 
         return Q
@@ -157,7 +167,6 @@ class SpectralGap(Runner):
         for i in range(P.shape[0]):
             s = np.sum(P[i, :]) - P[i, i]
             P[i, i] = 1 - s
-
 
         # find eigenvalues
         e_vals, e_vecs = sp.linalg.eig(P)
