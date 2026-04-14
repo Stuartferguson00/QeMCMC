@@ -5,7 +5,7 @@ from qemcmc.model import EnergyModel
 from qemcmc.utils import MCMCState
 from abc import ABC, abstractmethod
 
-class Proposal(ABC):
+class Proposal():#ABC):
     """
     Base class for producing proposals for Markov Chain Monte Carlo algorithms.
 

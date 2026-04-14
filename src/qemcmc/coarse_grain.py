@@ -58,4 +58,4 @@ class CoarseGraining:
             return chunks
         else:
             return [chunks[0],]
-
+    

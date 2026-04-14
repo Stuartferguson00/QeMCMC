@@ -258,7 +258,7 @@ class ConstrainedMCMCRunner(Runner):
                 mcmc_chain.add_state(MCMCState(current_state.bitstring, True, energy_s, position=i))
 
         if return_rejections:
-            return mcmc_chain, constraint_rejections
+            return mcmc_chain, constraint_rejections, self_rejections, MH_rejects
         else:
             return mcmc_chain
     

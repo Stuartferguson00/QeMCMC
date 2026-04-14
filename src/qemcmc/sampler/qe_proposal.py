@@ -45,6 +45,7 @@ class QeProposal(Proposal):
         step. By default None.
         Note that this is further adjusted by (1 - gamma) to balance the influence of the 
         problem Hamiltonian with the mixer term. Divide by (1 - gamma) if needed.
+        Also, note that the coupling weights should include the mixing term.
     m : int, optional
         Number of subgroups to partition the spins into for sequential updates.
         By default 1.
