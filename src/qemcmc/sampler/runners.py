@@ -147,7 +147,6 @@ class MCMCRunner(Runner):
                 energy_s = energy_sprime
                 current_state = MCMCState(s_prime, accepted, energy_s, position=i)
 
-            # TODO: What is this doing? Why are we ignoring the step at i=0?
             if i % sample_frequency == 0 and i != 0:
                 mcmc_chain.add_state(MCMCState(current_state.bitstring, True, energy_s, position=i))
 
@@ -170,6 +169,7 @@ class ConstrainedMCMCRunner(Runner):
     reject_invalid : bool, optional
         If True (default), proposed states that violate the constraint are rejected.
     """
+
     def __init__(self, model: ConstraintModel, temp: float, reject_invalid: bool = True, uniform: bool = False):
         if not isinstance(model, ConstraintModel):
             raise TypeError("Model must be an instance of ConstraintModel.")
@@ -252,7 +252,9 @@ class ConstrainedMCMCRunner(Runner):
         h_diffs = []  # Hamming distance difference in proposal
         for i in pbar:
             s_prime = proposer.update(current_state.bitstring)
-            pbar.set_description(f"Run {name} | current state H: {np.sum(np.array([int(b) for b in current_state.bitstring]))} | proposing state H: {np.sum(np.array([int(b) for b in s_prime]))} | avgEdiff: {np.mean(np.abs(E_diffs)):.4f} | avgHdiff: {np.mean(h_diffs):.2f} | constrejecects: {constraint_rejections} | selfrejects: {self_rejections} | MHrejects: {MH_rejects}")
+            pbar.set_description(
+                f"Run {name} | current state H: {np.sum(np.array([int(b) for b in current_state.bitstring]))} | proposing state H: {np.sum(np.array([int(b) for b in s_prime]))} | avgEdiff: {np.mean(np.abs(E_diffs)):.4f} | avgHdiff: {np.mean(h_diffs):.2f} | constrejecects: {constraint_rejections} | selfrejects: {self_rejections} | MHrejects: {MH_rejects}"
+            )
             if s_prime == current_state.bitstring:
                 accepted = False
                 energy_sprime = energy_s
@@ -263,7 +265,7 @@ class ConstrainedMCMCRunner(Runner):
             elif self.uniform:
                 accepted = True
                 h_diffs.append(sum(c1 != c2 for c1, c2 in zip(current_state.bitstring, s_prime)))
-                #energy_sprime = self.model.get_energy(s_prime)
+                # energy_sprime = self.model.get_energy(s_prime)
             else:
                 energy_sprime = self.model.get_energy(s_prime)
                 accepted = self.test_accept(energy_s, energy_sprime, temperature=self.temp)
@@ -276,7 +278,6 @@ class ConstrainedMCMCRunner(Runner):
                     energy_s = energy_sprime
                 current_state = MCMCState(s_prime, accepted, energy_s, position=i)
 
-            # TODO: What is this doing? Why are we ignoring the step at i=0?
             if i % sample_frequency == 0 and i != 0:
                 mcmc_chain.add_state(MCMCState(current_state.bitstring, True, energy_s, position=i))
 
