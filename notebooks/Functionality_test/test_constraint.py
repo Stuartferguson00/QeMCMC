@@ -77,7 +77,6 @@ def run_visual_tests():
         model=model_constraint,
         gamma=(0.1, 0.4),
         time=(1, 20),
-        delta_time=0.8,
         coupling_weights=[0.1, 0.1, 0.7],  
     )
     
@@ -102,7 +101,6 @@ def run_visual_tests():
         model=model_constraint,
         gamma=(0.1, 0.4),
         time=(1, 20),
-        delta_time=0.8,
         coarse_graining=cg,
         coupling_weights=[0.1, 0.1, 0.7],  
 
@@ -121,7 +119,6 @@ def run_visual_tests():
         model=model_constraint,
         gamma=(0.1, 0.4),
         time=(1, 20),
-        delta_time=0.8,
         m = 2,
         coupling_weights=[0.1, 0.1, 0.7],  
     )

@@ -50,7 +50,6 @@ def run_visual_tests():
         model=model,
         gamma=(0.3, 0.6),
         time=(1, 20),
-        delta_time=0.8
     )
     runner = MCMCRunner(model=model, temp=0.1)
     
@@ -75,7 +74,6 @@ def run_visual_tests():
         model=model,
         gamma=(0.3, 0.6),
         time=(1, 20),
-        delta_time=0.8,
         coarse_graining=cg
     )
 
@@ -92,7 +90,6 @@ def run_visual_tests():
         model=model,
         gamma=(0.3, 0.6),
         time=(1, 20),
-        delta_time=0.8,
         m = 2,
     )
     print("\nRunning Coarse-Grained automatic QeMCMC...")
