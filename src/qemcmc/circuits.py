@@ -16,7 +16,7 @@ class CircuitMaker:
     The generated sample serves as the proposal state in the quantum-enhanced
     MCMC algorithm.
 
-    Parameters
+    Attributes
     ----------
     model : EnergyModel
         Energy model defining the problem Hamiltonian.
@@ -25,7 +25,7 @@ class CircuitMaker:
     -----
     The total Hamiltonian simulated by the circuit is
 
-        H = γ H_mixer + (1 - γ) α H_problem
+        ``H = γ H_mixer + (1 - γ) α H_problem``
 
     where ``H_problem`` encodes the classical energy model and ``H_mixer``
     corresponds to a transverse-field term. The evolution time ``t`` and
@@ -38,7 +38,7 @@ class CircuitMaker:
         self.model = model
         self.n_qubits = model.n
         self.dev = qml.device("lightning.qubit", wires=self.n_qubits)
-        #self.dev = qml.device("default.tensor", wires=self.n_qubits, method="mps", max_bond_dim=2, contract="auto-mps")
+        # self.dev = qml.device("default.tensor", wires=self.n_qubits, method="mps", max_bond_dim=2, contract="auto-mps")
 
         self.model_type = model.model_type
         self.devices = {}  # cache devices for dynamic subgroup sizes if needed
@@ -47,7 +47,7 @@ class CircuitMaker:
         """Get or create a PennyLane device for the given number of wires."""
         if num_wires not in self.devices:
             self.devices[num_wires] = qml.device("lightning.qubit", wires=num_wires)
-            #self.devices[num_wires] = qml.device("default.tensor", wires=num_wires, method="mps", max_bond_dim=2, contract="auto-mps")
+            # self.devices[num_wires] = qml.device("default.tensor", wires=num_wires, method="mps", max_bond_dim=2, contract="auto-mps")
         return self.devices[num_wires]
 
     def get_problem_hamiltonian(self, couplings: List[np.ndarray], sign: int = 1) -> qml.Hamiltonian:
@@ -259,7 +259,7 @@ class CircuitMaker:
                     qml.PauliX(i)
             qml.ApproxTimeEvolution(H_total, time, r)
             return qml.sample()
-            
+
         """print(f"Simulating quantum circuit with {num_wires} qubits, time={time}, num_trotter_steps={num_trotter_steps}")
         compiled_circuit = qml.compile(quantum_evolution)
 
@@ -280,7 +280,7 @@ class CircuitMaker:
         # Get the first shot from the sample
         compiled_circuit = qml.compile(quantum_evolution)
         sample = compiled_circuit(s_cg)[0]
-        #sample = quantum_evolution(s_cg)[0]
+        # sample = quantum_evolution(s_cg)[0]
         bitstring = "".join(str(int(b)) for b in sample)
         return bitstring
 
