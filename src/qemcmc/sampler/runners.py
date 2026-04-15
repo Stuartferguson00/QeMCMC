@@ -15,7 +15,7 @@ class Runner:
     def __init__(self):
         pass
 
-    def test_probs(self, energy_s: float, energy_sprime: float, temperature: float = 1.0) -> float:
+    def get_acceptance_probability(self, energy_s: float, energy_sprime: float, temperature: float = 1.0) -> float:
         """
         Calculate the Metropolis acceptance probability.
 
@@ -44,7 +44,7 @@ class Runner:
 
         return min(1.0, exp_factor)
 
-    def test_accept(self, energy_s: float, energy_sprime: float, temperature: float = 1.0) -> bool:
+    def is_accepted(self, energy_s: float, energy_sprime: float, temperature: float = 1.0) -> bool:
         """
         Decide whether to accept a proposed state.
 
@@ -64,7 +64,7 @@ class Runner:
         bool
             True if the new state is accepted, False otherwise.
         """
-        acceptance_prob = self.test_probs(energy_s, energy_sprime, temperature)
+        acceptance_prob = self.get_acceptance_probability(energy_s, energy_sprime, temperature)
         return acceptance_prob > np.random.rand()
 
 
@@ -141,7 +141,7 @@ class MCMCRunner(Runner):
         for i in tqdm(range(0, n_hops), desc="Run " + name, disable=not verbose):
             s_prime = proposer.update(current_state.bitstring)
             energy_sprime = self.model.get_energy(s_prime)
-            accepted = self.test_accept(energy_s, energy_sprime, temperature=self.temp)
+            accepted = self.is_accepted(energy_s, energy_sprime, temperature=self.temp)
 
             if accepted:
                 energy_s = energy_sprime
@@ -245,15 +245,15 @@ class ConstrainedMCMCRunner(Runner):
         mcmc_chain = MCMCChain([current_state], name=name)
         constraint_rejections = 0
         self_rejections = 0
-        MH_rejects = 0
+        metropolis_rejections = 0
         s_prime = None
         pbar = tqdm(range(0, n_hops), desc="Run " + name, disable=not verbose)
-        E_diffs = []  # energy difference in proposal
-        h_diffs = []  # Hamming distance difference in proposal
+        energy_diffs = []  # energy difference in proposal
+        hamming_diffs = []  # Hamming distance difference in proposal
         for i in pbar:
             s_prime = proposer.update(current_state.bitstring)
             pbar.set_description(
-                f"Run {name} | current state H: {np.sum(np.array([int(b) for b in current_state.bitstring]))} | proposing state H: {np.sum(np.array([int(b) for b in s_prime]))} | avgEdiff: {np.mean(np.abs(E_diffs)):.4f} | avgHdiff: {np.mean(h_diffs):.2f} | constrejecects: {constraint_rejections} | selfrejects: {self_rejections} | MHrejects: {MH_rejects}"
+                f"Run {name} | current state H: {np.sum(np.array([int(b) for b in current_state.bitstring]))} | proposing state H: {np.sum(np.array([int(b) for b in s_prime]))} | avgEdiff: {np.mean(np.abs(energy_diffs)):.4f} | avgHdiff: {np.mean(hamming_diffs):.2f} | constrejecects: {constraint_rejections} | selfrejects: {self_rejections} | MHrejects: {metropolis_rejections}"
             )
             if s_prime == current_state.bitstring:
                 accepted = False
@@ -264,15 +264,15 @@ class ConstrainedMCMCRunner(Runner):
                 constraint_rejections += 1
             elif self.uniform:
                 accepted = True
-                h_diffs.append(sum(c1 != c2 for c1, c2 in zip(current_state.bitstring, s_prime)))
+                hamming_diffs.append(sum(c1 != c2 for c1, c2 in zip(current_state.bitstring, s_prime)))
                 # energy_sprime = self.model.get_energy(s_prime)
             else:
                 energy_sprime = self.model.get_energy(s_prime)
-                accepted = self.test_accept(energy_s, energy_sprime, temperature=self.temp)
-                E_diffs.append(energy_s - energy_sprime)
-                h_diffs.append(sum(c1 != c2 for c1, c2 in zip(current_state.bitstring, s_prime)))
+                accepted = self.is_accepted(energy_s, energy_sprime, temperature=self.temp)
+                energy_diffs.append(energy_s - energy_sprime)
+                hamming_diffs.append(sum(c1 != c2 for c1, c2 in zip(current_state.bitstring, s_prime)))
                 if not accepted:
-                    MH_rejects += 1
+                    metropolis_rejections += 1
             if accepted:
                 if not self.uniform:
                     energy_s = energy_sprime
@@ -282,6 +282,6 @@ class ConstrainedMCMCRunner(Runner):
                 mcmc_chain.add_state(MCMCState(current_state.bitstring, True, energy_s, position=i))
 
         if return_rejections:
-            return mcmc_chain, constraint_rejections, self_rejections, MH_rejects
+            return mcmc_chain, constraint_rejections, self_rejections, metropolis_rejections
         else:
             return mcmc_chain

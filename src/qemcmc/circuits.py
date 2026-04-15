@@ -311,7 +311,7 @@ class CircuitMaker:
             The updated bitstring s'.
         """
 
-        self._assert_bitstring(s)
+        self._validate_bitstring(s)
 
         # Get s_cg' for the subgroup and reconstruct full s' using s and s_cg'
         s_cg = "".join([s[i] for i in subgroup_choice])
@@ -323,7 +323,7 @@ class CircuitMaker:
 
         return "".join(s_list)
 
-    def _assert_bitstring(self, s: str, *, length: int = None):
+    def _validate_bitstring(self, s: str, *, length: int = None):
         """
         Validate s is a bitstring.
 

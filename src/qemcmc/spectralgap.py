@@ -41,9 +41,10 @@ class SpectralGap(Runner):
 
         return A
 
-    def find_prob_matrix_local(self):
+    def find_proposal_matrix_local(self):
         """
         Function to find the proposal matrix for a given local chain.
+
         Returns:
             Q (np.ndarray): The Q matrix for local proposal
         """
@@ -57,6 +58,7 @@ class SpectralGap(Runner):
         # When the ith bitstring is different (by a valua of 1) from the jth bitstring add 1 to Q[i,j]
         for i in range(2**self.model.n_spins):
             for j in range(2**self.model.n_spins):
+                # TODO: what's sm? maybe rename to something like diff_count or something descriptive
                 sm = 0
                 for k in range(self.model.n_spins):
                     sm += abs(int(possible_states[i][k]) - int(possible_states[j][k]))
@@ -70,7 +72,7 @@ class SpectralGap(Runner):
 
         return Q
 
-    def find_prob_matrix_uniform(self):
+    def find_proposal_matrix_uniform(self):
         """
         Function to find the proposal matrix for a given uniform chain.
 
@@ -84,7 +86,7 @@ class SpectralGap(Runner):
 
         return Q
 
-    def find_prob_matrix_quantum(self):
+    def find_proposal_matrix_quantum(self):
         """
         Function to find the proposal matrix for a given QeMCMCChain object.
 
@@ -134,24 +136,26 @@ class SpectralGap(Runner):
         """
 
         if self.proposal.method == "local":
-            Q = self.find_prob_matrix_local()
+            Q = self.find_proposal_matrix_local()
         elif self.proposal.method == "uniform":
-            Q = self.find_prob_matrix_uniform()
+            Q = self.find_proposal_matrix_uniform()
         elif self.proposal.method == "quantum":
-            Q = self.find_prob_matrix_quantum()
+            Q = self.find_proposal_matrix_quantum()
         else:
             raise ValueError("Method not recognised. Only 'local', 'uniform' or 'quantum' proposal methods are implimented in find_proposal_method.")
 
         return Q
 
-    def find_spec_gap(self, A=None, Q=None):
+    def find_spectral_gap(self, A=None, Q=None):
         """
-
         Function to find the spectral gap of a given mcmc.
-        Args:
-            A (np.ndarray): The acceptance matrix for the mcmc (optional, if not given, will be calculated)
-            Q (np.ndarray): The proposal matrix for the mcmc (optional, if not given, will be calculated)
 
+        Parameters
+        ----------
+        A (np.ndarray):
+            The acceptance matrix for the mcmc (optional, if not given, will be calculated)
+        Q (np.ndarray):
+            The proposal matrix for the mcmc (optional, if not given, will be calculated)
         """
 
         if A is None:

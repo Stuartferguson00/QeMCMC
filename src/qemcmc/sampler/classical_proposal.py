@@ -57,6 +57,7 @@ class ClassicalProposal(Proposal):
         str
             A new random state bitstring of the same length.
         """
+
         return get_random_state(len(current_state_bitstring))
 
     def update_local(self, current_state_bitstring: str) -> str:
@@ -73,6 +74,7 @@ class ClassicalProposal(Proposal):
         str
             The new state bitstring after flipping one spin.
         """
+
         # Randomly choose which spin to flip
         choice = np.random.randint(0, self.n_spins)
 

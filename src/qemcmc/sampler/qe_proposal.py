@@ -118,8 +118,8 @@ class QeProposal(Proposal):
         -------
         str
             Updated state of the system as a bitstring.
-
         """
+
         if not isinstance(current_state, str):
             raise TypeError(f"Bitstring must be of type str, got {type(current_state)}: {current_state!r}")
 
@@ -144,6 +144,7 @@ class QeProposal(Proposal):
         tuple[list[float], float, float, int]
             (final_coupling_weights, gamma, time, r) for this proposal step.
         """
+
         # Sample gamma and time once per full proposal step
         g = self.gamma if not isinstance(self.gamma, tuple) else np.random.uniform(*self.gamma)
         t = self.time if not isinstance(self.time, tuple) else np.random.uniform(*self.time)
@@ -183,6 +184,7 @@ class QeProposal(Proposal):
         """
         Validate the weight parameter gamma.
         """
+
         if isinstance(gamma, (float, int)):
             if not (0.0 <= gamma <= 1.0):
                 raise ValueError(f"gamma must be in [0, 1], got {gamma}")
@@ -202,6 +204,7 @@ class QeProposal(Proposal):
         """
         Validate the total evolution time parameter.
         """
+
         if isinstance(time, (int, float)):
             if time <= 0:
                 raise ValueError(f"time must be positive, got {time}")
@@ -223,6 +226,7 @@ class QeProposal(Proposal):
         """
         Validate the number of Trotter steps 'r'.
         """
+
         if r is None:
             return None
         if not isinstance(r, int):
@@ -235,6 +239,7 @@ class QeProposal(Proposal):
         """
         Validate the Trotter step size 'delta_t'.
         """
+
         if delta_t is None:
             return None
         if not isinstance(delta_t, (int, float)):
@@ -248,6 +253,7 @@ class QeProposal(Proposal):
         Check mutual exclusivity of r and delta_t, and warn
         if resulting Trotter step size falls outside [0.1, 2.0].
         """
+
         if self.r is not None and self.delta_t is not None:
             raise ValueError("Only one of 'r' (number of Trotter steps) or 'delta_t' (Trotter step size) should be provided, not both.")
 

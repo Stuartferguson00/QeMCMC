@@ -63,7 +63,7 @@ class MCMCChain:
     def __init__(self, states: Optional[List[MCMCState]] = None, name: Optional[str] = "MCMC"):
         self.name = name
 
-        if len(states) is None:
+        if states is None:
             self._states: List[MCMCState] = []
             self._current_state: MCMCState = None
             self._states_accepted: List[MCMCState] = []
@@ -196,7 +196,6 @@ def get_random_state(num_spins: int) -> str:
     """
 
     next_state = np.random.randint(0, 2, size=num_spins, dtype=np.int8)
-
     # s_prime = f"{next_state:0{num_spins}b}"
     s_prime = "".join(str(bit) for bit in next_state)
     return s_prime
@@ -211,6 +210,7 @@ def get_all_possible_states(num_spins: int) -> list:
     Returns:
         list: A list of all possible binary strings of length num_spins.
     """
+
     num_possible_states = 2 ** (num_spins)
     possible_states = [f"{k:0{num_spins}b}" for k in range(0, num_possible_states)]
     return possible_states
@@ -242,11 +242,11 @@ def dict_magnetization_of_all_states(list_all_possible_states: list) -> dict:
     Parameters:
         list_all_possible_states
     Returns:
-        dict{state(str): magnetization_value}: A dictionary mapping each state to its magnetization value.
+        dict: A dictionary mapping each state to its magnetization value.
     """
+
     list_mag_vals = [magnetization_of_state(state) for state in list_all_possible_states]
     dict_magnetization = dict(zip(list_all_possible_states, list_mag_vals))
-    # print("dict_magnetization:"); print(dict_magnetization)
     return dict_magnetization
 
 
@@ -300,6 +300,7 @@ def validate_subgroups(subgroups, subgroup_probs, n_spins):
     ------
     ValueError/TypeError
     """
+
     if not isinstance(subgroups, list) or len(subgroups) == 0:
         raise ValueError("subgroups must be a non-empty list")
 
