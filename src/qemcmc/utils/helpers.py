@@ -49,6 +49,7 @@ class MCMCState:
 #     def spins(self) -> np.ndarray:
 #         return 1 - 2 * self._bits
 
+
 @dataclass(init=True)
 class MCMCChain:
     """
@@ -57,7 +58,6 @@ class MCMCChain:
     This class records all proposed states, tracks accepted configurations,
     and provides helper methods for extracting trajectories, energies, and
     empirical distributions from the Markov chain.
-
     """
 
     def __init__(self, states: Optional[List[MCMCState]] = None, name: Optional[str] = "MCMC"):
@@ -152,8 +152,8 @@ class MCMCChain:
         markov_chain_in_state = [self.states[0].bitstring]
         for i in range(1, len(self.states)):
             mcmc_state = self.states[i].bitstring
-            whether_accepted = self.states[i].accepted
-            if whether_accepted:
+            accepted = self.states[i].accepted
+            if accepted:
                 markov_chain_in_state.append(mcmc_state)
             else:
                 markov_chain_in_state.append(markov_chain_in_state[i - 1])
@@ -188,21 +188,17 @@ def plot_chains(chains: list[MCMCChain], color: str, label: str, plot_individual
 def get_random_state(num_spins: int) -> str:
     """
     Generate a random state for a given number of spins.
-    Args:
+
+    Parameters:
         num_spins (int): The number of spins in the system.
     Returns:
         str: A bitstring representing the random state.
     """
-    #state_space = int(2 ** (num_spins))
-    # Generate a random state
-    #next_state = np.random.randint(0, state_space, 1, dtype=np.int64)[0]
-    # Convert the state from integer to a bitstring
 
-    
     next_state = np.random.randint(0, 2, size=num_spins, dtype=np.int8)
-    
-    #s_prime = f"{next_state:0{num_spins}b}"
-    s_prime = ''.join(str(bit) for bit in next_state)
+
+    # s_prime = f"{next_state:0{num_spins}b}"
+    s_prime = "".join(str(bit) for bit in next_state)
     return s_prime
 
 
@@ -210,10 +206,10 @@ def get_all_possible_states(num_spins: int) -> list:
     """
     Returns all possible binary strings of length n=num_spins
 
-    Args:
-    num_spins: n length of the bitstring
+    Paremeters:
+        num_spins: n length of the bitstring
     Returns:
-    possible_states= list of all possible binary strings of length num_spins
+        list: A list of all possible binary strings of length num_spins.
     """
     num_possible_states = 2 ** (num_spins)
     possible_states = [f"{k:0{num_spins}b}" for k in range(0, num_possible_states)]
@@ -222,10 +218,10 @@ def get_all_possible_states(num_spins: int) -> list:
 
 def magnetization_of_state(bitstring: str) -> float:
     """
-    Args:
-    bitstring: for eg: '010'
+    Parmeters:
+        bitstring: for eg: '010'
     Returns:
-    magnetization for the given bitstring
+        float: Magnetization for the given bitstring
     """
 
     if type(bitstring) is not str:
@@ -243,10 +239,10 @@ def dict_magnetization_of_all_states(list_all_possible_states: list) -> dict:
     """
     Returns magnetization for all unique states
 
-    Args:
-    list_all_possible_states
+    Parameters:
+        list_all_possible_states
     Returns:
-    dict_magnetization={state(str): magnetization_value}
+        dict{state(str): magnetization_value}: A dictionary mapping each state to its magnetization value.
     """
     list_mag_vals = [magnetization_of_state(state) for state in list_all_possible_states]
     dict_magnetization = dict(zip(list_all_possible_states, list_mag_vals))
@@ -302,7 +298,7 @@ def validate_subgroups(subgroups, subgroup_probs, n_spins):
 
     Raises
     ------
-    ValueError/TypeError message if validation fails.
+    ValueError/TypeError
     """
     if not isinstance(subgroups, list) or len(subgroups) == 0:
         raise ValueError("subgroups must be a non-empty list")
