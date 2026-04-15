@@ -70,6 +70,7 @@ class EnergyModel:
         list:
             A list of random initial states.
         """
+
         init_states = []
         while len(init_states) < num_initial_states:
             state = get_random_state(self.n_spins)
@@ -80,6 +81,7 @@ class EnergyModel:
         """
         Finds an approximate ground state using Simulated Annealing.
         """
+
         h, J = self.couplings
 
         h_dict = {i: h[i] for i in range(self.n_spins)}
@@ -127,6 +129,7 @@ class EnergyModel:
         -------
         float : Total energy of the state
         """
+
         if isinstance(state, str):
             state = np.array([int(bit) for bit in state])
         if isinstance(state, (list, tuple, np.ndarray)):
@@ -265,6 +268,7 @@ class EnergyModel:
         np.ndarray :
             An array of normalising factors for each term in the couplings list.
         """
+
         if couplings is None:
             couplings = self.couplings
 
@@ -336,6 +340,7 @@ class EnergyModel:
         """
         Returns the energy of a given state
         """
+
         if not isinstance(state, str):
             raise TypeError(f"State must be a string, but got {type(state)}")
         energy = self.calculate_energy(state, self.couplings, self.cost_function_signs)
@@ -352,6 +357,7 @@ class EnergyModel:
         np.ndarray :
             An array containing the energies of all possible spin states.
         """
+
         self.S = ["".join(i) for i in itertools.product("01", repeat=self.n)]
         all_energies = np.zeros(len(self.S))
         for state in self.S:
@@ -379,6 +385,7 @@ class EnergyModel:
         -----
             This method is intended for small instances due to its brute-force nature, which is extremely memory intensive and slow.
         """
+
         # only to be used for small instances, it is just brute force so extremely memory intensive and slow
         all_energies = self.get_all_energies()
 
@@ -410,6 +417,7 @@ class EnergyModel:
             - lowest_values (np.ndarray): The lowest unique values in the array.
             - degeneracy (np.ndarray): The counts of each of the lowest unique values.
         """
+
         # Count the occurrences of each value
         unique_values, counts = np.unique(arr, return_counts=True)
         # Sort the unique values and counts by value
@@ -464,10 +472,11 @@ class EnergyModel:
         -------
             float corresponding to the un-normalised boltzmann probability of the given state.
         """
-        E = self.get_energy(state)
-        r = np.exp(-1 * beta * E, dtype=np.longdouble)
 
-        return r
+        E = self.get_energy(state)
+        boltzmann_factor = np.exp(-1 * beta * E, dtype=np.longdouble)
+
+        return boltzmann_factor
 
     def get_boltzmann_factor_from_energy(self, E, beta: float = 1.0) -> float:
         """
