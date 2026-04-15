@@ -3,7 +3,7 @@ from .model import EnergyModel, ConstraintModel, ModelMaker
 from .circuits import CircuitMaker
 from .utils import MCMCState, MCMCChain, plot_chains, get_random_state, get_all_possible_states
 from .spectralgap import SpectralGap
-from .coarse_graining import CoarseGraining
+from .coarse_grain import CoarseGraining
 
 __all__ = [
     "EnergyModel",
