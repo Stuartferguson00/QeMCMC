@@ -29,14 +29,17 @@ class CSTClassicalProposal(Proposal):
         super().__init__(model)
         self.method = method
 
+        
+
+    def update(self, s) -> str:
         if self.method == "link":
-            self.update = self.link_move
+            return self.link_move(s)
         elif self.method == "relation":
-            self.update = self.relation_move
+            return self.relation_move(s)
         elif self.method == "both":
-            self.update = self.update_both
+            return self.update_both(s)
         else:
-            raise ValueError(f"Method '{method}' is not supported. Choose from 'link', 'relation', or 'both'.")
+            raise ValueError(f"Method '{self.method}' is not supported. Choose from 'link', 'relation', or 'both'.")
 
     
 

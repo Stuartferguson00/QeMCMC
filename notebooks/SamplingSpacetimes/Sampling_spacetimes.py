@@ -36,7 +36,7 @@ def main(config_path):
     print(f"Using {n} bits to represent a causal set of cardinality {C}.")
     print("Runnign experiment with the following parameters:")
     # use tabulate to print parameters in a nice table format
-    params_table = [["C", C], ["temp", temp], ["epsilon", epsilon]]
+    params_table = [["C", C], ["temp", temp], ["epsilon", epsilon], ["uniform", uniform]]
     print(tabulate(params_table, headers=["Parameter", "Value"], tablefmt="grid"))
     # And do the same for the inidivdual expeirments
     for exp in config.get("experiments", []):
@@ -54,7 +54,6 @@ def main(config_path):
     BD_action_model = EnergyModel(n, couplings = BD_couplings_list, name = "BD Action Model", cost_function_signs =[1,1,1], model_type = "binary")
 
     def constraint_checker_func(bitstring: str) -> bool:
-        """In {0, 1} representation, this constraint means no two adjacent bits can both be 1"""
         return is_causal_matrix(bitstring_to_matrix(bitstring))
 
     TC_couplings = get_TC_couplings(C)
@@ -88,8 +87,11 @@ def main(config_path):
             try:
                 cg_time = tuple(params.get("time"))
             except:
-                cg_time = int(params.get("time", 1))
-            proposal = QeProposal(TC_model, gamma=params.get("gamma"), time=cg_time, m=params.get("m"), coarse_graining=cg,  coupling_weights=[1 for coupling in TC_couplings_list])
+                cg_time = float(params.get("time", 1))
+            print("cg_time: ", cg_time)
+
+            coupling_weights = [1.0/(1-params.get("gamma")) for _ in range(len(TC_couplings_list))] 
+            proposal = QeProposal(TC_model, gamma=params.get("gamma"), time=cg_time, m=params.get("m"), coarse_graining=cg,  coupling_weights=coupling_weights)
             res = Runner.run(proposal, n_hops=num_steps_q, initial_state=initial_state, verbose=True)
         elif exp_type == "cst":
             proposal = CSTClassicalProposal(TC_model, method=params.get("method", "link"))
@@ -131,7 +133,7 @@ def main(config_path):
         }
 
     # Save results systematically
-    save_dir = os.path.join(os.path.dirname(__file__), "hyperparameters_saved_chains")
+    save_dir = os.path.join(os.path.dirname(__file__), "saved_chains")
 
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     exp_dir = os.path.join(save_dir, f"experiments_{C}C_{temp}T_{timestamp}")

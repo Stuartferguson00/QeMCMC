@@ -153,6 +153,7 @@ class QeProposal(Proposal):
         if self.r is not None:
             # Fixed r mode: r stays constant, Δt varies with t
             r = self.r
+            dt = t / r
         else:
             # Fixed Δt mode (explicit or default): r varies with t
             dt = self.delta_t if self.delta_t is not None else DEFAULT_DELTA_T
@@ -186,8 +187,11 @@ class QeProposal(Proposal):
         """
 
         if isinstance(gamma, (float, int)):
-            if not (0.0 <= gamma <= 1.0):
-                raise ValueError(f"gamma must be in [0, 1], got {gamma}")
+            if not 0.0 <= gamma:
+                raise ValueError(f"gamma must be non-negative, got {gamma}")
+            if not (gamma <= 1.0):
+                #raise ValueError(f"gamma must be in [0, 1], got {gamma}")
+                print(f"Warning: Got {gamma} but gamma > 1 is not intended behaviour. This is not necessarily mathematically incorrect. Be careful, and consider adjusting the coupling weights by (1 - gamma) to balance the influence of the problem Hamiltonian with the mixer term.")
             return float(gamma)
 
         if isinstance(gamma, (tuple, list)):
