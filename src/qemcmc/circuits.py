@@ -1,5 +1,8 @@
+from pyexpat import model
+
 import pennylane as qml
 import numpy as np
+from qemcmc.model.constraint_model import ConstraintModel
 from qemcmc.model.energy_model import EnergyModel
 from typing import List
 
@@ -144,7 +147,7 @@ class CircuitMaker:
         r : int
             Number of Trotter steps for the approximate time evolution.
         mix_weight : float
-            Coefficient for the mixer Hamiltonian (between 0 and 1).
+            Coefficient for the mixer Hamiltonian.
 
         Returns
         -------
@@ -174,11 +177,11 @@ class CircuitMaker:
         num_wires = len(s)
         dev = self._get_device(num_wires)
 
-        if mix_weight < 0 or mix_weight > 1:
-            raise ValueError(f"mix_weight must be between 0 and 1. Got {mix_weight}")
+        #if mix_weight < 0 or mix_weight > 1:
+        #    raise ValueError(f"mix_weight must be between 0 and 1. Got {mix_weight}")
 
-        if np.any(np.array(weights) < 0):
-            raise ValueError(f"Weights must be non-negative. Got {weights}")
+        #if np.any(np.array(weights) < 0):
+        #    raise ValueError(f"Weights must be non-negative. Got {weights}")
 
         coeff_mixer = mix_weight
         coeff_problem = weights
@@ -230,11 +233,11 @@ class CircuitMaker:
         num_wires = len(s_cg)
         dev = self._get_device(num_wires)
 
-        if mix_weight < 0 or mix_weight > 1:
-            raise ValueError(f"mix_weight must be between 0 and 1. Got {mix_weight}")
+        #if mix_weight < 0 or mix_weight > 1:
+        #    raise ValueError(f"mix_weight must be between 0 and 1. Got {mix_weight}")
 
-        if np.any(np.array(weights) < 0):
-            raise ValueError(f"Weights must be non-negative. Got {weights}")
+        #if np.any(np.array(weights) < 0):
+        #    raise ValueError(f"Weights must be non-negative. Got {weights}")
 
         coeff_mixer = mix_weight
         coeff_problem = weights
@@ -352,3 +355,44 @@ class CircuitMaker:
             raise ValueError(f"bitstring must contain only '0'/'1'. Bad chars: {bad}. Value: {s!r}")
 
         return s
+
+
+    def check_Hamiltonian(self, basis_states_ints: List[str] = None, couplings: List[np.ndarray] = None) -> None:
+        """
+        Utility function to print the Energy of the Hamiltonian to be simulated. Naturally, for a classical problem, the energy of the Hamiltonian wrt to some basis state b H|b> = E|b> should equal the energy of the corresponding state in the classical model. This is a useful sanity check to ensure that the Hamiltonian is being constructed correctly from the coupling tensors.
+
+
+        """
+
+        # Get hamiltonian (not normalised)
+        Hamiltonian = self.get_problem_hamiltonian(couplings)
+
+        # Evaluate the Hamiltonian on some randomly chosen bitstring states, and compare to the classical energy of those states in the model
+        for state in basis_states_ints:
+            print("state int: ", state)
+            state =bin(state)[2:].zfill(self.n_qubits)
+            classical_energy = self.model.get_energy(state)
+            
+            dev = qml.device("lightning.qubit", wires=self.n_qubits)
+            @qml.qnode(dev)
+            def evaluate_energy(basis_state):
+                # Prepares the state |1, 0> if basis_state=[1, 0]
+                #print(basis_state)
+                #print(len(bin(state)[2:].zfill(self.n_qubits)))
+                #qml.BasisState(, wires=range(self.n_qubits))
+                
+                for i, bit in enumerate(basis_state):
+                    if bit == "1":
+                        qml.PauliX(i)
+                return qml.expval(Hamiltonian)
+            
+            quantum_energy = evaluate_energy(state)
+
+            if type(self.model) is ConstraintModel:
+                constraint_energy = self.model.get_constraint_energy(state)
+                print(f"State: {state}, Classical Energy: {classical_energy}, Quantum Hamiltonian Energy: {quantum_energy}, Constraint energu {constraint_energy},Constraint Satisfaction: {self.model.constraint_func(state)}")
+            else:
+                print(f"State: {state}, Classical Energy: {classical_energy}, Quantum Hamiltonian Energy: {quantum_energy}")
+        return
+
+
