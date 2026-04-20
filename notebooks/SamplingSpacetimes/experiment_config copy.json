@@ -1,0 +1,72 @@
+{
+    "C": 4,
+    "temp": 0.01,
+    "epsilon": 0.1,
+    "num_steps_q": 1000,
+    "num_steps_c": 1000,
+    "initial_states": [
+        "0",
+        "1"
+    ],
+    "experiments": [
+        {
+            "name": "qe m = 3",
+            "type": "qe",
+            "params": {
+                "gamma": [
+                    0.1,
+                    0.2
+                ],
+                "time": [
+                    1,
+                    2
+                ],
+                "m": 3,
+                "repeated": false
+            }
+        },
+        {
+            "name": "cst_both",
+            "type": "cst",
+            "params": {
+                "method": "both"
+            }
+        },
+        {
+            "name": "cst_link",
+            "type": "cst",
+            "params": {
+                "method": "link"
+            }
+        },
+        // ,
+        // {
+        //     "name": "cst_relation",
+        //     "type": "cst",
+        //     "params": {
+        //         "method": "relation"
+        //     }
+        // }
+        {
+            "name": "cst_relation",
+            "type": "cst",
+            "params": {
+                "method": "relation"
+            }
+        },
+        {
+            "name": "local",
+            "type": "classical",
+            "params": {
+                "method": "local"
+            }
+        },
+        {
+            "name": "uniform",
+            "type": "classical",
+            "params": {
+                "method": "uniform"
+            }
+        }
+    ]
+}

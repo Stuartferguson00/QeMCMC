@@ -1,0 +1,47 @@
+{
+    "C": 4,
+    "temp": 0.01,
+    "epsilon": 0.1,
+    "num_steps_q": 50000,
+    "num_steps_c": 2000000,
+    "uniform": true,
+    "initial_states": [
+        "0",
+        "1"
+    ],
+    "experiments": [
+        {
+            "name": "cst_relation",
+            "type": "cst",
+            "params": {
+                "method": "relation"
+            }
+        },
+        {
+            "name": "qe g = 0.7",
+            "type": "qe",
+            "params": {
+                "gamma": 0.7,
+                "time": [
+                    1,
+                    20
+                ],
+                "m": 19,
+                "repeated": false
+            }
+        },
+        {
+            "name": "qe g = 0.3",
+            "type": "qe",
+            "params": {
+                "gamma": 0.3,
+                "time": [
+                    1,
+                    20
+                ],
+                "m": 19,
+                "repeated": false
+            }
+        }
+    ]
+}

@@ -5,7 +5,9 @@ __pycache__/
 
 # C extensions
 *.so
-notebooks/SamplingSpacetimes*
+notebooks/SamplingSpacetimes/save*
+notebooks/SamplingSpacetimes/temp*
+
 .gitignore
 .aiexclude
 
