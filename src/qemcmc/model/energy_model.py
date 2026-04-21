@@ -147,7 +147,7 @@ class EnergyModel:
                     raise ValueError("Spin configuration must be in spin (-1/+1) or binary (0/1) format, but got values outside these sets.")
                 else:
                     # Convert to binary
-                    state = np.array([(spin + 1) // 2 for spin in state])
+                    state = np.array([(spin - 1) // 2 for spin in state])
         elif self.model_type == "ising":
             if not np.all(np.isin(state, [-1, 1])):
                 # If not already in spin format, try interpreting as binary and converting
