@@ -174,8 +174,10 @@ class CircuitMaker:
 
         """
 
+        
         num_wires = len(s)
         dev = self._get_device(num_wires)
+   
 
         #if mix_weight < 0 or mix_weight > 1:
         #    raise ValueError(f"mix_weight must be between 0 and 1. Got {mix_weight}")
@@ -191,7 +193,7 @@ class CircuitMaker:
             [self.get_mixer_hamiltonian(num_wires)]
             + [self.get_problem_hamiltonian(couplings=[self.model.normalised_couplings[i]], sign=coeff_problem[i]) for i in range(len(self.model.normalised_couplings))],
         )
-
+        
         @qml.qnode(dev)
         def quantum_evolution(input_string):
             for i, bit in enumerate(input_string):
