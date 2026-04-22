@@ -392,9 +392,9 @@ class CircuitMaker:
 
             if type(self.model) is ConstraintModel:
                 constraint_energy = self.model.get_constraint_energy(state)
-                print(f"State: {state}, Classical Energy: {classical_energy}, Quantum Hamiltonian Energy: {quantum_energy}, Constraint energu {constraint_energy},Constraint Satisfaction: {self.model.constraint_func(state)}")
+                print(f"State: {state}, Classical Energy: {np.round(classical_energy,2)}, Quantum Hamiltonian Energy: {np.round(quantum_energy,2)}, Constraint energu {np.round(constraint_energy,2)},Constraint Satisfaction: {self.model.constraint_func(state)}")
             else:
-                print(f"State: {state}, Classical Energy: {classical_energy}, Quantum Hamiltonian Energy: {quantum_energy}")
+                print(f"State: {state}, Classical Energy: {np.round(classical_energy,2)}, Quantum Hamiltonian Energy: {np.round(quantum_energy,2)}")
         return
 
 
