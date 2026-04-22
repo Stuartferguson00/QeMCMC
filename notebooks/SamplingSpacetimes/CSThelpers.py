@@ -685,7 +685,7 @@ def plot_chains_mean_height(chains: list[MCMCChain], color: str, label: str, plo
         heights = [height(bitstring_to_matrix(state.bitstring)) for state in chain._states_accepted[0::samp_freq]]
         print("Mean of last 50'%' of states: ", np.mean(np.array(heights)[len(heights)//2:]))
          # only take every samp_freq sample
-        pos = chain.get_pos_array()[0::samp_freq]
+        pos = chain.get_pos_array()[0::samp_freq]+1
         
         all_heights.append(heights)
         # plot cumulative height average up to each point in the chain
@@ -856,3 +856,49 @@ def get_BD_couplings_4d(C, epsilon):
     return C_c, L, T#+ T.T
 
 
+def generate_kr_ish_matrix(n):
+    n2 = n // 2
+    n1 = (n - n2) // 2
+    n3 = n - n1 - n2
+    
+    adj = np.zeros((n, n), dtype=int)
+    
+    l1 = np.arange(0, n1)
+    l2 = np.arange(n1, n1 + n2)
+    l3 = np.arange(n1 + n2, n)
+
+    # 1. Deterministic 50% density for L1->L2 and L2->L3 using parity
+    for i in l1:
+        for j in l2:
+            u = np.random.rand()
+            if u>0.5:
+                adj[i, j] = 1
+                
+    for j in l2:
+        for k in l3:
+            u = np.random.rand()
+            if u>0.5 and (j + k) % 2 == 0:
+                adj[j, k] = 1
+
+
+    adj = transitive_closure(adj)
+    # # 2. Enforce Transitivity for L1->L3
+    # # A_ik = 1 if there exists j such that A_ij=1 AND A_jk=1
+    # forced_l1_l3 = (adj[l1, :][:, l2] @ adj[l2, :][:, l3]) > 0
+    
+    # # 3. Fill L1->L3 block
+    # for i_idx, i in enumerate(l1):
+    #     for k_idx, k in enumerate(l3):
+    #         if forced_l1_l3[i_idx, k_idx]:
+    #             adj[i, k] = 1
+    #         else:
+    #             # Apply parity to non-forced relations to maintain density
+    #             if (i + k) % 2 == 0:
+    #                 adj[i, k] = 1
+                    
+    #return adj
+
+    #return the upper triangle as a bitstring
+    return matrix_to_bitstring(adj)
+
+print(generate_kr_ish_matrix(20))

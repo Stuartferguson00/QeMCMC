@@ -6,7 +6,7 @@ import itertools
 import matplotlib.pyplot as plt
 
 # Import the plotting helper function
-from CST_helpers import * #s plot_chains_BD, plot_chains_height, plot_chains_height_hist, plot_chains_num_relations_hist, plot_chains_ordering_fraction, plot_chains_minimal_elements, plot_chains_num_relations
+from notebooks.SamplingSpacetimes.CSThelpers import * #s plot_chains_BD, plot_chains_height, plot_chains_height_hist, plot_chains_num_relations_hist, plot_chains_ordering_fraction, plot_chains_minimal_elements, plot_chains_num_relations
 
 
 

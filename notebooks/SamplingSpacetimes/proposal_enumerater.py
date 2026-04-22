@@ -18,11 +18,11 @@ import matplotlib.pyplot as plt
 # Internal imports from our QeMCMC package
 from qemcmc.coarse_grain import CoarseGraining
 from qemcmc.sampler import ClassicalProposal, QeProposal
-from CST_classical_proposals import CSTClassicalProposal
+from notebooks.SamplingSpacetimes.CSTclassicalproposals import CSTClassicalProposal
 from qemcmc.sampler.runners import MCMCRunner, ConstrainedMCMCRunner
 from qemcmc.utils import plot_chains, get_random_state
 from qemcmc.model import EnergyModel, ConstraintModel, ModelMaker, constraint_model
-from CST_helpers import *
+from notebooks.SamplingSpacetimes.CSThelpers import *
 from tabulate import tabulate
 import time
 

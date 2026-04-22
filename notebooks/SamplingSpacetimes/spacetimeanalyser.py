@@ -6,7 +6,7 @@ import itertools
 import matplotlib.pyplot as plt
 
 # Import the plotting helper function
-from CST_helpers import * #s plot_chains_BD, plot_chains_height, plot_chains_height_hist, plot_chains_num_relations_hist, plot_chains_ordering_fraction, plot_chains_minimal_elements, plot_chains_num_relations
+from CSThelpers import * #s plot_chains_BD, plot_chains_height, plot_chains_height_hist, plot_chains_num_relations_hist, plot_chains_ordering_fraction, plot_chains_minimal_elements, plot_chains_num_relations
 
 def plot_metric_histogram(C, temp, results, initial_states, file_path, plot_func, metric_name, filename_prefix, colors, exact = None):
     plt.figure(figsize=(10, 6))
@@ -93,8 +93,10 @@ def analyze_results(file_path):
 
     global_params = save_data.get('global_params', {})
     results = save_data.get('experiments', {})
+    print("Global Params:", global_params)
     
     initial_states = global_params.get('initial_states', [])
+
     C = global_params.get('C', 'Unknown')
     temp = global_params.get('temp', 'Unknown')
 

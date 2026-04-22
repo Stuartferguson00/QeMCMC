@@ -1,13 +1,16 @@
 {
     "C": 4,
-    "temp": 0.01,
+    "temp": 1,
     "epsilon": 0.1,
-    "num_steps_q": 50000,
-    "num_steps_c": 2000000,
+    "num_steps_q": 50,
+    "num_steps_c": 2000,
+    "sampling_frequency": 1,
     "uniform": true,
     "initial_states": [
         "0",
-        "1"
+        "1",
+        "KR",
+        "KR"
     ],
     "experiments": [
         {
@@ -15,32 +18,6 @@
             "type": "cst",
             "params": {
                 "method": "relation"
-            }
-        },
-        {
-            "name": "qe g = 0.7",
-            "type": "qe",
-            "params": {
-                "gamma": 0.7,
-                "time": [
-                    1,
-                    20
-                ],
-                "m": 19,
-                "repeated": false
-            }
-        },
-        {
-            "name": "qe g = 0.3",
-            "type": "qe",
-            "params": {
-                "gamma": 0.3,
-                "time": [
-                    1,
-                    20
-                ],
-                "m": 19,
-                "repeated": false
             }
         }
     ]

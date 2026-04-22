@@ -14,11 +14,11 @@ import matplotlib.pyplot as plt
 # Internal imports from our QeMCMC package
 from qemcmc.coarse_grain import CoarseGraining
 from qemcmc.sampler import ClassicalProposal, QeProposal
-from CST_classical_proposals import CSTClassicalProposal
+from CSTclassicalproposals import CSTClassicalProposal
 from qemcmc.sampler.runners import MCMCRunner, ConstrainedMCMCRunner
 from qemcmc.utils import plot_chains, get_random_state
 from qemcmc.model import EnergyModel, ConstraintModel, ModelMaker, constraint_model
-from CST_helpers import *
+from CSThelpers import *
 from tabulate import tabulate
 import time
 
@@ -30,6 +30,7 @@ def main(config_path):
     temp = config.get("temp")
     epsilon = config.get("epsilon")
     uniform = config.get("uniform")
+    samp_freq = config.get("sampling_frequency")
     
     n = C * (C - 1) // 2 # Number of (Qu)bits needed to represent the spacetime
 
@@ -67,8 +68,11 @@ def main(config_path):
             initial_states.append("0" * n)
         elif s == "1":
             initial_states.append("1" * n)
+        elif s == "KR":
+            initial_states.append(generate_kr_ish_matrix(C))
         else:
             initial_states.append(s)
+    print("Initial states: ", initial_states)
 
     BD_TC_model = ConstraintModel(n, constraint_couplings = [coupling for coupling in TC_couplings_list], name="TC Constraint Model", constraint_func=constraint_checker_func, constraint_signs = [1 for coupling in TC_couplings_list], couplings = [coupling for coupling in BD_couplings_list], model_type ="binary", cost_function_signs=[1 for coupling in BD_couplings_list])
     Runner = ConstrainedMCMCRunner(BD_TC_model, temp=temp, reject_invalid=True, uniform=uniform)
@@ -92,13 +96,13 @@ def main(config_path):
 
             coupling_weights = [1.0/(1-params.get("gamma")) for _ in range(len(TC_couplings_list))] 
             proposal = QeProposal(TC_model, gamma=params.get("gamma"), time=cg_time, m=params.get("m"), coarse_graining=cg,  coupling_weights=coupling_weights)
-            res = Runner.run(proposal, n_hops=num_steps_q, initial_state=initial_state, verbose=True)
+            res = Runner.run(proposal, n_hops=num_steps_q, initial_state=initial_state, verbose=True, sample_frequency = samp_freq)
         elif exp_type == "cst":
             proposal = CSTClassicalProposal(TC_model, method=params.get("method", "link"))
-            res = Runner.run(proposal, n_hops=num_steps_c, initial_state=initial_state, verbose=True)
+            res = Runner.run(proposal, n_hops=num_steps_c, initial_state=initial_state, verbose=True, sample_frequency = samp_freq)
         elif exp_type == "classical":
             proposal = ClassicalProposal(TC_model, method=params.get("method", "local"))
-            res = Runner.run(proposal, n_hops=num_steps_c, initial_state=initial_state, verbose=True)
+            res = Runner.run(proposal, n_hops=num_steps_c, initial_state=initial_state, verbose=True, sample_frequency = samp_freq)
         else:
             return None
         tme = time.time() - start_time

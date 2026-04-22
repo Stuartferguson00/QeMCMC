@@ -1,5 +1,5 @@
 import numpy as np
-from CST_helpers import *
+from notebooks.SamplingSpacetimes.CSThelpers import *
 import time
 n = 7
 start = time.time()

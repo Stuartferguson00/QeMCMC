@@ -2,7 +2,7 @@ from qemcmc.model import EnergyModel
 from qemcmc.sampler import Proposal
 from qemcmc.utils import get_random_state
 import numpy as np
-from CST_helpers import *
+from CSThelpers import *
 
 class CSTClassicalProposal(Proposal):
     """
