@@ -317,15 +317,12 @@ class CircuitMaker:
         """
 
         self._validate_bitstring(s)
-
         # Get s_cg' for the subgroup and reconstruct full s' using s and s_cg'
         s_cg = "".join([s[i] for i in subgroup_choice])
         s_cg_prime = self.get_sample(s_cg, time, r, gamma, local_couplings)
-
         s_list = list(s)
         for i, global_index in enumerate(subgroup_choice):
             s_list[global_index] = s_cg_prime[i]
-
         return "".join(s_list)
 
     def _validate_bitstring(self, s: str, *, length: int = None):
