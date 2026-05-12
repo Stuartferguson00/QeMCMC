@@ -147,7 +147,7 @@ class EnergyModel:
                     raise ValueError("Spin configuration must be in spin (-1/+1) or binary (0/1) format, but got values outside these sets.")
                 else:
                     # Convert to binary
-                    state = np.array([(spin - 1) // 2 for spin in state])
+                    state = np.array([(1-spin) // 2 for spin in state])
         elif self.model_type == "ising":
             if not np.all(np.isin(state, [-1, 1])):
                 # If not already in spin format, try interpreting as binary and converting
@@ -156,7 +156,7 @@ class EnergyModel:
                     raise ValueError("Spin configuration must be in binary (0/1) or spin (-1/+1) format, but got values outside these sets.")
                 else:
                     # Convert to spin
-                    state = np.array([2 * int(bit) - 1 for bit in state])
+                    state = np.array([1-2 * int(bit)  for bit in state])
 
         total_energy = 0.0
         for term_index, coupling in enumerate(couplings):
