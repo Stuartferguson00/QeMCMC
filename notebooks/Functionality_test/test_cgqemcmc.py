@@ -55,8 +55,8 @@ def run_visual_tests():
     
     chains = Parallel(n_jobs=-1)(
         delayed(run_chain_with_seed)(seed, runner, proposer=proposer, n_hops=steps, initial_state="0"*n, verbose=False)
-        for seed in np.random.randint(0, 2**31 - 1, size=reps)
-    )
+        for seed in np.arange(0,reps))#np.random.randint(0, 2**31 - 1, size=reps)
+    
 
     plot_chains(chains, "red", label = "Standard QeMCMC", plot_individual_chains=True)
 
@@ -81,8 +81,8 @@ def run_visual_tests():
     print("\nRunning Coarse-Grained manual QeMCMC...")
     cg_chains = Parallel(n_jobs=-1)(
         delayed(run_chain_with_seed)(seed, runner, proposer=cg_proposer, n_hops=steps, initial_state="0"*n, verbose=False)
-        for seed in np.random.randint(0, 2**31 - 1, size=reps)
-    )
+        for seed in np.arange(0,reps))#np.random.randint(0, 2**31 - 1, size=reps)
+    
 
     plot_chains(cg_chains, "lightblue", label = "Coarse-Grained manual QeMCMC", plot_individual_chains=True)
 
@@ -95,8 +95,8 @@ def run_visual_tests():
     print("\nRunning Coarse-Grained automatic QeMCMC...")
     cg_2_chains = Parallel(n_jobs=-1)(
         delayed(run_chain_with_seed)(seed, runner, proposer=cg_proposal_2, n_hops=steps, initial_state="0"*n, verbose=False)
-        for seed in np.random.randint(0, 2**31 - 1, size=reps)
-    )
+        for seed in np.arange(0,reps))#np.random.randint(0, 2**31 - 1, size=reps)
+    
 
     plot_chains(cg_2_chains , "blue", label = "Coarse-Grained automatic QeMCMC", plot_individual_chains=True)
 
@@ -105,16 +105,16 @@ def run_visual_tests():
     loc_proposer = ClassicalProposal(model, method = "local")
     loc_chains = Parallel(n_jobs=-1)(
         delayed(run_chain_with_seed)(seed, runner, proposer=loc_proposer, n_hops=steps, initial_state="0"*n, verbose=False)
-        for seed in np.random.randint(0, 2**31 - 1, size=reps)
-    )
+        for seed in np.arange(0,reps))#np.random.randint(0, 2**31 - 1, size=reps)
+    
 
     plot_chains(loc_chains, "green", label = "Classical local MCMC", plot_individual_chains=True)
     print("\nRunning Classical uniform MCMC...")
     uni_proposer = ClassicalProposal(model, method = "uniform")
     uni_chains = Parallel(n_jobs=-1)(
         delayed(run_chain_with_seed)(seed, runner, proposer=uni_proposer, n_hops=steps, initial_state="0"*n, verbose=False)
-        for seed in np.random.randint(0, 2**31 - 1, size=reps)
-    )
+        for seed in np.arange(0,reps))#np.random.randint(0, 2**31 - 1, size=reps)
+    
 
     plot_chains(uni_chains, "orange", label = "Classical uniform MCMC", plot_individual_chains=True)
 
