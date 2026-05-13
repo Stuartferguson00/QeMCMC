@@ -100,10 +100,12 @@ class CircuitMaker:
 
                 elif self.model_type == "binary":
                     # 0.5 * (I - Z) for first variable
+                    #term = 0.5 * (qml.Identity(index_tuple[0]) + qml.PauliZ(index_tuple[0]))
                     term = 0.5 * (qml.Identity(index_tuple[0]) - qml.PauliZ(index_tuple[0]))
                     # multiply by 0.5 * (I - Z) for rest
                     for q in index_tuple[1:]:
                         next_var = 0.5 * (qml.Identity(q) - qml.PauliZ(q))
+                        #next_var = 0.5 * (qml.Identity(q) + qml.PauliZ(q))
                         term = term @ next_var
 
                     total_hamiltonian += (sign * coeff) * term
@@ -356,7 +358,7 @@ class CircuitMaker:
         return s
 
 
-    def check_Hamiltonian(self, basis_states_ints: List[str] = None, couplings: List[np.ndarray] = None) -> None:
+    def check_Hamiltonian(self, basis_states_ints: List[str] = None, couplings: List[np.ndarray] = None, plot =  False) -> None:
         """
         Utility function to print the Energy of the Hamiltonian to be simulated. Naturally, for a classical problem, the energy of the Hamiltonian wrt to some basis state b H|b> = E|b> should equal the energy of the corresponding state in the classical model. This is a useful sanity check to ensure that the Hamiltonian is being constructed correctly from the coupling tensors.
 
@@ -365,7 +367,8 @@ class CircuitMaker:
 
         # Get hamiltonian (not normalised)
         Hamiltonian = self.get_problem_hamiltonian(couplings)
-
+        energies = []
+        quantum_energies = []
         # Evaluate the Hamiltonian on some randomly chosen bitstring states, and compare to the classical energy of those states in the model
         for state in basis_states_ints:
             print("state int: ", state)
@@ -392,6 +395,19 @@ class CircuitMaker:
                 print(f"State: {state}, Classical Energy: {np.round(classical_energy,2)}, Quantum Hamiltonian Energy: {np.round(quantum_energy,2)}, Constraint energu {np.round(constraint_energy,2)},Constraint Satisfaction: {self.model.constraint_func(state)}")
             else:
                 print(f"State: {state}, Classical Energy: {np.round(classical_energy,2)}, Quantum Hamiltonian Energy: {np.round(quantum_energy,2)}")
+            energies.append(classical_energy)
+            quantum_energies.append(quantum_energy)
+        if plot:
+            from matplotlib import pyplot as plt
+            plt.scatter(energies, quantum_energies)
+            plt.xlabel("Classical Energy")
+            plt.ylabel("Quantum Energy")
+            plt.show()
+            plt.plot(np.arange(0,2**self.n_qubits), np.array(energies), label = "classical")
+            plt.plot(np.arange(0,2**self.n_qubits), np.array(quantum_energies), label = "quantum")
+            plt.show()
+
+        
         return
 
 
