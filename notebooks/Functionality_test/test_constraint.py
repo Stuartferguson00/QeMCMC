@@ -37,14 +37,14 @@ def run_visual_tests():
     start_time = time.time()
     # Setup standard proble
     n = 8
-    reps = 10
+    reps = 7
     steps = 150
     temp = 0.1
-    np.random.seed(1)
+    np.random.seed(5)
 
 
-    base_model = ModelMaker(n , model_type="Fully Connected Ising", name = "Ising").model
-
+    base_model = ModelMaker(n , model_type="Fully Connected QUBO", name = "Binary Ising").model
+    
 
 
     shape_of_J = (n, n)
@@ -67,8 +67,8 @@ def run_visual_tests():
                     sum += J_constraint[i, j]
         return sum == 0
 
-    model_constraint = ConstraintModel(n, constraint_couplings = [J_constraint,], couplings = base_model.couplings, name="Large Constraint Model", cost_function_signs=base_model.cost_function_signs, constraint_func=constraint_checker_func, constraint_signs = [-1,])  
-
+    model_constraint = ConstraintModel(n, constraint_couplings = [J_constraint,], couplings = base_model.couplings, name="Large Constraint Model", cost_function_signs=base_model.cost_function_signs, constraint_func=constraint_checker_func, constraint_signs = [-1,], model_type="binary")  
+    random_initial_states = model_constraint.initial_state
     runner_constraint = ConstrainedMCMCRunner(model_constraint, temp, constraint_checker_func)
 
     # 1. Standard QeMCMC Test
@@ -81,9 +81,9 @@ def run_visual_tests():
     )
     
     chains = Parallel(n_jobs=-1)(
-        delayed(run_chain_with_seed)(seed, runner_constraint, proposer=proposer, n_hops=steps, initial_state="0"*n, verbose=False)
-        for seed in np.random.randint(0, 2**31 - 1, size=reps)
-    )
+        delayed(run_chain_with_seed)(seed, runner_constraint, proposer=proposer, n_hops=steps, initial_state=random_initial_states[iter], verbose=False)
+        for iter, seed in enumerate(np.arange(0,reps)))
+    
 
     plot_chains(chains, "red", label = "Standard QeMCMC", plot_individual_chains=True)
 
@@ -109,8 +109,8 @@ def run_visual_tests():
 
     print("\nRunning Coarse-Grained manual QeMCMC...")
     cg_chains = Parallel(n_jobs=-1)(
-        delayed(run_chain_with_seed)(seed, runner_constraint, proposer=cg_proposer, n_hops=steps, initial_state="0"*n, verbose=False)
-        for seed in np.arange(0,reps))#np.random.randint(0, 2**31 - 1, size=reps)
+        delayed(run_chain_with_seed)(seed, runner_constraint, proposer=cg_proposer, n_hops=steps, initial_state=random_initial_states[iter], verbose=False)
+        for iter, seed in enumerate(np.arange(0,reps)))
     
 
     plot_chains(cg_chains, "lightblue", label = "Coarse-Grained manual QeMCMC", plot_individual_chains=True)
@@ -124,8 +124,8 @@ def run_visual_tests():
     )
     print("\nRunning Coarse-Grained automatic QeMCMC...")
     cg_2_chains = Parallel(n_jobs=-1)(
-        delayed(run_chain_with_seed)(seed, runner_constraint, proposer=cg_proposal_2, n_hops=steps, initial_state="0"*n, verbose=False)
-        for seed in np.arange(0,reps))#np.random.randint(0, 2**31 - 1, size=reps)
+        delayed(run_chain_with_seed)(seed, runner_constraint, proposer=cg_proposal_2, n_hops=steps, initial_state=random_initial_states[iter], verbose=False)
+        for iter, seed in enumerate(np.arange(0,reps)))
     
 
     plot_chains(cg_2_chains , "blue", label = "Coarse-Grained automatic QeMCMC", plot_individual_chains=True)
@@ -134,16 +134,16 @@ def run_visual_tests():
     # classical to compare against
     loc_proposer = ClassicalProposal(model_constraint, method = "local")
     loc_chains = Parallel(n_jobs=-1)(
-        delayed(run_chain_with_seed)(seed, runner_constraint, proposer=loc_proposer, n_hops=steps, initial_state="0"*n, verbose=False)
-        for seed in np.arange(0,reps))#np.random.randint(0, 2**31 - 1, size=reps)
+        delayed(run_chain_with_seed)(seed, runner_constraint, proposer=loc_proposer, n_hops=steps, initial_state=random_initial_states[iter], verbose=False)
+        for iter, seed in enumerate(np.arange(0,reps)))
     
 
     plot_chains(loc_chains, "green", label = "Classical local MCMC", plot_individual_chains=True)
     print("\nRunning Classical uniform MCMC...")
     uni_proposer = ClassicalProposal(model_constraint, method = "uniform")
     uni_chains = Parallel(n_jobs=-1)(
-        delayed(run_chain_with_seed)(seed, runner_constraint, proposer=uni_proposer, n_hops=steps, initial_state="0"*n, verbose=False)
-        for seed in np.arange(0,reps))#np.random.randint(0, 2**31 - 1, size=reps)
+        delayed(run_chain_with_seed)(seed, runner_constraint, proposer=uni_proposer, n_hops=steps, initial_state=random_initial_states[iter], verbose=False)
+        for iter, seed in enumerate(np.arange(0,reps)))
     
 
     plot_chains(uni_chains, "orange", label = "Classical uniform MCMC", plot_individual_chains=True)

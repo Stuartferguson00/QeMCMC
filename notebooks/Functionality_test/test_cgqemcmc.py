@@ -35,12 +35,12 @@ def run_chain_with_seed(seed, runner, **kwargs):
 
 def run_visual_tests():
     # Setup standard proble
-    n = 10
+    n = 7
     reps = 5
     steps = 150
-    np.random.seed(1)
+    np.random.seed(2)
     start_time = time.time()
-
+    random_initial_states = ["".join(np.random.choice(["0", "1"], size=n)) for _ in range(reps)]
 
     model = ModelMaker(n , model_type="Fully Connected Ising", name = "Ising").model
     
@@ -54,8 +54,8 @@ def run_visual_tests():
     runner = MCMCRunner(model=model, temp=0.1)
     
     chains = Parallel(n_jobs=-1)(
-        delayed(run_chain_with_seed)(seed, runner, proposer=proposer, n_hops=steps, initial_state="0"*n, verbose=False)
-        for seed in np.arange(0,reps))#np.random.randint(0, 2**31 - 1, size=reps)
+        delayed(run_chain_with_seed)(seed, runner, proposer=proposer, n_hops=steps, initial_state=random_initial_states[iter], verbose=False)
+        for iter, seed in enumerate(np.arange(0,reps)))#np.random.randint(0, 2**31 - 1, size=reps)
     
 
     plot_chains(chains, "red", label = "Standard QeMCMC", plot_individual_chains=True)
@@ -80,8 +80,8 @@ def run_visual_tests():
 
     print("\nRunning Coarse-Grained manual QeMCMC...")
     cg_chains = Parallel(n_jobs=-1)(
-        delayed(run_chain_with_seed)(seed, runner, proposer=cg_proposer, n_hops=steps, initial_state="0"*n, verbose=False)
-        for seed in np.arange(0,reps))#np.random.randint(0, 2**31 - 1, size=reps)
+        delayed(run_chain_with_seed)(seed, runner, proposer=cg_proposer, n_hops=steps, initial_state=random_initial_states[iter], verbose=False)
+        for iter, seed in enumerate(np.arange(0,reps)))#np.random.randint(0, 2**31 - 1, size=reps)
     
 
     plot_chains(cg_chains, "lightblue", label = "Coarse-Grained manual QeMCMC", plot_individual_chains=True)
@@ -94,8 +94,8 @@ def run_visual_tests():
     )
     print("\nRunning Coarse-Grained automatic QeMCMC...")
     cg_2_chains = Parallel(n_jobs=-1)(
-        delayed(run_chain_with_seed)(seed, runner, proposer=cg_proposal_2, n_hops=steps, initial_state="0"*n, verbose=False)
-        for seed in np.arange(0,reps))#np.random.randint(0, 2**31 - 1, size=reps)
+        delayed(run_chain_with_seed)(seed, runner, proposer=cg_proposal_2, n_hops=steps, initial_state=random_initial_states[iter], verbose=False)
+        for iter, seed in enumerate(np.arange(0,reps)))
     
 
     plot_chains(cg_2_chains , "blue", label = "Coarse-Grained automatic QeMCMC", plot_individual_chains=True)
@@ -104,16 +104,16 @@ def run_visual_tests():
     # classical to compare against
     loc_proposer = ClassicalProposal(model, method = "local")
     loc_chains = Parallel(n_jobs=-1)(
-        delayed(run_chain_with_seed)(seed, runner, proposer=loc_proposer, n_hops=steps, initial_state="0"*n, verbose=False)
-        for seed in np.arange(0,reps))#np.random.randint(0, 2**31 - 1, size=reps)
+        delayed(run_chain_with_seed)(seed, runner, proposer=loc_proposer, n_hops=steps, initial_state=random_initial_states[iter], verbose=False)
+        for iter, seed in enumerate(np.arange(0,reps)))
     
 
     plot_chains(loc_chains, "green", label = "Classical local MCMC", plot_individual_chains=True)
     print("\nRunning Classical uniform MCMC...")
     uni_proposer = ClassicalProposal(model, method = "uniform")
     uni_chains = Parallel(n_jobs=-1)(
-        delayed(run_chain_with_seed)(seed, runner, proposer=uni_proposer, n_hops=steps, initial_state="0"*n, verbose=False)
-        for seed in np.arange(0,reps))#np.random.randint(0, 2**31 - 1, size=reps)
+        delayed(run_chain_with_seed)(seed, runner, proposer=uni_proposer, n_hops=steps, initial_state=random_initial_states[iter], verbose=False)
+        for iter, seed in enumerate(np.arange(0,reps)))
     
 
     plot_chains(uni_chains, "orange", label = "Classical uniform MCMC", plot_individual_chains=True)
