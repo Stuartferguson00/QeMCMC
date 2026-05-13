@@ -255,6 +255,7 @@ class ConstrainedMCMCRunner(Runner):
             pbar.set_description(
                 f"Run {name} | current state H: {np.sum(np.array([int(b) for b in current_state.bitstring]))} | proposing state H: {np.sum(np.array([int(b) for b in s_prime]))} | avgEdiff: {np.mean(np.abs(energy_diffs)):.4f} | avgHdiff: {np.mean(hamming_diffs):.2f} | constrejecects: {constraint_rejections} | selfrejects: {self_rejections} | MHrejects: {metropolis_rejections}"
             )
+
             if s_prime == current_state.bitstring:
                 accepted = False
                 energy_sprime = energy_s

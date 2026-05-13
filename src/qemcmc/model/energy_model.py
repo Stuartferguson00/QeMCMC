@@ -43,10 +43,10 @@ class EnergyModel:
         self.n_spins = n
         self.couplings = couplings
         self.name = name
-        self.alphas = self.calculate_alpha(n, couplings)
+        self.alpha = self.calculate_alpha(n, couplings)
         self.lowest_energy = None
 
-        self.normalised_couplings = [self.couplings[i] * self.alphas[i] for i in range(len(self.couplings))]
+        self.normalised_couplings = [self.couplings[i] * self.alpha for i in range(len(self.couplings))]
         self.cost_function_signs = cost_function_signs
 
         if model_type not in ["ising", "binary"]:
@@ -138,7 +138,6 @@ class EnergyModel:
                 state = state.astype(int)
         else:
             raise TypeError(f"State must be a string, list, tuple, or numpy array, but got {type(state)}")
-
         if self.model_type == "binary":
             if not np.all(np.isin(state, [0, 1])):
                 # If not already in binary format, try interpreting as spin values and converting
@@ -147,7 +146,8 @@ class EnergyModel:
                     raise ValueError("Spin configuration must be in spin (-1/+1) or binary (0/1) format, but got values outside these sets.")
                 else:
                     # Convert to binary
-                    state = np.array([(spin + 1) // 2 for spin in state])
+                    state = np.array([(1-spin) // 2 for spin in state])
+
         elif self.model_type == "ising":
             if not np.all(np.isin(state, [-1, 1])):
                 # If not already in spin format, try interpreting as binary and converting
@@ -157,6 +157,7 @@ class EnergyModel:
                 else:
                     # Convert to spin
                     state = np.array([2 * int(bit) - 1 for bit in state])
+                    #state = np.array([1-2 * int(bit)  for bit in state])
 
         total_energy = 0.0
         for term_index, coupling in enumerate(couplings):
@@ -311,10 +312,11 @@ class EnergyModel:
                 if T.shape != (n,) * order:
                     raise ValueError(f"{order}-body tensor has shape {T.shape}, expected {(n,) * order}")
 
-            for comb in itertools.combinations(range(n), order):
-                c = float(T[comb])
-                if c != 0.0:
-                    norm_sq += c * c
+                for comb in itertools.combinations(range(n), order):
+                    c = float(T[comb])
+                    if c != 0.0:
+                        norm_sq += c * c
+            
             norm_sq_arr[T_ind] = norm_sq
 
         norm_sq_tot = np.sum(norm_sq_arr)
@@ -323,7 +325,7 @@ class EnergyModel:
             print("Input of a zero-coupling may be intended to sample Uniform distributions, however if this is not your intention, please check your couplings.")
             return np.ones(len(couplings))
 
-        return np.sqrt(n / norm_sq_arr)
+        return np.sqrt(n) / np.sqrt(norm_sq_tot)
 
         # TODO: is this check required? test code with and without.
         # alpha_arr = np.zeros(len(couplings))

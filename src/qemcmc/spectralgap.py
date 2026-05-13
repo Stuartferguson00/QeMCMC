@@ -35,7 +35,7 @@ class SpectralGap(Runner):
         for i in range(num_states):
             for j in range(num_states):
                 if i != j:
-                    A[i][j] = self.test_probs(energies[i], energies[j], temperature=self.temp)
+                    A[i][j] = self.get_acceptance_probability(energies[i], energies[j], temperature=self.temp)
                 else:
                     A[i][j] = 0
 
