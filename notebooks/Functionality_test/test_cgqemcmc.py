@@ -36,7 +36,7 @@ def run_chain_with_seed(seed, runner, **kwargs):
 def run_visual_tests():
     # Setup standard proble
     n = 14
-    reps = 5
+    reps = 14
     steps = 100
     np.random.seed(2)
     start_time = time.time()
