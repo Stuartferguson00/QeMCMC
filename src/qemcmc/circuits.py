@@ -3,6 +3,8 @@ import pennylane as qml
 
 from qemcmc.model.constraint_model import ConstraintModel
 from qemcmc.model.energy_model import EnergyModel
+from typing import List
+import dimod
 
 
 class CircuitMaker:
@@ -54,13 +56,12 @@ class CircuitMaker:
     def get_problem_hamiltonian(self, couplings: list[np.ndarray], sign: int = 1) -> qml.Hamiltonian:
         """
         Construct the problem Hamiltonian from symmetric coupling tensors.
-
         This method supports both 'ising' (-1/+1) and 'binary' (0/1) models.
 
         Parameters
         ----------
-        couplings : List[np.ndarray]
-            A list of coupling tensors.
+        couplings : List[dimod.BinaryPolynomial]
+            A list of coupling polynomials.
         sign : int, optional
             A sign to apply to the Hamiltonian. Default is ``1``.
 
@@ -70,43 +71,39 @@ class CircuitMaker:
             The problem Hamiltonian.
         """
         total_hamiltonian = 0.0 * qml.Identity(0)
-        for coupling_tensor in couplings:
-            coupling_tensor = np.asarray(coupling_tensor)
-            order = coupling_tensor.ndim
-            if order == 0:
-                continue
-
-            spin_sign = (-1) ** order if self.model_type == "ising" else 1
-            non_zero_indices = np.transpose(np.nonzero(coupling_tensor))
-            for index_tuple in non_zero_indices:
-                index_tuple = tuple(int(i) for i in index_tuple)
-
-                if len(set(index_tuple)) != len(index_tuple):  # skip repeated indices
-                    continue
-                if index_tuple != tuple(sorted(index_tuple)):  # keep only strictly increasing i1 < i2 < ... < ik
-                    continue
-
-                coeff = float(coupling_tensor[index_tuple])
+        for coupling_poly in couplings:
+            for indices, coeff in coupling_poly.items():
                 if coeff == 0.0:
                     continue
 
+                order = len(indices)
+                if order == 0:
+                    continue
+
+                # Ensure strict increasing order to match previous behavior if needed,
+                # though dimod already canonicalizes tuples.
+                indices = tuple(sorted(indices))
+                
+                # Z |0> = |0>, Z |1> = - |1>. 
+                # For ising models, bit=0 -> spin=-1, which corresponds to +1 Z eigenvalue. So spin_i = -Z_i.
+                # Therefore a term with k spins has a factor of (-1)^k.
+                spin_sign = (-1) ** order if self.model_type == "ising" else 1
+
                 if self.model_type == "ising":
-                    term = qml.PauliZ(index_tuple[0])
-                    for q in index_tuple[1:]:
+                    term = qml.PauliZ(indices[0])
+                    for q in indices[1:]:
                         term = term @ qml.PauliZ(q)
                     total_hamiltonian += (sign * spin_sign * coeff) * term
 
                 elif self.model_type == "binary":
                     # 0.5 * (I - Z) for first variable
-                    # term = 0.5 * (qml.Identity(index_tuple[0]) + qml.PauliZ(index_tuple[0]))
-                    term = 0.5 * (qml.Identity(index_tuple[0]) - qml.PauliZ(index_tuple[0]))
-                    # multiply by 0.5 * (I - Z) for rest
-                    for q in index_tuple[1:]:
+                    term = 0.5 * (qml.Identity(indices[0]) - qml.PauliZ(indices[0]))
+                    for q in indices[1:]:
                         next_var = 0.5 * (qml.Identity(q) - qml.PauliZ(q))
-                        # next_var = 0.5 * (qml.Identity(q) + qml.PauliZ(q))
                         term = term @ next_var
 
                     total_hamiltonian += (sign * coeff) * term
+                    
         simplified_H = qml.simplify(total_hamiltonian)
 
         coeffs, ops = simplified_H.terms()
