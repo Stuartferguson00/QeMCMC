@@ -1,5 +1,6 @@
 import typing
 import numpy as np
+import dimod
 from qemcmc.utils.helpers import get_random_state
 import warnings
 from .energy_model import EnergyModel
@@ -17,12 +18,12 @@ class ConstraintModel(EnergyModel):
     ----------
     n : int
         Number of spins in the model.
-    constraint_couplings : list[np.ndarray]
-        List of coupling tensors (numpy arrays) defining the constraint.
+    constraint_couplings : list[dimod.BinaryPolynomial]
+        List of coupling tensors (dimod.BinaryPolynomial) defining the constraint.
     constraint_signs : list[float]
         Sign convention(s) for the constraint couplings.
-    couplings : list[np.ndarray]
-        List of coupling tensors (numpy arrays) defining the energy function.
+    couplings : list[dimod.BinaryPolynomial]
+        List of coupling tensors (dimod.BinaryPolynomial) defining the energy function.
     constraint_func : typing.Callable[[str], bool]
         A function that takes a state (string representation of spin configuration)
         and returns True if the state satisfies the constraint, and False otherwise.
@@ -43,7 +44,7 @@ class ConstraintModel(EnergyModel):
       certain combinatorial optimization problems or physical systems with forbidden states.
     """
 
-    def __init__(self, n: int, constraint_couplings: list[np.ndarray], constraint_signs: list[float], couplings: list[np.ndarray], constraint_func: typing.Callable[[str], bool], **kwargs):
+    def __init__(self, n: int, constraint_couplings: list[dimod.BinaryPolynomial], constraint_signs: list[float], couplings: list[dimod.BinaryPolynomial], constraint_func: typing.Callable[[str], bool], **kwargs):
         if not callable(constraint_func):
             raise ValueError("constraint_func must be a callable function that takes a state as input and returns True/False.")
         self.constraint_func = constraint_func
@@ -65,10 +66,9 @@ class ConstraintModel(EnergyModel):
         # These are the couplings used in quantum proposals
         # Combine and normalize the energy and constraint couplings
         self.normalised_couplings = (
-            [self.couplings[i] * self.alpha for i in range(len(self.couplings))]
+            [dimod.BinaryPolynomial({k: v * self.alpha for k, v in poly.items()}, poly.vartype) for i, poly in enumerate(self.couplings)]
             +
-            # [self.constraint_couplings[i] for i in range(len(self.constraint_couplings))]
-            [self.constraint_couplings[i] * self.constraint_coupling_alpha for i in range(len(self.constraint_couplings))]
+            [dimod.BinaryPolynomial({k: v * self.constraint_coupling_alpha[i] for k, v in poly.items()}, poly.vartype) for i, poly in enumerate(self.constraint_couplings)]
         )
 
         # Store the un-normalized total couplings
