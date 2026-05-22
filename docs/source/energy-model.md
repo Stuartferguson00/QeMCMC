@@ -62,7 +62,9 @@ above. Linear coefficients always go in the separate 1D array, never on the diag
 ## Sign convention
 
 By default QeMCMC negates each term (`cost_function_signs=[-1, -1]`), i.e. it evaluates
+
 $$E(s) = -\sum_i h_i s_i - \sum_{i<j} J_{ij} s_i s_j$$ 
+
 This is the convention for Boltzmann sampling $p(s) \propto e^{-E(s)/T}$.
 
 ## Quick models for testing
