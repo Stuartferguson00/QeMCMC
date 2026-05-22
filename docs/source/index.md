@@ -10,15 +10,10 @@
 :caption: Getting Started
 
 getting-started
+quickstart
 energy-model
 coarse-graining
-```
-
-```{toctree}
-:maxdepth: 2
-:caption: Usage
-
-example
+constraints
 ```
 
 ```{toctree}

@@ -1,16 +1,23 @@
 # Installation
 
-This project uses [`uv`](https://astral.sh/uv), an extremely fast Python package installer written in Rust, intended as a drop-in replacement for `pip` and `pip-tools`. Official installation instructions available at [astral.sh/uv](https://astral.sh/uv)
+Install the latest release from [PyPI](https://pypi.org/project/qemcmc/) (requires Python 3.13+):
 
-1.  **Install `uv`:**
-    For macOS and Linux run:
-    ```bash
-    curl -LsSf https://astral.sh/uv/install.sh | sh
-    ```
+```bash
+pip install qemcmc
+```
 
-2.  **Create a virtual environment:**
-    From the project's root directory, run:
-    ```bash
-    uv sync
-    ```
-    This will create a local `.venv` folder and install all required dependencies from `pyproject.toml` and `uv.lock`.
+## From source
+
+The example notebooks live in the [repo](https://github.com/Stuartferguson00/QeMCMC), not the published package. To run them — or to develop QeMCMC — clone the repo and install with [`uv`](https://astral.sh/uv):
+
+```bash
+git clone https://github.com/Stuartferguson00/QeMCMC.git
+cd QeMCMC
+uv sync
+```
+
+`uv sync` creates a local `.venv` and installs the locked dependencies from `pyproject.toml` and `uv.lock`. If you don't have `uv`, install it with:
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
