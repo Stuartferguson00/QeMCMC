@@ -53,11 +53,11 @@ Q = np.array([                         # quadratic coefficients b_ij (symmetric,
 model = EnergyModel(n=n, couplings=[q, Q], name="my_qubo", model_type="binary")
 ``` -->
 
-```{note}
-Provide the quadratic term as a **full symmetric matrix with a zero diagonal** (not
-upper-triangular): QeMCMC sums over all $i, j$ and halves the result, giving the $\sum_{i<j}$
-above. Linear coefficients always go in the separate 1D array, never on the diagonal.
-```
+!!! note
+    Provide the quadratic term as a **full symmetric matrix with a zero diagonal** (not
+    upper-triangular): QeMCMC sums over all $i, j$ and halves the result, giving the
+    $\sum_{i<j}$ above. Linear coefficients always go in the separate 1D array, never on
+    the diagonal.
 
 ## Sign convention
 

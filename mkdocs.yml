@@ -1,0 +1,90 @@
+site_name: QeMCMC
+site_description: Quantum-enhanced Markov Chain Monte Carlo sampler simulated using PennyLane
+site_url: https://stuartferguson00.github.io/QeMCMC/
+repo_url: https://github.com/Stuartferguson00/QeMCMC
+repo_name: Stuartferguson00/QeMCMC
+
+theme:
+  name: material
+  icon:
+    logo: material/atom
+  favicon: logo-qsl.jpeg
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+plugins:
+  - search
+  - include-markdown
+  - gen-files:
+      scripts:
+        - gen_ref_pages.py
+  - literate-nav:
+      nav_file: SUMMARY.md
+  - section-index
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            docstring_style: numpy
+            docstring_options:
+              warn_unknown_params: false
+            show_root_heading: true
+            show_source: true
+            members_order: source
+            separate_signature: true
+            merge_init_into_class: true
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.arithmatex:
+      generic: true
+  - toc:
+      permalink: true
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
+
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Installation: getting-started.md
+      - Quick Start: quickstart.md
+      - Energy Models: energy-model.md
+      - Coarse Graining: coarse-graining.md
+      - Constraints: constraints.md
+  - API Reference: reference/
+  - Development:
+      - GitHub: github.md
+      - License: license.md
+      - Authors: authors.md
