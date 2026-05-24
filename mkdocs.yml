@@ -1,4 +1,4 @@
-site_name: QeMCMC
+site_name: QeMCMC documentation
 site_description: Quantum-enhanced Markov Chain Monte Carlo sampler simulated using PennyLane
 site_url: https://stuartferguson00.github.io/QeMCMC/
 repo_url: https://github.com/Stuartferguson00/QeMCMC
@@ -8,7 +8,7 @@ theme:
   name: material
   icon:
     logo: material/atom
-  favicon: logo-qsl.jpeg
+  favicon: favicon.svg
   features:
     - navigation.tabs
     - navigation.sections
