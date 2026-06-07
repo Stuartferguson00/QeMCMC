@@ -68,7 +68,7 @@ class ConstraintModel(EnergyModel):
         self.normalised_couplings = (
             [dimod.BinaryPolynomial({k: v * self.alpha for k, v in poly.items()}, poly.vartype) for i, poly in enumerate(self.couplings)]
             +
-            [dimod.BinaryPolynomial({k: v * self.constraint_coupling_alpha[i] for k, v in poly.items()}, poly.vartype) for i, poly in enumerate(self.constraint_couplings)]
+            [dimod.BinaryPolynomial({k: v * self.constraint_coupling_alpha for k, v in poly.items()}, poly.vartype) for i, poly in enumerate(self.constraint_couplings)]
         )
 
         # Store the un-normalized total couplings

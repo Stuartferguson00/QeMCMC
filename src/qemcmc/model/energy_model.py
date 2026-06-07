@@ -114,17 +114,22 @@ class EnergyModel:
             raise TypeError(f"State must be a string, list, tuple, or numpy array, but got {type(state)}")
 
         if self.model_type == "binary":
-            if not np.all(np.isin(state, [0, 1])):
-                if not np.all(np.isin(state, [-1, 1])):
-                    raise ValueError("Spin configuration must be in spin (-1/+1) or binary (0/1) format, but got values outside these sets.")
-                else:
-                    state = np.array([(1-spin) // 2 for spin in state])
+            # Check if strictly binary using bitwise mask
+            if np.any(state & ~1): 
+                # Fallback check for strictly spin (-1, 1) using absolute value
+                if np.any(np.abs(state) != 1):
+                    raise ValueError("Spin configuration must be in spin (-1/+1) or binary (0/1) format.")
+                # Map Spin -> Binary
+                state = (1 - state) >> 1 
+                
         elif self.model_type == "ising":
-            if not np.all(np.isin(state, [-1, 1])):
-                if not np.all(np.isin(state, [0, 1])):
-                    raise ValueError("Spin configuration must be in binary (0/1) or spin (-1/+1) format, but got values outside these sets.")
-                else:
-                    state = np.array([2 * int(bit) - 1 for bit in state])
+            # Check if strictly spin
+            if np.any(np.abs(state) != 1):
+                # Fallback check for strictly binary
+                if np.any(state & ~1):
+                    raise ValueError("Spin configuration must be in binary (0/1) or spin (-1/+1) format.")
+                # Map Binary -> Spin (Shift left by 1 is 2*x, minus 1)
+                state = (state << 1) - 1
 
         state_dict = {i: int(val) for i, val in enumerate(state)}
         total_energy = 0.0

@@ -5,7 +5,7 @@ from joblib import Parallel, delayed
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-
+import dimod
 from qemcmc.model import EnergyModel, ConstraintModel, ModelMaker
 from qemcmc.coarse_grain import CoarseGraining
 from qemcmc.sampler.classical_proposal import ClassicalProposal
@@ -37,10 +37,10 @@ def run_visual_tests():
     start_time = time.time()
     # Setup standard proble
     n = 8
-    reps = 7
-    steps = 150
+    reps = 14
+    steps = 100
     temp = 0.1
-    np.random.seed(5)
+    np.random.seed(3)
 
 
     base_model = ModelMaker(n , model_type="Fully Connected QUBO", name = "Binary Ising").model
@@ -66,8 +66,10 @@ def run_visual_tests():
                 if bitstring[i] != bitstring[j]:
                     sum += J_constraint[i, j]
         return sum == 0
+    J_constraint_dict = {(i, j): float(J_constraint[i, j]) for i in range(n) for j in range(i + 1, n) if J_constraint[i, j] != 0}
+    J_constraint_bp = dimod.BinaryPolynomial(J_constraint_dict, dimod.SPIN)
 
-    model_constraint = ConstraintModel(n, constraint_couplings = [J_constraint,], couplings = base_model.couplings, name="Large Constraint Model", cost_function_signs=base_model.cost_function_signs, constraint_func=constraint_checker_func, constraint_signs = [-1,], model_type="binary")  
+    model_constraint = ConstraintModel(n, constraint_couplings = [J_constraint_bp,], couplings = base_model.couplings, name="Large Constraint Model", cost_function_signs=base_model.cost_function_signs, constraint_func=constraint_checker_func, constraint_signs = [-1,], model_type="binary")  
     random_initial_states = model_constraint.initial_state
     runner_constraint = ConstrainedMCMCRunner(model_constraint, temp, constraint_checker_func)
 

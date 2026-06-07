@@ -37,8 +37,8 @@ def run_visual_tests():
     # Setup standard proble
     n = 14
     reps = 14
-    steps = 100
-    np.random.seed(2)
+    steps = 200
+    np.random.seed(10)
     start_time = time.time()
     random_initial_states = ["".join(np.random.choice(["0", "1"], size=n)) for _ in range(reps)]
 
