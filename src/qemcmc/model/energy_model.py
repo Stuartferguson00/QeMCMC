@@ -7,6 +7,15 @@ from tqdm import tqdm
 from collections import defaultdict
 from qemcmc.utils.helpers import get_random_state
 from typing import List
+import typing
+from typing import List
+import numpy as np
+import dimod
+import math
+from tqdm import tqdm
+from collections import defaultdict
+from qemcmc.utils.helpers import get_random_state
+import time
 
 class EnergyModel:
     """
@@ -57,6 +66,51 @@ class EnergyModel:
 
         self.initial_state = self.get_initial_states(num_initial_states=100)
 
+
+        maximum_order = 0
+        for poly in self.normalised_couplings:
+            order = poly.degree
+            if order > maximum_order:
+                maximum_order = order
+        self.maximum_order = maximum_order
+        self.calculate_energy = self.calculate_energy_dimod
+
+        #start = time.time()
+        #print("energy of model 0:", self.get_energy("0" * n))
+        #end = time.time()
+        #print("took:", end - start, "seconds")
+        if self.maximum_order <= 2:
+            constant, self.h, self.J = self.get_h_J()
+            self.normalised_couplings = [constant, self.h, self.J]
+            self.calculate_energy = self.calculate_energy_raw
+            #start = time.time()
+            #print("energy of model 0 old fashioned:", self.get_energy("0" * n))
+
+            #end = time.time()
+            #print("took:", end - start, "seconds")
+        else:
+            self.calculate_energy = self.calculate_energy_dimod
+        
+
+    def get_h_J(self):
+        """ Helper function to get h and J representation,
+          as for low dimension it is much quicker to do energy calc in numpy"""
+        h = np.zeros(self.n_spins)
+        J = np.zeros((self.n_spins, self.n_spins))
+        offset = 0.0
+        for poly in self.normalised_couplings:
+            for indices, coeff in poly.items():
+                if len(indices) == 0:
+                    offset += coeff
+                elif len(indices) == 1:
+                    (u,) = indices  
+                    h[u] += coeff
+                elif len(indices) == 2:
+                    # sorted() automatically consumes the frozenset and returns a sorted list
+                    u, v = sorted(indices) 
+                    J[u, v] += coeff
+        return offset, h, J
+
     def get_initial_states(self, num_initial_states: int):
         """
         Generates a list of random initial states.
@@ -79,7 +133,7 @@ class EnergyModel:
         return init_states
 
 
-    def calculate_energy(self, state, couplings: List[dimod.BinaryPolynomial], cost_function_signs):
+    def calculate_energy_dimod(self, state, couplings: List[dimod.BinaryPolynomial], cost_function_signs):
         """
         Calculate the energy of a given state for an arbitrary-order Ising/binary model.
 
@@ -137,7 +191,66 @@ class EnergyModel:
 
         return total_energy
 
-    def get_subgroup_couplings(self, subgroup: list[int], current_state: str, coupling_weights: list[float] | None = None):
+    def calculate_energy_raw(self, state, couplings: List[np.ndarray], cost_function_signs):
+        """
+        Calculate the energy of a given state for an arbitrary-order Ising/binary model.
+
+        Parameters
+        -----------
+        state : array-like (str, list, tuple, np.array)
+
+            State configuration. Can be:
+            - Binary: "011", [0,1,1], (0,1,1), etc.
+            - Spin: [-1,1,1], (-1,1,1), etc.
+
+        couplings : list of numpy arrays
+        
+        List of coupling tensors where:
+            - 1D arrays represent linear terms (h_i)
+            - 2D arrays represent quadratic terms (J_ij)
+            - 3D arrays represent cubic terms, etc.
+
+        Returns
+        -------
+        float : Total energy of the state
+        """
+
+        if isinstance(state, str):
+            state = np.array([int(bit) for bit in state])
+        if isinstance(state, (list, tuple, np.ndarray)):
+            state = np.array(state)
+            if state.dtype == np.bool_:
+                state = state.astype(int)
+        else:
+            raise TypeError(f"State must be a string, list, tuple, or numpy array, but got {type(state)}")
+
+        if self.model_type == "binary":
+            # Check if strictly binary using bitwise mask
+            if np.any(state & ~1): 
+                # Fallback check for strictly spin (-1, 1) using absolute value
+                if np.any(np.abs(state) != 1):
+                    raise ValueError("Spin configuration must be in spin (-1/+1) or binary (0/1) format.")
+                # Map Spin -> Binary
+                state = (1 - state) >> 1 
+                
+        elif self.model_type == "ising":
+            # Check if strictly spin
+            if np.any(np.abs(state) != 1):
+                # Fallback check for strictly binary
+                if np.any(state & ~1):
+                    raise ValueError("Spin configuration must be in binary (0/1) or spin (-1/+1) format.")
+                # Map Binary -> Spin (Shift left by 1 is 2*x, minus 1)
+                state = (state << 1) - 1
+
+        state_dict = {i: int(val) for i, val in enumerate(state)}
+        total_energy = 0.0
+        for term_index, poly in enumerate(couplings):
+            total_energy += cost_function_signs[term_index] * poly.energy(state_dict)
+
+        return total_energy
+
+
+    def get_subgroup_couplings(self, subgroup: List[int], current_state: str, coupling_weights: List[float] = None):
         """
         Calculates local couplings for a subgroup of spins.
 
