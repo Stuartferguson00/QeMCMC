@@ -67,20 +67,20 @@ class EnergyModel:
         self.maximum_order = maximum_order
         self.calculate_energy = self.calculate_energy_dimod
 
-        start = time.time()
-        print("energy of model 0:", self.get_energy("0" * n))
-        end = time.time()
-        print("took:", end - start, "seconds")
+        # start = time.time()
+        # print("energy of model 0:", self.get_energy("0" * n))
+        # end = time.time()
+        # print("took:", end - start, "seconds")
         if self.maximum_order <= 2:
             constant, self.h, self.J = self.get_h_J(couplings)
             norm_constant, norm_h, norm_J = self.get_h_J(self.normalised_couplings)
             self.normalised_couplings = [norm_constant, norm_h, norm_J]
             self.couplings = [constant, self.h, self.J]
             self.calculate_energy = self.calculate_energy_raw
-            start = time.time()
-            print("energy raw:", self.get_energy("0" * n))
-            end = time.time()
-            print("took:", end - start, "seconds")
+            # start = time.time()
+            # print("energy raw:", self.get_energy("0" * n))
+            # end = time.time()
+            # print("took:", end - start, "seconds")
             
         
 
