@@ -282,9 +282,10 @@ class CircuitMaker:
         for gate, count in specs_dict['gate_types'].items():
             print(f"- {gate}: {count}")"""
         # Get the first shot from the sample
-        compiled_circuit = qml.compile(quantum_evolution)
-        sample = compiled_circuit(s_cg)[0]
-        # sample = quantum_evolution(s_cg)[0]
+        #compiled_circuit = qml.compile(quantum_evolution)
+        #sample = compiled_circuit(s_cg)[0]
+
+        sample = quantum_evolution(s_cg)[0]
         bitstring = "".join(str(int(b)) for b in sample)
         return bitstring
 
