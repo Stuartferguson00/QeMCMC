@@ -74,7 +74,7 @@ class EnergyModel:
         if self.maximum_order <= 2:
             constant, self.h, self.J = self.get_h_J(couplings)
             norm_constant, norm_h, norm_J = self.get_h_J(self.normalised_couplings)
-            self.normalised_couplings = [norm_constant, norm_h, norm_J]
+            #self.normalised_couplings = [norm_constant, norm_h, norm_J]
             self.couplings = [constant, self.h, self.J]
             self.calculate_energy = self.calculate_energy_raw
             # start = time.time()
