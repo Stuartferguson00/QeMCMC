@@ -288,7 +288,6 @@ class EnergyModel:
         for couplings_index, poly in enumerate(self.normalised_couplings):
             weight = coupling_weights[couplings_index]
             new_dict = defaultdict(float)
-            print("poly:", poly)
             for indices, coeff in poly.items():
                 effective_coeff = coeff * weight
                 in_group = []
