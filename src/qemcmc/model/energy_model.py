@@ -60,37 +60,37 @@ class EnergyModel:
 
 
         maximum_order = 0
-        for poly in self.normalised_couplings:
+        for poly in self.couplings:
             order = poly.degree
             if order > maximum_order:
                 maximum_order = order
         self.maximum_order = maximum_order
         self.calculate_energy = self.calculate_energy_dimod
 
-        #start = time.time()
-        #print("energy of model 0:", self.get_energy("0" * n))
-        #end = time.time()
-        #print("took:", end - start, "seconds")
+        start = time.time()
+        print("energy of model 0:", self.get_energy("0" * n))
+        end = time.time()
+        print("took:", end - start, "seconds")
         if self.maximum_order <= 2:
-            constant, self.h, self.J = self.get_h_J()
-            self.normalised_couplings = [constant, self.h, self.J]
+            constant, self.h, self.J = self.get_h_J(couplings)
+            norm_constant, norm_h, norm_J = self.get_h_J(self.normalised_couplings)
+            self.normalised_couplings = [norm_constant, norm_h, norm_J]
+            self.couplings = [constant, self.h, self.J]
             self.calculate_energy = self.calculate_energy_raw
-            #start = time.time()
-            #print("energy of model 0 old fashioned:", self.get_energy("0" * n))
-
-            #end = time.time()
-            #print("took:", end - start, "seconds")
-        else:
-            self.calculate_energy = self.calculate_energy_dimod
+            start = time.time()
+            print("energy raw:", self.get_energy("0" * n))
+            end = time.time()
+            print("took:", end - start, "seconds")
+            
         
 
-    def get_h_J(self):
+    def get_h_J(self,couplings):
         """ Helper function to get h and J representation,
           as for low dimension it is much quicker to do energy calc in numpy"""
         h = np.zeros(self.n_spins)
         J = np.zeros((self.n_spins, self.n_spins))
         offset = 0.0
-        for poly in self.normalised_couplings:
+        for poly in couplings:
             for indices, coeff in poly.items():
                 if len(indices) == 0:
                     offset += coeff
@@ -234,12 +234,8 @@ class EnergyModel:
                 # Map Binary -> Spin (Shift left by 1 is 2*x, minus 1)
                 state = (state << 1) - 1
 
-        state_dict = {i: int(val) for i, val in enumerate(state)}
-        total_energy = 0.0
-        for term_index, poly in enumerate(couplings):
-            total_energy += cost_function_signs[term_index] * poly.energy(state_dict)
-
-        return total_energy
+        energy = self.cost_function_signs[0]*np.dot(state, self.couplings[1]) + self.cost_function_signs[1] *np.dot(state, self.couplings[2] @ state) +self.cost_function_signs[1] * self.couplings[0]
+        return energy
 
 
     def get_subgroup_couplings(self, subgroup: List[int], current_state: str, coupling_weights: List[float] = None):
