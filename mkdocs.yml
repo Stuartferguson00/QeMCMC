@@ -85,6 +85,7 @@ nav:
       - Constraints: constraints.md
   - API Reference: reference/
   - Development:
+      - Releasing to PyPI: releasing.md
       - GitHub: github.md
       - License: license.md
       - Authors: authors.md
