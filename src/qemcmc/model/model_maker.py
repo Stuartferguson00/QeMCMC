@@ -1,7 +1,7 @@
 # Internal package imports
 from qemcmc.model import EnergyModel
 from qemcmc.coarse_grain import CoarseGraining
-
+from typing import List
 # External package imports
 import numpy as np
 import itertools
@@ -44,8 +44,44 @@ class ModelMaker:
         h = dimod.BinaryPolynomial(h_dict, dimod.SPIN)
         J = dimod.BinaryPolynomial(J_dict, dimod.SPIN)
 
+
+        # dimod representation needed for sparsity etc. 
+        # but a simple numpy implementation is far more efficient for energy calc.
+
+        def get_energy_manual(state):
+            """
+            Calculate the energy of a given state for an arbitrary-order Ising/binary model.
+
+            Parameters
+            -----------
+            state : array-like (str, list, tuple, np.array)
+
+                State configuration. Can be:
+                - Binary: "011", [0,1,1], (0,1,1), etc.
+                - Spin: [-1,1,1], (-1,1,1), etc.
+
+            couplings : list of numpy arrays
+            
+            List of coupling tensors where:
+                - 1D arrays represent linear terms (h_i)
+                - 2D arrays represent quadratic terms (J_ij)
+                - 3D arrays represent cubic terms, etc.
+
+            Returns
+            -------
+            float : Total energy of the state
+            """
+            if not isinstance(state, str):
+                raise TypeError(f"State must be a string, but got {type(state)}")
+            
+            state = np.array([int(bit) for bit in state])
+            state = (state << 1) - 1
+
+            energy = - np.dot(state, h_np) - np.dot(state, J_np @ state)/2
+            return energy
+
         couplings = [h, J]
-        self.model = EnergyModel(n=self.n_spins, couplings=couplings, name=self.name, cost_function_signs=self.cost_function_signs, model_type="ising")
+        self.model = EnergyModel(n=self.n_spins, couplings=couplings, name=self.name, cost_function_signs=self.cost_function_signs, model_type="ising", manual_get_energy = get_energy_manual)
         if return_couplings:
             return couplings
 

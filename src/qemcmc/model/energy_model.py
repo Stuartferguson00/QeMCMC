@@ -29,6 +29,10 @@ class EnergyModel:
         Type of model, either 'ising' or 'binary'. This determines how the binary states are interpreted
         and how the energy is calculated. 'ising' models use spin values {-1, +1}, while 'binary'
         models use binary values {0, 1}.
+    manual_get_energy:
+        Optional custom energy function. If provided, this function will be used to calculate energies 
+        instead of the default methods. Must agree on energy values with the default method for a sample 
+        of states, otherwise a ValueError is raised.
 
     Notes
     -----
@@ -37,7 +41,7 @@ class EnergyModel:
       small systems.
     """
 
-    def __init__(self, n: int, couplings: List[dimod.BinaryPolynomial] = [], name: str = None, cost_function_signs: list = [-1, -1], model_type: str = "ising"):
+    def __init__(self, n: int, couplings: List[dimod.BinaryPolynomial] = [], name: str = None, cost_function_signs: list = [-1, -1], model_type: str = "ising", manual_get_energy: callable = None):
         self.n = n
         self.n_spins = n
         self.couplings = couplings
@@ -65,43 +69,19 @@ class EnergyModel:
             if order > maximum_order:
                 maximum_order = order
         self.maximum_order = maximum_order
-        self.calculate_energy = self.calculate_energy_dimod
 
-        # start = time.time()
-        # print("energy of model 0:", self.get_energy("0" * n))
-        # end = time.time()
-        # print("took:", end - start, "seconds")
-        if self.maximum_order <= 2:
-            constant, self.h, self.J = self.get_h_J(couplings)
-            norm_constant, norm_h, norm_J = self.get_h_J(self.normalised_couplings)
-            #self.normalised_couplings = [norm_constant, norm_h, norm_J]
-            self.couplings = [constant, self.h, self.J]
-            self.calculate_energy = self.calculate_energy_raw
-            # start = time.time()
-            # print("energy raw:", self.get_energy("0" * n))
-            # end = time.time()
-            # print("took:", end - start, "seconds")
+        if manual_get_energy is not None:
             
-        
+            # generate a few bitstrings, and test the manual get_energy against the exact one.
+            test_states = self.get_initial_states(num_initial_states=10)
+            for state in test_states:
+                exact_energy = self.get_energy(state)
+                manual_energy = manual_get_energy(state)
+                if not math.isclose(exact_energy, manual_energy, rel_tol=1e-5):
+                    raise ValueError(f"Manual get_energy does not match exact energy for state {state}. Exact: {exact_energy}, Manual: {manual_energy}. Please check your manual_get_energy function. If this is intended functionality, then you may have to make an alternative EnergyModel class. ")
+            self.get_energy = manual_get_energy
 
-    def get_h_J(self,couplings):
-        """ Helper function to get h and J representation,
-          as for low dimension it is much quicker to do energy calc in numpy"""
-        h = np.zeros(self.n_spins)
-        J = np.zeros((self.n_spins, self.n_spins))
-        offset = 0.0
-        for poly in couplings:
-            for indices, coeff in poly.items():
-                if len(indices) == 0:
-                    offset += coeff
-                elif len(indices) == 1:
-                    (u,) = indices  
-                    h[u] += coeff
-                elif len(indices) == 2:
-                    # sorted() automatically consumes the frozenset and returns a sorted list
-                    u, v = sorted(indices) 
-                    J[u, v] += coeff
-        return offset, h, J
+
 
     def get_initial_states(self, num_initial_states: int):
         """
@@ -125,7 +105,7 @@ class EnergyModel:
         return init_states
 
 
-    def calculate_energy_dimod(self, state, couplings: List[dimod.BinaryPolynomial], cost_function_signs):
+    def calculate_energy(self, state, couplings: List[dimod.BinaryPolynomial], cost_function_signs):
         """
         Calculate the energy of a given state for an arbitrary-order Ising/binary model.
 
@@ -183,59 +163,7 @@ class EnergyModel:
 
         return total_energy
 
-    def calculate_energy_raw(self, state, couplings: List[np.ndarray], cost_function_signs):
-        """
-        Calculate the energy of a given state for an arbitrary-order Ising/binary model.
-
-        Parameters
-        -----------
-        state : array-like (str, list, tuple, np.array)
-
-            State configuration. Can be:
-            - Binary: "011", [0,1,1], (0,1,1), etc.
-            - Spin: [-1,1,1], (-1,1,1), etc.
-
-        couplings : list of numpy arrays
-        
-        List of coupling tensors where:
-            - 1D arrays represent linear terms (h_i)
-            - 2D arrays represent quadratic terms (J_ij)
-            - 3D arrays represent cubic terms, etc.
-
-        Returns
-        -------
-        float : Total energy of the state
-        """
-
-        if isinstance(state, str):
-            state = np.array([int(bit) for bit in state])
-        if isinstance(state, (list, tuple, np.ndarray)):
-            state = np.array(state)
-            if state.dtype == np.bool_:
-                state = state.astype(int)
-        else:
-            raise TypeError(f"State must be a string, list, tuple, or numpy array, but got {type(state)}")
-
-        if self.model_type == "binary":
-            # Check if strictly binary using bitwise mask
-            if np.any(state & ~1): 
-                # Fallback check for strictly spin (-1, 1) using absolute value
-                if np.any(np.abs(state) != 1):
-                    raise ValueError("Spin configuration must be in spin (-1/+1) or binary (0/1) format.")
-                # Map Spin -> Binary
-                state = (1 - state) >> 1 
-                
-        elif self.model_type == "ising":
-            # Check if strictly spin
-            if np.any(np.abs(state) != 1):
-                # Fallback check for strictly binary
-                if np.any(state & ~1):
-                    raise ValueError("Spin configuration must be in binary (0/1) or spin (-1/+1) format.")
-                # Map Binary -> Spin (Shift left by 1 is 2*x, minus 1)
-                state = (state << 1) - 1
-
-        energy = self.cost_function_signs[0]*np.dot(state, self.couplings[1]) + self.cost_function_signs[1] *np.dot(state, self.couplings[2] @ state) +self.cost_function_signs[1] * self.couplings[0]
-        return energy
+    
 
 
     def get_subgroup_couplings(self, subgroup: List[int], current_state: str, coupling_weights: List[float] = None):
