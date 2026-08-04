@@ -7,7 +7,7 @@
 
 This is a lightweight research package for **Quantum-enhanced Markov Chain Monte Carlo** (QeMCMC) sampling over discrete spin/bitstring configurations.  
 
-Link to GitHub repo: https://github.com/Stuartferguson00/QeMCMC
+Link to GitHub repo: [https://github.com/Stuartferguson00/QeMCMC](https://github.com/Stuartferguson00/QeMCMC)
 
 
 The implementation is inspired by the numerics in [_Layden et al's_ paper on QeMCMC](https://www.nature.com/articles/s41586-023-06095-4) and builds upon the foundations of the [pafloxy/quMCMC](https://github.com/pafloxy/quMCMC) repository.
