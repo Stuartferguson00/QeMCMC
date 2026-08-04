@@ -46,12 +46,12 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 ## Authors
 
-This project was created and maintained by _Stuart Ferguson_ & _Feroz Hassan_.
+This project is maintained by _Feroz Hassan_ & _Stuart Ferguson_.
 
 For questions, suggestions, or collaboration, please feel free to contact the authors:
 
--   S.A.Ferguson-3@sms.ed.ac.uk.
 -   fhassan2@ed.ac.uk
+-   S.A.Ferguson-3@sms.ed.ac.uk.
 
 ## Acknowledgements
 
