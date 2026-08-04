@@ -1,5 +1,6 @@
-from qemcmc.utils.helpers import validate_subgroups
 import numpy as np
+
+from qemcmc.utils.helpers import validate_subgroups
 
 
 class CoarseGraining:
