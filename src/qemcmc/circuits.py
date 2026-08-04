@@ -1,10 +1,8 @@
-from pyexpat import model
-
-import pennylane as qml
 import numpy as np
+import pennylane as qml
+
 from qemcmc.model.constraint_model import ConstraintModel
 from qemcmc.model.energy_model import EnergyModel
-from typing import List
 
 
 class CircuitMaker:
@@ -53,7 +51,7 @@ class CircuitMaker:
             # self.devices[num_wires] = qml.device("default.tensor", wires=num_wires, method="mps", max_bond_dim=2, contract="auto-mps")
         return self.devices[num_wires]
 
-    def get_problem_hamiltonian(self, couplings: List[np.ndarray], sign: int = 1) -> qml.Hamiltonian:
+    def get_problem_hamiltonian(self, couplings: list[np.ndarray], sign: int = 1) -> qml.Hamiltonian:
         """
         Construct the problem Hamiltonian from symmetric coupling tensors.
 
@@ -100,12 +98,12 @@ class CircuitMaker:
 
                 elif self.model_type == "binary":
                     # 0.5 * (I - Z) for first variable
-                    #term = 0.5 * (qml.Identity(index_tuple[0]) + qml.PauliZ(index_tuple[0]))
+                    # term = 0.5 * (qml.Identity(index_tuple[0]) + qml.PauliZ(index_tuple[0]))
                     term = 0.5 * (qml.Identity(index_tuple[0]) - qml.PauliZ(index_tuple[0]))
                     # multiply by 0.5 * (I - Z) for rest
                     for q in index_tuple[1:]:
                         next_var = 0.5 * (qml.Identity(q) - qml.PauliZ(q))
-                        #next_var = 0.5 * (qml.Identity(q) + qml.PauliZ(q))
+                        # next_var = 0.5 * (qml.Identity(q) + qml.PauliZ(q))
                         term = term @ next_var
 
                     total_hamiltonian += (sign * coeff) * term
@@ -114,7 +112,7 @@ class CircuitMaker:
         coeffs, ops = simplified_H.terms()
         return qml.Hamiltonian(coeffs, ops)
 
-    def get_mixer_hamiltonian(self, num_wires: int = None) -> qml.Hamiltonian:
+    def get_mixer_hamiltonian(self, num_wires: int | None = None) -> qml.Hamiltonian:
         """
         Constructs the Mixer Hamiltonian: Σ X_i.
 
@@ -134,7 +132,7 @@ class CircuitMaker:
             num_wires = self.n_qubits
         return qml.Hamiltonian([1.0] * num_wires, [qml.PauliX(i) for i in range(num_wires)])
 
-    def get_state_vector(self, s: str, weights: List[float], time: float, r: int, mix_weight: float) -> np.ndarray:
+    def get_state_vector(self, s: str, weights: list[float], time: float, r: int, mix_weight: float) -> np.ndarray:
         """
         Evolve the initial state and return the final state vector.
 
@@ -176,15 +174,13 @@ class CircuitMaker:
 
         """
 
-        
         num_wires = len(s)
         dev = self._get_device(num_wires)
-   
 
-        #if mix_weight < 0 or mix_weight > 1:
+        # if mix_weight < 0 or mix_weight > 1:
         #    raise ValueError(f"mix_weight must be between 0 and 1. Got {mix_weight}")
 
-        #if np.any(np.array(weights) < 0):
+        # if np.any(np.array(weights) < 0):
         #    raise ValueError(f"Weights must be non-negative. Got {weights}")
 
         coeff_mixer = mix_weight
@@ -195,7 +191,7 @@ class CircuitMaker:
             [self.get_mixer_hamiltonian(num_wires)]
             + [self.get_problem_hamiltonian(couplings=[self.model.normalised_couplings[i]], sign=coeff_problem[i]) for i in range(len(self.model.normalised_couplings))],
         )
-        
+
         @qml.qnode(dev)
         def quantum_evolution(input_string):
             for i, bit in enumerate(input_string):
@@ -207,7 +203,7 @@ class CircuitMaker:
         state_vector = quantum_evolution(s)
         return state_vector
 
-    def get_sample(self, s_cg: str, time: float, r: int, mix_weight: float, local_couplings: list, weights: List[float] = None) -> str:
+    def get_sample(self, s_cg: str, time: float, r: int, mix_weight: float, local_couplings: list, weights: list[float] | None = None) -> str:
         """
         Generate a single sample by evolving the system and measuring.
 
@@ -237,10 +233,10 @@ class CircuitMaker:
         num_wires = len(s_cg)
         dev = self._get_device(num_wires)
 
-        #if mix_weight < 0 or mix_weight > 1:
+        # if mix_weight < 0 or mix_weight > 1:
         #    raise ValueError(f"mix_weight must be between 0 and 1. Got {mix_weight}")
 
-        #if np.any(np.array(weights) < 0):
+        # if np.any(np.array(weights) < 0):
         #    raise ValueError(f"Weights must be non-negative. Got {weights}")
 
         coeff_mixer = mix_weight
@@ -284,14 +280,17 @@ class CircuitMaker:
         print("\nGate Breakdown:")
         for gate, count in specs_dict['gate_types'].items():
             print(f"- {gate}: {count}")"""
+
+        # This is slow!
         # Get the first shot from the sample
-        compiled_circuit = qml.compile(quantum_evolution)
-        sample = compiled_circuit(s_cg)[0]
-        # sample = quantum_evolution(s_cg)[0]
+        # compiled_circuit = qml.compile(quantum_evolution)
+        # sample = compiled_circuit(s_cg)[0]
+
+        sample = quantum_evolution(s_cg)[0]
         bitstring = "".join(str(int(b)) for b in sample)
         return bitstring
 
-    def update(self, s: str, subgroup_choice: List[int], local_couplings: list, gamma: float, time: float, r: int) -> str:
+    def update(self, s: str, subgroup_choice: list[int], local_couplings: list, gamma: float, time: float, r: int) -> str:
         """
         Update a bitstring by evolving a subgroup.
 
@@ -327,7 +326,7 @@ class CircuitMaker:
             s_list[global_index] = s_cg_prime[i]
         return "".join(s_list)
 
-    def _validate_bitstring(self, s: str, *, length: int = None):
+    def _validate_bitstring(self, s: str, *, length: int | None = None):
         """
         Validate s is a bitstring.
 
@@ -357,8 +356,7 @@ class CircuitMaker:
 
         return s
 
-
-    def check_Hamiltonian(self, basis_states_ints: List[str] = None, couplings: List[np.ndarray] = None, plot =  False) -> None:
+    def check_Hamiltonian(self, basis_states_ints: list[str] | None = None, couplings: list[np.ndarray] | None = None, plot=False) -> None:
         """
         Utility function to print the Energy of the Hamiltonian to be simulated. Naturally, for a classical problem, the energy of the Hamiltonian wrt to some basis state b H|b> = E|b> should equal the energy of the corresponding state in the classical model. This is a useful sanity check to ensure that the Hamiltonian is being constructed correctly from the coupling tensors.
 
@@ -372,42 +370,41 @@ class CircuitMaker:
         # Evaluate the Hamiltonian on some randomly chosen bitstring states, and compare to the classical energy of those states in the model
         for state in basis_states_ints:
             print("state int: ", state)
-            state =bin(state)[2:].zfill(self.n_qubits)
+            state = bin(state)[2:].zfill(self.n_qubits)
             classical_energy = self.model.get_energy(state)
-            
+
             dev = qml.device("lightning.qubit", wires=self.n_qubits)
+
             @qml.qnode(dev)
             def evaluate_energy(basis_state):
                 # Prepares the state |1, 0> if basis_state=[1, 0]
-                #print(basis_state)
-                #print(len(bin(state)[2:].zfill(self.n_qubits)))
-                #qml.BasisState(, wires=range(self.n_qubits))
-                
+                # print(basis_state)
+                # print(len(bin(state)[2:].zfill(self.n_qubits)))
+                # qml.BasisState(, wires=range(self.n_qubits))
+
                 for i, bit in enumerate(basis_state):
                     if bit == "1":
                         qml.PauliX(i)
                 return qml.expval(Hamiltonian)
-            
+
             quantum_energy = evaluate_energy(state)
 
             if type(self.model) is ConstraintModel:
                 constraint_energy = self.model.get_constraint_energy(state)
-                print(f"State: {state}, Classical Energy: {np.round(classical_energy,2)}, Quantum Hamiltonian Energy: {np.round(quantum_energy,2)}, Constraint energu {np.round(constraint_energy,2)},Constraint Satisfaction: {self.model.constraint_func(state)}")
+                print(
+                    f"State: {state}, Classical Energy: {np.round(classical_energy, 2)}, Quantum Hamiltonian Energy: {np.round(quantum_energy, 2)}, Constraint energu {np.round(constraint_energy, 2)},Constraint Satisfaction: {self.model.constraint_func(state)}"
+                )
             else:
-                print(f"State: {state}, Classical Energy: {np.round(classical_energy,2)}, Quantum Hamiltonian Energy: {np.round(quantum_energy,2)}")
+                print(f"State: {state}, Classical Energy: {np.round(classical_energy, 2)}, Quantum Hamiltonian Energy: {np.round(quantum_energy, 2)}")
             energies.append(classical_energy)
             quantum_energies.append(quantum_energy)
         if plot:
             from matplotlib import pyplot as plt
+
             plt.scatter(energies, quantum_energies)
             plt.xlabel("Classical Energy")
             plt.ylabel("Quantum Energy")
             plt.show()
-            plt.plot(np.arange(0,2**self.n_qubits), np.array(energies), label = "classical")
-            plt.plot(np.arange(0,2**self.n_qubits), np.array(quantum_energies), label = "quantum")
+            plt.plot(np.arange(0, 2**self.n_qubits), np.array(energies), label="classical")
+            plt.plot(np.arange(0, 2**self.n_qubits), np.array(quantum_energies), label="quantum")
             plt.show()
-
-        
-        return
-
-
