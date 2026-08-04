@@ -1,10 +1,8 @@
-# Internal package imports
-from qemcmc.model import EnergyModel
-from qemcmc.coarse_grain import CoarseGraining
-
 # External package imports
 import numpy as np
-import itertools
+
+# Internal package imports
+from qemcmc.model.energy_model import EnergyModel
 
 
 class ModelMaker:
@@ -16,7 +14,7 @@ class ModelMaker:
     coupling tensors and initialises an :class:`EnergyModel` instance.
     """
 
-    def __init__(self, n_spins: int, model_type: str, name: str, cost_function_signs: list = [-1, -1]):
+    def __init__(self, n_spins: int, model_type: str, name: str, cost_function_signs: list | None = None):
         self.name = name
         self.n_spins = n_spins
         self.cost_function_signs = cost_function_signs or [-1, -1]

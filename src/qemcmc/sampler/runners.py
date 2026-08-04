@@ -1,9 +1,10 @@
+
 import numpy as np
 from tqdm.auto import tqdm
-from typing import Optional, Tuple
-from qemcmc.model import EnergyModel, ConstraintModel
-from qemcmc.utils import MCMCChain, MCMCState, get_random_state
+
+from qemcmc.model import ConstraintModel, EnergyModel
 from qemcmc.sampler.proposal import Proposal
+from qemcmc.utils import MCMCChain, MCMCState, get_random_state
 
 
 class Runner:
@@ -93,8 +94,8 @@ class MCMCRunner(Runner):
         self,
         proposer: Proposal,
         n_hops: int,
-        initial_state: Optional[str] = None,
-        name: Optional[str] = None,
+        initial_state: str | None = None,
+        name: str | None = None,
         verbose: bool = False,
         sample_frequency: int = 1,
     ) -> MCMCChain:
@@ -138,7 +139,7 @@ class MCMCRunner(Runner):
 
         mcmc_chain = MCMCChain([current_state], name=name)
 
-        for i in tqdm(range(0, n_hops), desc="Run " + name, disable=not verbose):
+        for i in tqdm(range(n_hops), desc="Run " + name, disable=not verbose):
             s_prime = proposer.update(current_state.bitstring)
             energy_sprime = self.model.get_energy(s_prime)
             accepted = self.is_accepted(energy_s, energy_sprime, temperature=self.temp)
@@ -185,12 +186,12 @@ class ConstrainedMCMCRunner(Runner):
         self,
         proposer: Proposal,
         n_hops: int,
-        initial_state: Optional[str] = None,
-        name: Optional[str] = None,
+        initial_state: str | None = None,
+        name: str | None = None,
         verbose: bool = False,
         sample_frequency: int = 1,
         return_rejections: bool = True,
-    ) -> Tuple[MCMCChain, int]:
+    ) -> tuple[MCMCChain, int]:
         """
         Run the constrained MCMC simulation.
 
@@ -247,7 +248,7 @@ class ConstrainedMCMCRunner(Runner):
         self_rejections = 0
         metropolis_rejections = 0
         s_prime = None
-        pbar = tqdm(range(0, n_hops), desc="Run " + name, disable=not verbose)
+        pbar = tqdm(range(n_hops), desc="Run " + name, disable=not verbose)
         energy_diffs = []  # energy difference in proposal
         hamming_diffs = []  # Hamming distance difference in proposal
         for i in pbar:

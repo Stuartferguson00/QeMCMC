@@ -1,16 +1,16 @@
 import itertools
+import os
 import time
+
+import matplotlib.pyplot as plt
+import numpy as np
 from joblib import Parallel, delayed
 
-import numpy as np
-import matplotlib.pyplot as plt
-import os
-
-from qemcmc.model import EnergyModel, ConstraintModel, ModelMaker
 from qemcmc.coarse_grain import CoarseGraining
+from qemcmc.model import ConstraintModel, ModelMaker
 from qemcmc.sampler.classical_proposal import ClassicalProposal
 from qemcmc.sampler.qe_proposal import QeProposal
-from qemcmc.sampler.runners import MCMCRunner, ConstrainedMCMCRunner
+from qemcmc.sampler.runners import ConstrainedMCMCRunner
 from qemcmc.utils import plot_chains
 
 # Setup directory for plots

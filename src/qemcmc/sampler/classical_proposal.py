@@ -1,7 +1,10 @@
-from qemcmc.model import EnergyModel
-from qemcmc.sampler import Proposal
-from qemcmc.utils import get_random_state
+from typing import ClassVar
+
 import numpy as np
+
+from qemcmc.model import EnergyModel
+from qemcmc.sampler.proposal import Proposal
+from qemcmc.utils import get_random_state
 
 
 class ClassicalProposal(Proposal):
@@ -27,7 +30,7 @@ class ClassicalProposal(Proposal):
         Default is ``"uniform"``.
     """
 
-    METHODS = {"uniform", "local", "2-local"}
+    METHODS: ClassVar[set[str]] = {"uniform", "local", "2-local"}
 
     def __init__(self, model: EnergyModel, method: str = "uniform"):
         if method not in self.METHODS:

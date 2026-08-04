@@ -1,9 +1,9 @@
-import numpy as np
 from collections import Counter
-from typing import Optional, List, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
-import matplotlib.pyplot as plt
 
+import matplotlib.pyplot as plt
+import numpy as np
 
 ###########################################################################################
 ## MCMC Chain and States ##
@@ -60,20 +60,20 @@ class MCMCChain:
     empirical distributions from the Markov chain.
     """
 
-    def __init__(self, states: Optional[List[MCMCState]] = None, name: Optional[str] = "MCMC"):
+    def __init__(self, states: list[MCMCState] | None = None, name: str | None = "MCMC"):
         self.name = name
 
         if states is None:
-            self._states: List[MCMCState] = []
+            self._states: list[MCMCState] = []
             self._current_state: MCMCState = None
-            self._states_accepted: List[MCMCState] = []
-            self.markov_chain: List[str] = []
+            self._states_accepted: list[MCMCState] = []
+            self.markov_chain: list[str] = []
 
         else:
             self._states = states
             self._current_state: MCMCState = next((s for s in self._states[::-1] if s.accepted), None)
-            self._states_accepted: List[MCMCState] = [state for state in states if state.accepted]
-            self.markov_chain: List[str] = self.get_list_markov_chain()
+            self._states_accepted: list[MCMCState] = [state for state in states if state.accepted]
+            self.markov_chain: list[str] = self.get_list_markov_chain()
 
     def add_state(self, state: MCMCState):
         if state.accepted:
@@ -145,10 +145,10 @@ class MCMCChain:
         return self._current_state
 
     @property
-    def accepted_states(self) -> List[str]:
+    def accepted_states(self) -> list[str]:
         return [state.bitstring for state in self._states_accepted]
 
-    def get_list_markov_chain(self) -> List[str]:
+    def get_list_markov_chain(self) -> list[str]:
         markov_chain_in_state = [self.states[0].bitstring]
         for i in range(1, len(self.states)):
             mcmc_state = self.states[i].bitstring
@@ -212,7 +212,7 @@ def get_all_possible_states(num_spins: int) -> list:
     """
 
     num_possible_states = 2 ** (num_spins)
-    possible_states = [f"{k:0{num_spins}b}" for k in range(0, num_possible_states)]
+    possible_states = [f"{k:0{num_spins}b}" for k in range(num_possible_states)]
     return possible_states
 
 
@@ -261,8 +261,8 @@ def hamming_dist(str1, str2):
 
 
 def hamming_dist_related_counts(num_spins: int, sprime_each_iter: list, states_accepted_each_iter: list):
-    dict_counts_states_hamming_dist = dict(zip(list(range(0, num_spins + 1)), [0] * (num_spins + 1)))
-    ham_dist_s_and_sprime = np.array([hamming_dist(states_accepted_each_iter[j], sprime_each_iter[j + 1]) for j in range(0, len(states_accepted_each_iter) - 1)])
+    dict_counts_states_hamming_dist = dict(zip(list(range(num_spins + 1)), [0] * (num_spins + 1)))
+    ham_dist_s_and_sprime = np.array([hamming_dist(states_accepted_each_iter[j], sprime_each_iter[j + 1]) for j in range(len(states_accepted_each_iter) - 1)])
     for k in list(dict_counts_states_hamming_dist.keys()):
         dict_counts_states_hamming_dist[k] = np.count_nonzero(ham_dist_s_and_sprime == k)
 
@@ -271,7 +271,7 @@ def hamming_dist_related_counts(num_spins: int, sprime_each_iter: list, states_a
 
 
 def energy_difference_related_counts(num_spins, sprime_each_iter: list, states_accepted_each_iter: list, model_in):
-    energy_diff_s_and_sprime = np.array([abs(model_in.get_energy(sprime_each_iter[j]) - model_in.get_energy(states_accepted_each_iter[j + 1])) for j in range(0, len(sprime_each_iter) - 1)])
+    energy_diff_s_and_sprime = np.array([abs(model_in.get_energy(sprime_each_iter[j]) - model_in.get_energy(states_accepted_each_iter[j + 1])) for j in range(len(sprime_each_iter) - 1)])
     return energy_diff_s_and_sprime
 
 
@@ -317,7 +317,7 @@ def validate_subgroups(subgroups, subgroup_probs, n_spins):
         if len(set(g)) != len(g):
             raise ValueError("duplicate indices inside a subgroup")
 
-    covered = set(i for g in subgroups for i in g)
+    covered = {i for g in subgroups for i in g}
     if covered != set(range(n_spins)):
         raise ValueError("subgroups must cover all spins exactly once or at least once")
 
