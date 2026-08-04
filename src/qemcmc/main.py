@@ -1,123 +1,154 @@
-# # Internal
-# from qemcmc.sampler import ClassicalMCMC, QeMCMC
-# from qemcmc.sampler.runners import MCMCRunner
-# from qemcmc.utils import ModelMaker, MCMCChain
-# from qemcmc.coarse_grain import CoarseGraining
+import tempfile
+import time
+from pathlib import Path
+
+import matplotlib.pyplot as plt
+import numpy as np
+from joblib import Parallel, delayed
+from rich.console import Console
+from rich.progress import (
+    BarColumn,
+    MofNCompleteColumn,
+    Progress,
+    TextColumn,
+    TimeElapsedColumn,
+    TimeRemainingColumn,
+)
+
+from qemcmc.coarse_grain import CoarseGraining
+from qemcmc.model import ModelMaker
+from qemcmc.sampler import ClassicalProposal, QeProposal
+from qemcmc.sampler.runners import MCMCRunner
+from qemcmc.utils import plot_chains
+
+N_SPINS = 16
+STEPS = 150
+REPS = 10
+TEMP = 0.1
+M_BLOCKS = 4  # coarse-grained QeMCMC: N_SPINS // M_BLOCKS spins simulated per partition
+
+# Standard QeMCMC simulates all N_SPINS qubits at once, so its cost is exponential in N_SPINS
+# Set to False to compare only the arms that scale.
+RUN_STANDARD_QEMCMC = True
+
+console = Console()
 
 
-# # External
-# from matplotlib import pyplot as plt
-# from joblib import Parallel, delayed
-# import numpy as np
-# from tqdm import tqdm
+def run_chain_with_seed(seed, runner, **kwargs):
+    np.random.seed(seed)
+    return runner.run(**kwargs)
 
 
-# def plot_thermalisation(chains_dict, n_spins, temp, exact_energy=None, lowest_levels=None):
-#     """
-#     chains_dict format: {"Label": (chain_data, "color")}
-#     """
-#     fig, ax = plt.subplots(figsize=(8, 6))
+class ProgressProposal:
+    """
+    Wraps a proposal so each chain records its hop count to its own file.
 
-#     # Plot each algorithm's energy trajectory
-#     for label, (energy_data, color) in chains_dict.items():
-#         steps = np.arange(1, len(energy_data) + 1)
-#         ax.plot(steps, energy_data, label=label, color=color, linewidth=2)
+    ``MCMCRunner.run`` only ever calls ``proposer.update()``, so this needs no cooperation
+    from the runner. Chains run in separate processes, so a file is the simplest thing they
+    can all write to without the parent having to coordinate them.
+    """
 
-#     # Add reference lines if provided
-#     if exact_energy is not None:
-#         ax.axhline(exact_energy, color="black", label="Exact average energy", zorder=3)
+    def __init__(self, proposer, progress_file):
+        self._proposer = proposer
+        self._progress_file = Path(progress_file)
+        self._hops = 0
 
-#     if lowest_levels is not None:
-#         for i, level in enumerate(lowest_levels):
-#             lbl = "Lowest energy levels" if i == 0 else ""
-#             ax.axhline(level, color="lightcyan", linestyle="--", label=lbl, zorder=1)
-
-#     # Match the paper's style
-#     ax.set_xscale("log")
-#     ax.set_xlabel("MCMC step (Log Scale)", fontsize=12)
-#     ax.set_ylabel("Average Energy", fontsize=12)
-#     ax.set_title(f"Repeated Coarse Graining Benchmarks ({n_spins} spins | T = {temp})", fontsize=14)
-#     ax.legend(loc="upper right", fontsize=9)
-
-#     plt.tight_layout()
-#     plt.show()
+    def update(self, current_state: str) -> str:
+        next_state = self._proposer.update(current_state)
+        self._hops += 1
+        self._progress_file.write_text(str(self._hops))
+        return next_state
 
 
-# if __name__ == "__main__":
-#     n = 24
-#     steps = 10
-#     reps = 10
-#     temp = 0.1
+class ChainProgress(Progress):
+    """One bar per chain, re-read from the workers' files on every refresh."""
 
-#     model_maker = ModelMaker(n, "Coarse Grained Ising", "24 Spin Test")
-#     model = model_maker.model
-#     initial_states = model.initial_state
+    def __init__(self, progress_dir, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.progress_dir = Path(progress_dir)
 
-#     cg = CoarseGraining(n)
+    def get_renderable(self):
+        for task in self.tasks:
+            progress_file = self.progress_dir / str(task.id)
+            if progress_file.exists():
+                try:
+                    task.completed = int(progress_file.read_text() or 0)
+                except ValueError:
+                    pass  # caught mid-write; the next refresh picks it up
+        return super().get_renderable()
 
-#     m_values = [3, 4, 6, 8, 12]
-#     colors = ["purple", "red", "pink", "green", "orange"]
 
-#     results_dict = {}
-#     runner = MCMCRunner()
+def run_arm(label, color, proposer, runner, initial_states, seeds):
+    """Run REPS independent chains for one proposal method and add them to the current plot."""
+    console.print(f"[bold]{label}[/bold]")
+    start = time.time()
 
-#     # --- 1. Run Classical Baselines ---
-#     print("--- Running Classical Baselines ---")
+    with tempfile.TemporaryDirectory() as progress_dir:
+        columns = (
+            TextColumn("  {task.description}"),
+            BarColumn(),
+            MofNCompleteColumn(),
+            TextColumn("hops"),
+            TimeElapsedColumn(),
+            TimeRemainingColumn(),
+        )
+        with ChainProgress(progress_dir, *columns) as progress:
+            task_ids = [progress.add_task(f"chain {i}", total=STEPS) for i in range(len(seeds))]
+            chains = Parallel(n_jobs=-1)(
+                delayed(run_chain_with_seed)(
+                    seed,
+                    runner,
+                    proposer=ProgressProposal(proposer, Path(progress_dir) / str(task_ids[i])),
+                    n_hops=STEPS,
+                    initial_state=initial_states[i],
+                    verbose=False,
+                )
+                for i, seed in enumerate(seeds)
+            )
 
-#     # Uniform
-#     def run_uniform(rep):
-#         sampler = ClassicalMCMC(model, temp, method="uniform")
-#         return runner.run(sampler, steps, initial_state=initial_states[rep], verbose=True)
+    console.print(f"  [dim]{label}: {time.time() - start:.1f} s[/dim]")
+    plot_chains(chains, color, label=label, plot_individual_chains=True)
+    return chains
 
-#     uni_chains = list(tqdm(Parallel(n_jobs=-1, return_as="generator")(delayed(run_uniform)(rep) for rep in range(reps)), total=reps, desc="Running Uniform chains", leave=False))
-#     results_dict["Uniform"] = (np.mean([c.get_current_energy_array() for c in uni_chains], axis=0), "darkorange")
 
-#     # Local
-#     def run_local(rep):
-#         sampler = ClassicalMCMC(model, temp, method="local")
-#         return runner.run(sampler, steps, initial_state=initial_states[rep], verbose=True)
+def annotate_below_legend(ax, legend, text):
+    """Place text directly under the legend box, in axes coordinates."""
+    ax.figure.canvas.draw()  # the legend has no extent until the figure is drawn
+    bbox = legend.get_window_extent().transformed(ax.transAxes.inverted())
+    ax.text(bbox.x0, bbox.y0 - 0.03, text, transform=ax.transAxes, ha="left", va="top", fontsize=9)
 
-#     loc_chains = list(tqdm(Parallel(n_jobs=-1, return_as="generator")(delayed(run_local)(rep) for rep in range(reps)), total=reps, desc="Running Local chains", leave=False))
-#     results_dict["Local"] = (np.mean([c.get_current_energy_array() for c in loc_chains], axis=0), "forestgreen")
 
-#     # --- 2. Run Repeated QeMCMC ---
-#     print("\n--- Running Quantum Chains (Repeated CG) ---")
-#     m_values = [3, 4, 6, 8, 12]
-#     colors = ["purple", "red", "pink", "dodgerblue", "gold"]
+if __name__ == "__main__":
+    np.random.seed(2)
+    start_time = time.time()
 
-#     for m, color in tqdm(zip(m_values, colors), total=len(m_values), desc="Testing Partitions (m)"):
+    model = ModelMaker(N_SPINS, model_type="Fully Connected Ising", name=f"{N_SPINS} Spin Ising").model
+    runner = MCMCRunner(model=model, temp=TEMP)
 
-#         def run_repeated_qemcmc(rep):
-#             sampler = QeMCMC(
-#                 model=model,
-#                 gamma=(0.3, 0.6),
-#                 time=(2, 20),
-#                 temp=temp,
-#                 coarse_graining=cg,
-#                 m=m,
-#             )
-#             return runner.run(
-#                 sampler,
-#                 steps,
-#                 initial_state=initial_states[rep],
-#                 name=f"QeMCMC m={m}",
-#                 verbose=True,
-#                 sample_frequency=1,
-#             )
+    initial_states = ["".join(np.random.choice(["0", "1"], size=N_SPINS)) for _ in range(REPS)]
+    seeds = np.arange(REPS)
 
-#         chains = list(
-#             tqdm(
-#                 Parallel(n_jobs=-1, return_as="generator")(delayed(run_repeated_qemcmc)(rep) for rep in range(reps)),
-#                 total=reps,
-#                 desc=f"Running m={m} chains",
-#                 leave=True,
-#             )
-#         )
+    cg = CoarseGraining(n=N_SPINS)
 
-#         all_energies = np.array([chain.get_current_energy_array() for chain in chains])
-#         avg_energy = np.mean(all_energies, axis=0)
+    run_arm("Classical uniform MCMC", "orange", ClassicalProposal(model, method="uniform"), runner, initial_states, seeds)
+    run_arm("Classical local MCMC", "green", ClassicalProposal(model, method="local"), runner, initial_states, seeds)
+    run_arm(
+        f"Coarse-Grained QeMCMC (m={M_BLOCKS}, {N_SPINS // M_BLOCKS} spin blocks)",
+        "blue",
+        QeProposal(model=model, gamma=(0.3, 0.6), time=(1, 20), coarse_graining=cg, m=M_BLOCKS),
+        runner,
+        initial_states,
+        seeds,
+    )
 
-#         results_dict[f"QeMCMC m={m} ({n // m} spin blocks)"] = (avg_energy, color)
+    if RUN_STANDARD_QEMCMC:
+        run_arm("Standard QeMCMC", "red", QeProposal(model=model, gamma=(0.3, 0.6), time=(1, 20)), runner, initial_states, seeds)
 
-#     exact_gs_energy = model.get_ground_state()
-#     plot_thermalisation(results_dict, n_spins=n, temp=temp, exact_energy=exact_gs_energy)
+    ax = plt.gca()
+    ax.set_title(f"QeMCMC thermalisation ({N_SPINS} spins | T = {TEMP})")
+    ax.set_xlabel("Step")
+    ax.set_ylabel("Energy")
+    legend = ax.legend(loc="upper right", fontsize=9)
+    annotate_below_legend(ax, legend, f"Time taken: {time.time() - start_time:.2f} seconds")
+    plt.tight_layout()
+    plt.show()

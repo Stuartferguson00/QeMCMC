@@ -25,6 +25,7 @@ dependencies = [
     "tabulate>=0.10.0",
     "quimb>=1.13.0",
     "pyyaml>=6.0.3",
+    "rich>=15.0.0",
 ]
 
 [project.scripts]

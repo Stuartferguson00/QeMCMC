@@ -1,10 +1,11 @@
 import warnings
-from typing import Optional
+
 import numpy as np
+
 from qemcmc.circuits import CircuitMaker
 from qemcmc.coarse_grain import CoarseGraining
 from qemcmc.model import EnergyModel
-from qemcmc.sampler import Proposal
+from qemcmc.sampler.proposal import Proposal
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
@@ -76,10 +77,10 @@ class QeProposal(Proposal):
         model: EnergyModel,
         gamma: float | tuple[float, float],
         time: float | tuple[float, float],
-        r: Optional[int] = None,
-        delta_t: Optional[float] = None,
-        coarse_graining: Optional[CoarseGraining] = None,
-        coupling_weights: Optional[list[float | tuple[float, float]]] = None,
+        r: int | None = None,
+        delta_t: float | None = None,
+        coarse_graining: CoarseGraining | None = None,
+        coupling_weights: list[float | tuple[float, float]] | None = None,
         m: int = 1,
     ):
         super().__init__(model)
@@ -160,7 +161,7 @@ class QeProposal(Proposal):
             r = max(1, int(np.floor(t / dt)))
 
         # Pre-sample weights for all unique coupling weight settings (tuples or floats)
-        unique_items = sorted(list(set(self.coupling_weights)), key=lambda x: str(x))
+        unique_items = sorted(set(self.coupling_weights), key=str)
         unique_index = [[i for i, x in enumerate(self.coupling_weights) if x == item] for item in unique_items]
 
         sampled_weights = np.ones(len(unique_items), dtype=float)
@@ -226,7 +227,7 @@ class QeProposal(Proposal):
 
         raise TypeError(f"time must be a float or tuple[float, float], got {type(time)}")
 
-    def _validate_r(self, r: Optional[int]) -> Optional[int]:
+    def _validate_r(self, r: int | None) -> int | None:
         """
         Validate the number of Trotter steps 'r'.
         """
@@ -239,7 +240,7 @@ class QeProposal(Proposal):
             raise ValueError(f"r must be a positive integer, got {r}")
         return r
 
-    def _validate_delta_t(self, delta_t: Optional[float]) -> Optional[float]:
+    def _validate_delta_t(self, delta_t: float | None) -> float | None:
         """
         Validate the Trotter step size 'delta_t'.
         """
@@ -281,9 +282,8 @@ class QeProposal(Proposal):
                         stacklevel=3,
                     )
 
-        if self.delta_t is not None:
-            if self.delta_t < 0.1 or self.delta_t > 2.0:
-                warnings.warn(
-                    f"Trotter step size Δt = {self.delta_t} is outside the recommended range [0.1, 2.0].",
-                    stacklevel=3,
-                )
+        if self.delta_t is not None and (self.delta_t < 0.1 or self.delta_t > 2.0):
+            warnings.warn(
+                f"Trotter step size Δt = {self.delta_t} is outside the recommended range [0.1, 2.0].",
+                stacklevel=3,
+            )

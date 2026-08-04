@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+
 from qemcmc.model import EnergyModel
 from qemcmc.utils import MCMCState
 
@@ -39,4 +40,3 @@ class Proposal(ABC):
         MCMCState
             A new candidate state.
         """
-        pass

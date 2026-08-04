@@ -1,10 +1,11 @@
 import numpy as np
+import scipy as sp
+from tqdm import tqdm
+
 from qemcmc.model.energy_model import EnergyModel
 from qemcmc.sampler import Proposal
-from tqdm import tqdm
-import scipy as sp
-from qemcmc.sampler.runners import Runner
 from qemcmc.sampler.qe_proposal import DEFAULT_DELTA_T
+from qemcmc.sampler.runners import Runner
 
 
 class SpectralGap(Runner):
@@ -110,7 +111,6 @@ class SpectralGap(Runner):
         for i in range(2**self.model.n_spins):
             Q[i, :] += abs(self.proposal.CM.get_state_vector(self.model.S[i], self.proposal.coupling_weights, self.proposal.time, r, self.proposal.gamma)) ** 2
             # get_output_statevector(self.proposal.model.S[i])
-        Q = Q
 
         return Q
 
@@ -172,7 +172,7 @@ class SpectralGap(Runner):
             P[i, i] = 1 - s
 
         # find eigenvalues
-        e_vals, e_vecs = sp.linalg.eig(P)
+        e_vals, _e_vecs = sp.linalg.eig(P)
         e_vals = np.flip(np.sort(abs(e_vals)))
 
         # find spectral gap

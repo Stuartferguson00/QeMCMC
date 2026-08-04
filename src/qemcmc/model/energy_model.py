@@ -1,10 +1,10 @@
 import itertools
-import typing
-from typing import List
-import numpy as np
-import dimod
 import math
+
+import dimod
+import numpy as np
 from tqdm import tqdm
+
 from qemcmc.utils.helpers import get_random_state
 
 
@@ -38,16 +38,16 @@ class EnergyModel:
       small systems.
     """
 
-    def __init__(self, n: int, couplings: List[np.ndarray] = [], name: str = None, cost_function_signs: list = [-1, -1], model_type: str = "ising"):
+    def __init__(self, n: int, couplings: list[np.ndarray] | None = None, name: str | None = None, cost_function_signs: list | None = None, model_type: str = "ising"):
         self.n = n
         self.n_spins = n
-        self.couplings = couplings
+        self.couplings = couplings if couplings is not None else []
         self.name = name
-        self.alpha = self.calculate_alpha(n, couplings)
+        self.alpha = self.calculate_alpha(n, self.couplings)
         self.lowest_energy = None
 
         self.normalised_couplings = [self.couplings[i] * self.alpha for i in range(len(self.couplings))]
-        self.cost_function_signs = cost_function_signs
+        self.cost_function_signs = cost_function_signs if cost_function_signs is not None else [-1, -1]
 
         if model_type not in ["ising", "binary"]:
             raise ValueError(f"Invalid model_type '{model_type}'. Expected 'ising' or 'binary'.")
@@ -98,8 +98,7 @@ class EnergyModel:
             response = sampler.sample(bqm, num_reads=reads_per_batch)
 
             current_best = response.first
-            if current_best.energy < best_energy:
-                best_energy = current_best.energy
+            best_energy = min(best_energy, current_best.energy)
 
         print("\n--- Simulated Annealing Results ---")
         print(f"Lowest Energy Found: {best_energy:.4f}")
@@ -146,7 +145,7 @@ class EnergyModel:
                     raise ValueError("Spin configuration must be in spin (-1/+1) or binary (0/1) format, but got values outside these sets.")
                 else:
                     # Convert to binary
-                    state = np.array([(1-spin) // 2 for spin in state])
+                    state = np.array([(1 - spin) // 2 for spin in state])
 
         elif self.model_type == "ising":
             if not np.all(np.isin(state, [-1, 1])):
@@ -157,7 +156,7 @@ class EnergyModel:
                 else:
                     # Convert to spin
                     state = np.array([2 * int(bit) - 1 for bit in state])
-                    #state = np.array([1-2 * int(bit)  for bit in state])
+                    # state = np.array([1-2 * int(bit)  for bit in state])
 
         total_energy = 0.0
         for term_index, coupling in enumerate(couplings):
@@ -178,7 +177,7 @@ class EnergyModel:
 
         return total_energy
 
-    def get_subgroup_couplings(self, subgroup: List[int], current_state: str, coupling_weights: List[float] = None):
+    def get_subgroup_couplings(self, subgroup: list[int], current_state: str, coupling_weights: list[float] | None = None):
         """
         Calculates local couplings for a subgroup of spins.
 
@@ -248,7 +247,7 @@ class EnergyModel:
 
         return new_couplings
 
-    def calculate_alpha(self, n: int, couplings: list = None, eps: float = 1e-15) -> np.ndarray:
+    def calculate_alpha(self, n: int, couplings: list | None = None, eps: float = 1e-15) -> np.ndarray:
         """
         Compute alpha = sqrt(n) / sqrt(sum of squares of UNIQUE coupling coefficients),
         assuming coupling tensors are symmetric representations.
@@ -316,7 +315,7 @@ class EnergyModel:
                     c = float(T[comb])
                     if c != 0.0:
                         norm_sq += c * c
-            
+
             norm_sq_arr[T_ind] = norm_sq
 
         norm_sq_tot = np.sum(norm_sq_arr)
@@ -326,17 +325,6 @@ class EnergyModel:
             return np.ones(len(couplings))
 
         return np.sqrt(n) / np.sqrt(norm_sq_tot)
-
-        # TODO: is this check required? test code with and without.
-        # alpha_arr = np.zeros(len(couplings))
-        # for i, val in enumerate(norm_sq_arr):
-        #     if val < eps:
-        #         print(f"Warning: Coupling at index {i} is all zero (or close to zero). Returning alpha=1 for this term.")
-        #         alpha_arr[i] = 1.0
-        #     else:
-        #         alpha_arr[i] = np.sqrt(n / val)
-
-        # return alpha_arr
 
     def get_energy(self, state: str) -> float:
         """
@@ -366,7 +354,7 @@ class EnergyModel:
             all_energies[int(state, 2)] = self.calculate_energy(state, self.couplings, self.cost_function_signs)
         return all_energies
 
-    def get_lowest_energies(self, num_states: int, return_configurations: bool = False) -> typing.Tuple[np.ndarray, np.ndarray]:
+    def get_lowest_energies(self, num_states: int, return_configurations: bool = False) -> tuple[np.ndarray, np.ndarray]:
         """
         Retrieve the lowest energy states and their degeneracies.
         This method computes all possible energies and then finds the specified number
