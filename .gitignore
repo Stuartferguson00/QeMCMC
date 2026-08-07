@@ -14,7 +14,7 @@ docs/doctrees/
 docs/build/
 
 # figures
-plots
+*plots/
 
 # Distribution / packaging
 .Python
