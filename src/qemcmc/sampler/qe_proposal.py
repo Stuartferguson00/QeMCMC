@@ -82,6 +82,8 @@ class QeProposal(Proposal):
         coupling_weights: Optional[list[float | tuple[float, float]]] = None,
         m: int = 1,
     ):
+        # Why is m in QeMCMC, not CG?!?!?
+        # Feroz, remind me to do this if you see it
         super().__init__(model)
 
         if coupling_weights is not None:
