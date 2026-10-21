@@ -13,6 +13,8 @@ quantum proposal) alongside the usual energy `couplings`.
 ```python
 import numpy as np
 from qemcmc.model import ModelMaker, ConstraintModel
+import dimod
+
 
 n = 6
 base_model = ModelMaker(n, "Fully Connected Ising", name="base").model
@@ -21,6 +23,7 @@ base_model = ModelMaker(n, "Fully Connected Ising", name="base").model
 J_constraint = np.zeros((n, n))
 J_constraint[0, 1] = J_constraint[1, 0] = 1
 
+
 def constraint_func(bitstring: str) -> bool:
     total = 0
     for i in range(len(bitstring)):
@@ -28,6 +31,7 @@ def constraint_func(bitstring: str) -> bool:
             if bitstring[i] != bitstring[j]:
                 total += J_constraint[i, j]
     return total == 0
+
 
 model = ConstraintModel(
     n,

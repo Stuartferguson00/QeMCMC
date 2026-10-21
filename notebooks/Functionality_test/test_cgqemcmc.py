@@ -38,31 +38,33 @@ def run_chain_with_seed(seed, runner, **kwargs):
 
 def run_visual_tests():
     # Setup standard proble
-    n = 7
-    reps = 10
-    steps = 150
-    np.random.seed(2)
+    n = 14
+    reps = 14
+    steps = 200
+    np.random.seed(10)
     start_time = time.time()
     random_initial_states = ["".join(np.random.choice(["0", "1"], size=n)) for _ in range(reps)]
 
     model = ModelMaker(n, model_type="Fully Connected Ising", name="Ising").model
 
     # 1. Standard QeMCMC Test
-    print("Running Standard QeMCMC...")
+    # print("Running Standard QeMCMC...")
     proposer = QeProposal(
         model=model,
         gamma=(0.3, 0.6),
         time=(1, 20),
     )
     runner = MCMCRunner(model=model, temp=0.1)
+    
+    # chains = Parallel(n_jobs=-1)(
+    #     delayed(run_chain_with_seed)(seed, runner, proposer=proposer, n_hops=steps, initial_state=random_initial_states[iter], verbose=False)
+    #     for iter, seed in enumerate(np.arange(0,reps)))#np.random.randint(0, 2**31 - 1, size=reps)
+    
 
-    chains = Parallel(n_jobs=-1)(
-        delayed(run_chain_with_seed)(seed, runner, proposer=proposer, n_hops=steps, initial_state=random_initial_states[iter], verbose=False) for iter, seed in enumerate(np.arange(0, reps))
-    )  # np.random.randint(0, 2**31 - 1, size=reps)
+    # plot_chains(chains, "red", label = "Standard QeMCMC", plot_individual_chains=True)
 
-    plot_chains(chains, "red", label="Standard QeMCMC", plot_individual_chains=True)
 
-    subgroups = list(itertools.combinations(range(n), n // 2))
+    subgroups = list(itertools.combinations(range(n), n//2))
     len_subgroups = len(subgroups)
     # 3. Coarse-Grained QeMCMC Test
     cg = CoarseGraining(n=n, subgroups=subgroups, subgroup_probs=np.ones(len_subgroups) / len_subgroups)
@@ -76,11 +78,12 @@ def run_visual_tests():
 
     plot_chains(cg_chains, "lightblue", label="Coarse-Grained manual QeMCMC", plot_individual_chains=True)
 
+    cg = CoarseGraining(n=n, m = 2)
     cg_proposal_2 = QeProposal(
         model=model,
         gamma=(0.3, 0.6),
         time=(1, 20),
-        m=2,
+        coarse_graining=cg,
     )
     print("\nRunning Coarse-Grained automatic QeMCMC...")
     cg_2_chains = Parallel(n_jobs=-1)(

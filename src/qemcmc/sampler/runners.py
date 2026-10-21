@@ -174,6 +174,12 @@ class ConstrainedMCMCRunner(Runner):
     def __init__(self, model: ConstraintModel, temp: float, reject_invalid: bool = True, uniform: bool = False):
         if not isinstance(model, ConstraintModel):
             raise TypeError("Model must be an instance of ConstraintModel.")
+        if not isinstance(temp, float):
+            raise TypeError("temp must be a float.")
+        if not isinstance(reject_invalid, bool):
+            raise TypeError("reject_invalid must be a boolean.")
+        if not isinstance(uniform, bool):
+            raise TypeError("uniform must be a boolean.")
 
         super().__init__()
         self.model = model
@@ -191,7 +197,7 @@ class ConstrainedMCMCRunner(Runner):
         verbose: bool = False,
         sample_frequency: int = 1,
         return_rejections: bool = True,
-    ) -> tuple[MCMCChain, int]:
+    ) -> tuple[MCMCChain, int, int, int] | MCMCChain:
         """
         Run the constrained MCMC simulation.
 
@@ -215,8 +221,8 @@ class ConstrainedMCMCRunner(Runner):
 
         Returns
         -------
-        tuple[MCMCChain, int]
-            A tuple containing the generated Markov chain and the number of rejections due to constraints. If return_rejections is False, only the MCMCChain is returned.
+        tuple[MCMCChain, int, int, int] | MCMCChain
+            A tuple containing the generated Markov chain and the number of rejections due to constraints, self proposals and Metropolis-Hastings respectively. If return_rejections is False, only the MCMCChain is returned.
         """
 
         if name is None:

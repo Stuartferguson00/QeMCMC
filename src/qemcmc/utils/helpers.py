@@ -260,19 +260,6 @@ def hamming_dist(str1, str2):
     return count
 
 
-def hamming_dist_related_counts(num_spins: int, sprime_each_iter: list, states_accepted_each_iter: list):
-    dict_counts_states_hamming_dist = dict(zip(list(range(num_spins + 1)), [0] * (num_spins + 1)))
-    ham_dist_s_and_sprime = np.array([hamming_dist(states_accepted_each_iter[j], sprime_each_iter[j + 1]) for j in range(len(states_accepted_each_iter) - 1)])
-    for k in list(dict_counts_states_hamming_dist.keys()):
-        dict_counts_states_hamming_dist[k] = np.count_nonzero(ham_dist_s_and_sprime == k)
-
-    assert sum(list(dict_counts_states_hamming_dist.values())) == len(sprime_each_iter) - 1
-    return dict_counts_states_hamming_dist
-
-
-def energy_difference_related_counts(num_spins, sprime_each_iter: list, states_accepted_each_iter: list, model_in):
-    energy_diff_s_and_sprime = np.array([abs(model_in.get_energy(sprime_each_iter[j]) - model_in.get_energy(states_accepted_each_iter[j + 1])) for j in range(len(sprime_each_iter) - 1)])
-    return energy_diff_s_and_sprime
 
 
 # ###########################################################################################
@@ -330,3 +317,26 @@ def validate_subgroups(subgroups, subgroup_probs, n_spins):
 
         if not np.isclose(sum(subgroup_probs), 1.0):
             raise ValueError("subgroup_probs must sum to 1")
+
+import itertools
+import dimod
+import numpy as np
+
+def np_to_dimod(J_arr: np.ndarray, vartype=dimod.SPIN) -> dimod.BinaryPolynomial:
+    """
+    Convert an arbitrary n-dimensional coupling tensor into a dimod.BinaryPolynomial.
+    """
+    J_arr = np.asarray(J_arr)
+    dim = J_arr.ndim
+
+    if dim == 0:
+        val = float(J_arr)
+        return dimod.BinaryPolynomial({(): val} if val != 0 else {}, vartype)
+
+    n_spins = J_arr.shape[0]
+    J_dict = {
+        idx: float(J_arr[idx])
+        for idx in itertools.combinations(range(n_spins), dim)
+        if J_arr[idx] != 0
+    }
+    return dimod.BinaryPolynomial(J_dict, vartype)

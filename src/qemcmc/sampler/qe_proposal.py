@@ -57,9 +57,7 @@ class QeProposal(Proposal):
         Note that this is further adjusted by (1 - gamma) to balance the influence of the
         problem Hamiltonian with the mixer term. Divide by (1 - gamma) if needed.
         Also, note that the coupling weights should include the mixing term.
-    m : int, optional
-        Number of subgroups to partition the spins into for sequential updates.
-        By default ``1``.
+
 
     Notes
     -----
@@ -81,8 +79,17 @@ class QeProposal(Proposal):
         delta_t: float | None = None,
         coarse_graining: CoarseGraining | None = None,
         coupling_weights: list[float | tuple[float, float]] | None = None,
-        m: int = 1,
+        m: int | None = None,
     ):
+        if m is not None:
+            warnings.warn(
+                "The 'm' parameter has been moved. "
+                "Please pass coarse_graining=CoarseGraining(model.n_spins, m=m) instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            if coarse_graining is None:
+                coarse_graining = CoarseGraining(model.n_spins, m=m)
         super().__init__(model)
 
         if coupling_weights is not None:
@@ -99,7 +106,6 @@ class QeProposal(Proposal):
         self.r = self._validate_r(r)
         self.delta_t = self._validate_delta_t(delta_t)
         self._validate_trotter_params()
-        self.m = m
         self.method = "quantum"
 
         self.CM = CircuitMaker(self.model)
@@ -108,7 +114,7 @@ class QeProposal(Proposal):
 
     def update(self, current_state: str) -> str:
         """
-        Perform 'm' sequential quantum updates across non-overlapping subgroups.
+        Perform sequential quantum updates across non-overlapping subgroups.
 
         Parameters
         ----------
@@ -124,8 +130,8 @@ class QeProposal(Proposal):
         if not isinstance(current_state, str):
             raise TypeError(f"Bitstring must be of type str, got {type(current_state)}: {current_state!r}")
 
-        # Generate m disjoint partitions of the spins
-        partitions = self.cg.get_partitions(m=self.m)
+        # Generate disjoint partitions of the spins
+        partitions = self.cg.get_partitions()
 
         final_coupling_weights, g, t, r = self.sample_hyperparams()
 
