@@ -13,7 +13,6 @@ quantum proposal) alongside the usual energy `couplings`.
 ```python
 import numpy as np
 from qemcmc.model import ModelMaker, ConstraintModel
-import dimod
 
 
 n = 6
