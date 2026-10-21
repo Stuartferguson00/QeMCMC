@@ -8,6 +8,7 @@ import numpy as np
 
 # Internal package imports
 from qemcmc.model.energy_model import EnergyModel
+import itertools
 import dimod
 
 

@@ -53,7 +53,7 @@ class CircuitMaker:
             # self.devices[num_wires] = qml.device("default.tensor", wires=num_wires, method="mps", max_bond_dim=2, contract="auto-mps")
         return self.devices[num_wires]
 
-    def get_problem_hamiltonian(self, couplings: list[np.ndarray], sign: int = 1) -> qml.Hamiltonian:
+    def get_problem_hamiltonian(self, couplings: List[dimod.BinaryPolynomial], sign: int = 1) -> qml.Hamiltonian:
         """
         Construct the problem Hamiltonian from symmetric coupling tensors.
         This method supports both 'ising' (-1/+1) and 'binary' (0/1) models.
