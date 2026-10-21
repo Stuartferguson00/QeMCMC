@@ -156,7 +156,7 @@ class EnergyModel:
 
         Returns
         -------
-        list:
+        init_states: list
             A list of random initial states.
         """
 
@@ -249,7 +249,7 @@ class EnergyModel:
 
         Returns
         -------
-        List[np.ndarray]
+        new_couplings: list[np.ndarray]
             A new list of coupling tensors for the subgroup.
 
         Notes
