@@ -1,3 +1,5 @@
+import itertools
+
 import numpy as np
 import scipy as sp
 from tqdm import tqdm
@@ -50,8 +52,7 @@ class SpectralGap(Runner):
             Q (np.ndarray): The Q matrix for local proposal
         """
 
-        possible_states = self.model.S
-        # TODO: define S separately, not inside the model since S is the state space and will be pretty inefficient otherwise
+        possible_states = ["".join(i) for i in itertools.product("01", repeat=self.model.n_spins)]
 
         Q = np.zeros((2**self.model.n_spins, 2**self.model.n_spins))
 
@@ -59,13 +60,12 @@ class SpectralGap(Runner):
         # When the ith bitstring is different (by a valua of 1) from the jth bitstring add 1 to Q[i,j]
         for i in range(2**self.model.n_spins):
             for j in range(2**self.model.n_spins):
-                # TODO: what's sm? maybe rename to something like diff_count or something descriptive
-                sm = 0
+                diff_count = 0
                 for k in range(self.model.n_spins):
-                    sm += abs(int(possible_states[i][k]) - int(possible_states[j][k]))
+                    diff_count += abs(int(possible_states[i][k]) - int(possible_states[j][k]))
 
                 # ie if the number of different strings is the size of the cluster (= 1 for local)
-                if sm == 1:
+                if diff_count == 1:
                     Q[i, j] = 1
 
         row_sums = Q.sum(axis=1)

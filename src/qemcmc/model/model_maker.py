@@ -1,15 +1,7 @@
-# Internal package imports
-from qemcmc.model import EnergyModel
-from qemcmc.coarse_grain import CoarseGraining
-from typing import List
-
-# External package imports
+import dimod
 import numpy as np
 
-# Internal package imports
 from qemcmc.model.energy_model import EnergyModel
-import itertools
-import dimod
 
 
 class FastIsingEnergy:

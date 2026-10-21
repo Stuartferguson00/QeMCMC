@@ -78,11 +78,12 @@ def run_visual_tests():
 
     plot_chains(cg_chains, "lightblue", label="Coarse-Grained manual QeMCMC", plot_individual_chains=True)
 
+    cg = CoarseGraining(n=n, m = 2)
     cg_proposal_2 = QeProposal(
         model=model,
         gamma=(0.3, 0.6),
         time=(1, 20),
-        m=2,
+        coarse_graining=cg,
     )
     print("\nRunning Coarse-Grained automatic QeMCMC...")
     cg_2_chains = Parallel(n_jobs=-1)(

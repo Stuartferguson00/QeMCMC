@@ -1,10 +1,11 @@
+from typing import List
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pennylane as qml
 
 from qemcmc.model.constraint_model import ConstraintModel
 from qemcmc.model.energy_model import EnergyModel
-from typing import List
-import dimod
 
 
 class CircuitMaker:
@@ -53,9 +54,10 @@ class CircuitMaker:
             # self.devices[num_wires] = qml.device("default.tensor", wires=num_wires, method="mps", max_bond_dim=2, contract="auto-mps")
         return self.devices[num_wires]
 
-    def get_problem_hamiltonian(self, couplings: List[dimod.BinaryPolynomial], sign: int = 1) -> qml.Hamiltonian:
+    def get_problem_hamiltonian(self, couplings: List[np.ndarray], sign: int = 1) -> qml.Hamiltonian:
         """
         Construct the problem Hamiltonian from symmetric coupling tensors.
+
         This method supports both 'ising' (-1/+1) and 'binary' (0/1) models.
 
         Parameters
@@ -97,9 +99,12 @@ class CircuitMaker:
 
                 elif self.model_type == "binary":
                     # 0.5 * (I - Z) for first variable
+                    #term = 0.5 * (qml.Identity(index_tuple[0]) + qml.PauliZ(index_tuple[0]))
                     term = 0.5 * (qml.Identity(indices[0]) - qml.PauliZ(indices[0]))
+                    # multiply by 0.5 * (I - Z) for rest
                     for q in indices[1:]:
                         next_var = 0.5 * (qml.Identity(q) - qml.PauliZ(q))
+                        #next_var = 0.5 * (qml.Identity(q) + qml.PauliZ(q))
                         term = term @ next_var
 
                     total_hamiltonian += (sign * coeff) * term
@@ -396,8 +401,6 @@ class CircuitMaker:
             energies.append(classical_energy)
             quantum_energies.append(quantum_energy)
         if plot:
-            from matplotlib import pyplot as plt
-
             plt.scatter(energies, quantum_energies)
             plt.xlabel("Classical Energy")
             plt.ylabel("Quantum Energy")

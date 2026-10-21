@@ -1,21 +1,13 @@
+from collections import defaultdict
 import itertools
 import math
+from typing import List
 
 import dimod
 import numpy as np
-from tqdm import tqdm
-from collections import defaultdict
-from qemcmc.utils.helpers import get_random_state
-from typing import List
-import typing
-from typing import List
-import numpy as np
-import dimod
-import math
-from tqdm import tqdm
-from collections import defaultdict
-from qemcmc.utils.helpers import get_random_state
-import time
+
+from qemcmc.utils.helpers import get_random_state, np_to_dimod
+
 
 class EnergyModel:
     """
@@ -49,14 +41,26 @@ class EnergyModel:
       small systems.
     """
 
-    def __init__(self, n: int, couplings: List[dimod.BinaryPolynomial] = [], name: str = None, cost_function_signs: list = [-1, -1], model_type: str = "ising", manual_get_energy: callable = None):
+    def __init__(self, n: int, couplings: list[dimod.BinaryPolynomial | np.ndarray] = [], name: str = None, cost_function_signs: list = [-1, -1], model_type: str = "ising", manual_get_energy: callable = None):
         self.n = n
         self.n_spins = n
-        self.couplings = couplings if couplings is not None else []
         self.name = name
-        self.alpha = self.calculate_alpha(n, self.couplings)
+        
         self.lowest_energy = None
+        if type(couplings) is not list:
+            raise TypeError(f"Couplings must be a list of dimod.BinaryPolynomial or numpy arrays, but got {type(couplings)}")
+        self.couplings = []
+        for item in couplings:
+            if type(item) is not dimod.BinaryPolynomial and type(item) is not np.ndarray:
+                raise TypeError(f"Couplings must be a list of dimod.BinaryPolynomial or numpy arrays, but got an item in the list of type {type(item)}")
+            if type(item) is dimod.BinaryPolynomial:
+                self.couplings.append(item)
+            else:
+                J_bp = np_to_dimod(item)
+                self.couplings.append(J_bp)
 
+
+        self.alpha = self.calculate_alpha(n, self.couplings)
         self.normalised_couplings = [
             dimod.BinaryPolynomial({k: v * self.alpha for k, v in poly.items()}, poly.vartype)
             for i, poly in enumerate(self.couplings)
@@ -71,6 +75,7 @@ class EnergyModel:
         self.initial_state = self.get_initial_states(num_initial_states=100)
 
 
+
         maximum_order = 0
         for poly in self.couplings:
             order = poly.degree
@@ -78,9 +83,13 @@ class EnergyModel:
                 maximum_order = order
         self.maximum_order = maximum_order
 
-        if manual_get_energy is not None:
+
+
+
             
-            # generate a few bitstrings, and test the manual get_energy against the exact one.
+
+        if manual_get_energy is not None:
+            # generate a few bitstrings, and test the manual get_energy against the trusted one.
             test_states = self.get_initial_states(num_initial_states=10)
             for state in test_states:
                 exact_energy = self.get_energy(state)
@@ -89,7 +98,55 @@ class EnergyModel:
                     raise ValueError(f"Manual get_energy does not match exact energy for state {state}. Exact: {exact_energy}, Manual: {manual_energy}. Please check your manual_get_energy function. If this is intended functionality, then you may have to make an alternative EnergyModel class. ")
             self.get_energy = manual_get_energy
 
+            
+        elif self.maximum_order <= 2:
+            self.quad_h = np.zeros(self.n_spins, dtype=float)
+            self.quad_J = np.zeros((self.n_spins, self.n_spins), dtype=float)
+            self.offset = 0.0
+            for term_index, poly in enumerate(self.couplings):
+                sign = self.cost_function_signs[term_index]
+                h, J, offset = poly.to_hising()
+                # Linear terms
+                for i, bias in h.items():
+                    self.quad_h[i] += sign * bias
+                # Quadratic terms: symmetrize for (state @ quad_J @ state) / 2
+                for (i, j), coupling in J.items():
+                    self.quad_J[i, j] += sign * coupling
+                    self.quad_J[j, i] += sign * coupling
+                # Constant offset
+                self.offset += sign * offset
 
+
+            # generate a few bitstrings, and test the faster get_energy against the trusted one.
+            test_states = self.get_initial_states(num_initial_states=10)
+            for state in test_states:
+                exact_energy = self.get_energy(state)
+                manual_energy = self.quadratic_get_energy(state)
+                if not math.isclose(exact_energy, manual_energy, rel_tol=1e-5):
+                    raise ValueError(f"quadratic_get_energy does not match exact energy for state {state}. Exact: {exact_energy}, quadratic_get_energy: {manual_energy}. ")
+            self.get_energy = self.quadratic_get_energy
+
+
+    def quadratic_get_energy(self, state):
+        if isinstance(state, str):
+            state = np.array([int(bit) for bit in state])
+        if isinstance(state, (list, tuple, np.ndarray)):
+            state = np.array(state)
+            if state.dtype == np.bool_:
+                state = state.astype(int)
+        else:
+            raise TypeError(f"State must be a string, list, tuple, or numpy array, but got {type(state)}")
+
+        # to_hising() produces an Ising model, so state must always be in spin basis {-1, +1}
+        if np.any(state & ~1):
+            if np.any(np.abs(state) != 1):
+                raise ValueError("Spin configuration must be in spin (-1/+1) or binary (0/1) format.")
+        else:
+            # Map Binary (0/1) -> Spin (-1/+1)
+            state = (state << 1) - 1
+
+        energy = np.dot(state, self.quad_h) + np.dot(state, self.quad_J @ state) / 2 + self.offset
+        return float(energy)
 
     def get_initial_states(self, num_initial_states: int):
         """
@@ -136,7 +193,6 @@ class EnergyModel:
         -------
         float : Total energy of the state
         """
-
         if isinstance(state, str):
             state = np.array([int(bit) for bit in state])
         if isinstance(state, (list, tuple, np.ndarray)):
@@ -153,8 +209,8 @@ class EnergyModel:
                 if np.any(np.abs(state) != 1):
                     raise ValueError("Spin configuration must be in spin (-1/+1) or binary (0/1) format.")
                 # Map Spin -> Binary
-                state = (1 - state) >> 1 
-                
+                state = (state + 1) >> 1 
+
         elif self.model_type == "ising":
             # Check if strictly spin
             if np.any(np.abs(state) != 1):
@@ -170,7 +226,6 @@ class EnergyModel:
             total_energy += cost_function_signs[term_index] * poly.energy(state_dict)
 
         return total_energy
-
     
 
 
@@ -281,7 +336,7 @@ class EnergyModel:
         if norm_sq_tot < eps:
             print("Warning: Couplings are all zero (or very close to zero). Returning alpha=1 to avoid division by zero.")
             print("Input of a zero-coupling may be intended to sample Uniform distributions, however if this is not your intention, please check your couplings.")
-            return np.ones(len(couplings))
+            return 1.0
 
         return np.sqrt(n) / np.sqrt(norm_sq_tot)
 

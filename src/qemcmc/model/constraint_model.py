@@ -1,13 +1,10 @@
 import typing
-import numpy as np
-import dimod
-from qemcmc.utils.helpers import get_random_state
 import warnings
 
-import numpy as np
 import dimod
-from qemcmc.utils.helpers import get_random_state
+import numpy as np
 
+from qemcmc.utils.helpers import get_random_state, np_to_dimod
 from .energy_model import EnergyModel
 
 
@@ -49,11 +46,23 @@ class ConstraintModel(EnergyModel):
       certain combinatorial optimization problems or physical systems with forbidden states.
     """
 
-    def __init__(self, n: int, constraint_couplings: list[dimod.BinaryPolynomial], constraint_signs: list[float], couplings: list[dimod.BinaryPolynomial], constraint_func: typing.Callable[[str], bool], **kwargs):
+    def __init__(self, n: int, constraint_couplings: list[dimod.BinaryPolynomial], constraint_signs: list[float], couplings: list[dimod.BinaryPolynomial | np.ndarray], constraint_func: typing.Callable[[str], bool], **kwargs):
         if not callable(constraint_func):
             raise ValueError("constraint_func must be a callable function that takes a state as input and returns True/False.")
         self.constraint_func = constraint_func
-
+        
+        if type(constraint_couplings) is not list:
+            raise TypeError(f"Constraint couplings must be a list of dimod.BinaryPolynomial or numpy arrays, but got a {type(constraint_couplings)}")
+        self.constraint_couplings = []
+        for item in constraint_couplings:
+            if type(item) is not dimod.BinaryPolynomial and type(item) is not np.ndarray:
+                raise TypeError(f"Constraint couplings must be a list of dimod.BinaryPolynomial objects or numpy arrays, but got an item in the list of type {type(item)}")
+            if type(item) is dimod.BinaryPolynomial:
+                self.constraint_couplings.append(item)
+            else:
+                J_bp = np_to_dimod(item)
+                self.constraint_couplings.append(J_bp)
+        
         # This model requires a special way to generate initial states that respect the constraint.
         self.get_initial_states = self.get_initial_states_constraint
 
@@ -62,11 +71,10 @@ class ConstraintModel(EnergyModel):
         else:
             super().__init__(n=n, couplings=[], **kwargs)
 
-        self.constraint_couplings = constraint_couplings
         self.constraint_signs = constraint_signs
 
         # Calculate normalization factors for constraint couplings
-        self.constraint_coupling_alpha = self.calculate_alpha(n, constraint_couplings)
+        self.constraint_coupling_alpha = self.calculate_alpha(n, self.constraint_couplings)
 
         # These are the couplings used in quantum proposals
         # Combine and normalize the energy and constraint couplings

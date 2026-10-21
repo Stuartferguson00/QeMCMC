@@ -4,7 +4,7 @@ An energy model defines a classical energy function over binary configurations w
 
 In QeMCMC you describe a model by its coefficients, passed to `EnergyModel` as a list of
 coupling tensors: a 1D array of linear terms and a 2D matrix of quadratic terms. Higher-order
-tensors (3D, 4D, …) are also accepted for interactions beyond pairwise.
+tensors (3D, 4D, …) are also accepted for interactions beyond pairwise. Internally, we treat these as dimod binary polynomial objects and can also accept them if required.
 
 ## Ising model
 

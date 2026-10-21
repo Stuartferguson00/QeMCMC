@@ -17,21 +17,28 @@ class CoarseGraining:
         A list of probabilities corresponding to each subgroup, used for weighted random selection. Must sum to 1. If None, subgroups are selected uniformly at random.
     repeated : bool, optional
         If True, then multiple subgroups are run on the quantum computer in serial, if not then only one subgroup is selected at random and run on the quantum computer. Default is ``True``.
+    m : int
+        The number of partitions to generate. Ignored if user-specified subgroups are provided.
     """
 
-    def __init__(self, n, subgroups=None, subgroup_probs=None, repeated=True):
+    def __init__(self, n, subgroups=None, subgroup_probs=None, repeated=True, m: int = 1):
+
+        if not isinstance(m, int):
+            raise TypeError("m must be an integer.")
 
         self._user_specified = subgroups is not None
+    
 
-        if subgroups is None:
-            subgroups = [list(range(n))]
-            subgroup_probs = [1.0]
-        else:
+
+        if subgroups is not None:
             if subgroup_probs is None:
                 subgroup_probs = [1.0 / len(subgroups)] * len(subgroups)
+            if m is not None:
+                print("Cannot provide m and subgroups for course graining. Ignoring m")
+        if self._user_specified:
+            validate_subgroups(subgroups=subgroups, subgroup_probs=subgroup_probs, n_spins=n)
 
-        validate_subgroups(subgroups=subgroups, subgroup_probs=subgroup_probs, n_spins=n)
-
+        self.m = m
         self.n = n
         self.subgroups = subgroups
         self.subgroup_probs = subgroup_probs
@@ -41,7 +48,7 @@ class CoarseGraining:
             if not np.all([len(s) == len(subgroups[0]) for s in subgroups]):
                 raise NotImplementedError("If providing own subgroups, repeated must be set to False as it is not obvious how one performs repeated coarse-graining without knowledge of the subgroups. If length, l, of each subrgoup is equal, we continue assuming l = n//m.")
             else:
-                print("Provided subgroups are all of same length, so repeated coarse-graining will be performed accross a random choice of subgroups. This means that the same variables may be chosen multiple times.")
+                print("Provided subgroups are all of same length, so repeated coarse-graining will be performed accross a random choice of subgroups. This means that the same variables may be chosen multiple times within the same proposal.")
 
     def sample(self) -> list[int]:
         """
@@ -50,7 +57,7 @@ class CoarseGraining:
         idx = np.random.choice(len(self.subgroups), p=self.subgroup_probs)
         return self.subgroups[idx]
 
-    def get_partitions(self, m: int) -> list[list[int]]:
+    def get_partitions(self) -> list[list[int]]:
         """
         Returns partitions of spins for sequential quantum updates.
 
@@ -59,19 +66,15 @@ class CoarseGraining:
         If no subgroups were specified, random disjoint partitions of
         approximate size n/m are generated.
 
-        Parameters
-        ----------
-        m : int
-            The number of partitions to generate. Ignored if user-specified subgroups are provided.
+
         """
 
         if self._user_specified:
 
             if self.repeated:
-                # choose m subgroups from self.subgroups
-                if len(self.subgroups) < m:
-                    raise ValueError("Number of partitions, m, must be less than or equal to the number of provided subgroups.")
-                choices = np.random.choice(np.arange(0,len(self.subgroups)), size = m, p = self.subgroup_probs, replace=False)
+                number_of_subgroups_that_fit = self.n//np.max([len(sg) for sg in self.subgroups])
+                
+                choices = np.random.choice(np.arange(0,len(self.subgroups)), size = number_of_subgroups_that_fit, p = self.subgroup_probs, replace=False)
                 
                 chosen_subgroups = []
                 for choice in choices:
@@ -80,13 +83,13 @@ class CoarseGraining:
             else:
                 chosen_subgroup = np.random.choice(self.subgroups, p=self.subgroup_probs)
                 
-                return [self.subgroups[chosen_subgroup]]
-
-        spins = np.arange(self.n)
-        np.random.shuffle(spins)
-        # array_split handles uneven divisions gracefully
-        chunks = [list(chunk) for chunk in np.array_split(spins, m)]
-        if self.repeated:
-            return chunks
+                return [chosen_subgroup]
         else:
-            return [chunks[0]]
+            spins = np.arange(self.n)
+            np.random.shuffle(spins)
+            # array_split handles uneven divisions gracefully
+            chunks = [list(chunk) for chunk in np.array_split(spins,self.m)]
+            if self.repeated:
+                return chunks
+            else:
+                return [chunks[0]]
