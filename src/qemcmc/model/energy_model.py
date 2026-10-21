@@ -226,7 +226,7 @@ class EnergyModel:
     
 
 
-    def get_subgroup_couplings(self, subgroup: List[int], current_state: str, coupling_weights: List[float] = None):
+    def get_subgroup_couplings(self, subgroup: l[int], current_state: str, coupling_weights: list[float] = None):
         """
         Calculates local couplings for a subgroup of spins.
 
