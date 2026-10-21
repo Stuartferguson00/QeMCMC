@@ -13,20 +13,20 @@ class EnergyModel:
 
     Parameters
     ----------
-    n:
-        Number of spins
-    couplings:
+    n : int
+        Number of spins.
+    couplings : list of dimod.BinaryPolynomial or list of np.ndarray, optional
         List of dimod.BinaryPolynomial representing interaction tensors.
-    name:
+    name : str, optional
         Optional label for the model (used in plotting / logging).
-    cost_function_signs:
+    cost_function_signs : list of float, optional
         Sign convention(s) used by downstream components (e.g. proposal/acceptance conventions).
         For example, `[-1, -1]` for linear and quadratic terms.
-    model_type: str
+    model_type : str, optional
         Type of model, either 'ising' or 'binary'. This determines how the binary states are interpreted
         and how the energy is calculated. 'ising' models use spin values {-1, +1}, while 'binary'
         models use binary values {0, 1}.
-    manual_get_energy:
+    manual_get_energy : callable, optional
         Optional custom energy function. If provided, this function will be used to calculate energies 
         instead of the default methods. Must agree on energy values with the default method for a sample 
         of states, otherwise a ValueError is raised.
@@ -151,12 +151,12 @@ class EnergyModel:
 
         Parameters
         ----------
-        num_initial_states:
+        num_initial_states : int
             The number of initial states to generate.
 
         Returns
         -------
-        init_states: list
+        list of str
             A list of random initial states.
         """
 
@@ -167,28 +167,25 @@ class EnergyModel:
         return init_states
 
 
-    def calculate_energy(self, state, couplings: list[dimod.BinaryPolynomial], cost_function_signs):
+    def calculate_energy(self, state, couplings: list[dimod.BinaryPolynomial], cost_function_signs: list[float] | None = None) -> float:
         """
         Calculate the energy of a given state for an arbitrary-order Ising/binary model.
 
         Parameters
-        -----------
-        state : array-like (str, list, tuple, np.array)
-
+        ----------
+        state : str, list, tuple, or np.ndarray
             State configuration. Can be:
-            - Binary: "011", [0,1,1], (0,1,1), etc.
-            - Spin: [-1,1,1], (-1,1,1), etc.
-
-        couplings : list of numpy arrays
-        
-        List of coupling tensors where:
-            - 1D arrays represent linear terms (h_i)
-            - 2D arrays represent quadratic terms (J_ij)
-            - 3D arrays represent cubic terms, etc.
+            - Binary: "011", [0, 1, 1], (0, 1, 1), etc.
+            - Spin: [-1, 1, 1], (-1, 1, 1), etc.
+        couplings : list of dimod.BinaryPolynomial
+            List of coupling polynomials defining the interaction terms.
+        cost_function_signs : list of float, optional
+            Sign convention applied to each coupling term.
 
         Returns
         -------
-        float : Total energy of the state
+        float
+            Total energy of the state.
         """
         if isinstance(state, str):
             state = np.array([int(bit) for bit in state])
@@ -226,7 +223,7 @@ class EnergyModel:
     
 
 
-    def get_subgroup_couplings(self, subgroup: l[int], current_state: str, coupling_weights: list[float] = None):
+    def get_subgroup_couplings(self, subgroup: list[int], current_state: str, coupling_weights: list[float] = None) -> list[dimod.BinaryPolynomial]:
         """
         Calculates local couplings for a subgroup of spins.
 
@@ -236,12 +233,11 @@ class EnergyModel:
 
         Parameters
         ----------
-        subgroup : List[int]
+        subgroup : list of int
             A list of indices of the spins in the subgroup.
         current_state : str
             The current state of the full system, as a binary string.
-        
-        coupling_weights : List[float], optional
+        coupling_weights : list of float, optional
             Optional weights for the couplings. This can be used to effectively
             remove certain couplings from the proposal (e.g., constraints) by setting
             their weight to 0. It is important not to normalize the couplings after
@@ -249,14 +245,14 @@ class EnergyModel:
 
         Returns
         -------
-        new_couplings: list[np.ndarray]
-            A new list of coupling tensors for the subgroup.
+        list of dimod.BinaryPolynomial
+            A new list of coupling polynomials for the subgroup.
 
         Notes
         -----
-            It might seem off to do the reweighting at this point, but here are reasons why I [SF] did it!
-            Basically, when you get the subgroup couplings, the terms jumble up, so the returned local
-            coupling list necessarily does not respect the order etc. of the different terms in the original.
+        It might seem off to do the reweighting at this point, but here are reasons why I [SF] did it!
+        Basically, when you get the subgroup couplings, the terms jumble up, so the returned local
+        coupling list necessarily does not respect the order etc. of the different terms in the original.
         """
         
         
@@ -300,7 +296,7 @@ class EnergyModel:
 
         return new_couplings
 
-    def calculate_alpha(self, n: int, couplings: list | None = None, eps: float = 1e-15) -> np.ndarray:
+    def calculate_alpha(self, n: int, couplings: list | None = None, eps: float = 1e-15) -> float:
         """
         Compute alpha = sqrt(n) / sqrt(sum of squares of UNIQUE coupling coefficients),
         assuming coupling tensors are symmetric representations.
@@ -311,15 +307,15 @@ class EnergyModel:
         ----------
         n : int
             Number of spins.
-        couplings : list[np.ndarray], optional
+        couplings : list of dimod.BinaryPolynomial, optional
             Couplings to use. Defaults to self.couplings if not provided.
-        eps : float
+        eps : float, optional
             Small threshold to avoid division by zero.
 
         Returns
         -------
-        np.ndarray :
-            An array of normalising factors for each term in the couplings list.
+        float
+            Normalisation factor for the couplings.
         """
         if couplings is None:
             couplings = self.couplings
@@ -335,11 +331,21 @@ class EnergyModel:
             print("Input of a zero-coupling may be intended to sample Uniform distributions, however if this is not your intention, please check your couplings.")
             return 1.0
 
-        return np.sqrt(n) / np.sqrt(norm_sq_tot)
+        return float(np.sqrt(n) / np.sqrt(norm_sq_tot))
 
     def get_energy(self, state: str) -> float:
         """
-        Returns the energy of a given state
+        Returns the energy of a given state.
+
+        Parameters
+        ----------
+        state : str
+            Binary or spin state string.
+
+        Returns
+        -------
+        float
+            Energy of the state.
         """
         if not isinstance(state, str):
             raise TypeError(f"State must be a string, but got {type(state)}")
@@ -347,18 +353,17 @@ class EnergyModel:
         return energy
 
     def get_all_energies(self) -> np.ndarray:
-
         """
         Calculate the energies for all possible spin states.
+
         This method generates all possible spin states for the
         system and calculates the energy for each state.
 
         Returns
         -------
-        np.ndarray :
+        np.ndarray
             An array containing the energies of all possible spin states.
         """
-        
 
         self.S = ["".join(i) for i in itertools.product("01", repeat=self.n)]
         all_energies = np.zeros(len(self.S))
@@ -366,26 +371,32 @@ class EnergyModel:
             all_energies[int(state, 2)] = self.calculate_energy(state, self.couplings, self.cost_function_signs)
         return all_energies
 
-    def get_lowest_energies(self, num_states: int, return_configurations: bool = False) -> tuple[np.ndarray, np.ndarray]:
+    def get_lowest_energies(self, num_states: int, return_configurations: bool = False) -> tuple[np.ndarray, np.ndarray] | tuple[np.ndarray, np.ndarray, list]:
         """
         Retrieve the lowest energy states and their degeneracies.
+
         This method computes all possible energies and then finds the specified number
         of lowest energy states along with their degeneracies.
 
         Parameters
         ----------
-        num_states (int): The number of lowest energy states to retrieve.
-        return_configurations (bool): Whether to also return the corresponding configurations of the lowest energy states. Defaults to False.
+        num_states : int
+            The number of lowest energy states to retrieve.
+        return_configurations : bool, optional
+            Whether to also return the corresponding configurations of the lowest energy states. Defaults to False.
 
         Returns
         -------
-        Tuple[np.ndarray, np.ndarray]
-            - The first array contains the lowest energy values.
-            - The second array contains the degeneracies of the corresponding energy values.
+        lowest_energies : np.ndarray
+            The lowest energy values.
+        lowest_energy_degeneracy : np.ndarray
+            The degeneracies of the corresponding energy values.
+        lowest_configs : list, optional
+            List of configurations corresponding to each energy (only returned if return_configurations=True).
 
         Notes
         -----
-            This method is intended for small instances due to its brute-force nature, which is extremely memory intensive and slow.
+        This method is intended for small instances due to its brute-force nature, which is extremely memory intensive and slow.
         """
         all_energies = self.get_all_energies()
         lowest_energies, lowest_energy_degeneracy = self.find_lowest_values(all_energies, num_values=num_states)
@@ -406,14 +417,17 @@ class EnergyModel:
 
         Parameters
         ----------
-        arr (np.ndarray): The input array from which to find the lowest values.
-        num_values (int, optional): The number of lowest unique values to find. Defaults to 5.
+        arr : np.ndarray
+            The input array from which to find the lowest values.
+        num_values : int, optional
+            The number of lowest unique values to find. Defaults to 5.
 
         Returns
         -------
-        Tuple[lowest_values (np.ndarray), degeneracy (np.ndarray)]
-            - lowest_values (np.ndarray): The lowest unique values in the array.
-            - degeneracy (np.ndarray): The counts of each of the lowest unique values.
+        lowest_values : np.ndarray
+            The lowest unique values in the array.
+        degeneracy : np.ndarray
+            The counts of each of the lowest unique values.
         """
         unique_values, counts = np.unique(arr, return_counts=True)
         sorted_indices = np.argsort(unique_values)
@@ -426,13 +440,15 @@ class EnergyModel:
     def get_lowest_energy(self):
         """
         Calculate and return the lowest energy from all possible energies.
+
         This method uses a brute force approach to find the lowest energy,
         making it extremely memory intensive and slow. It is recommended
         to use this method only for small instances.
 
         Returns
         -------
-        float: The lowest energy value.
+        float
+            The lowest energy value.
 
         Notes
         -----
@@ -452,18 +468,19 @@ class EnergyModel:
 
     def get_boltzmann_factor(self, state: str, beta: float = 1.0) -> float:
         """
-        Get un-normalised boltzmann probability of a given state
+        Get un-normalised boltzmann probability of a given state.
 
         Parameters
         ----------
         state : str
-            configuration of spins for which probability is to be calculated
-        beta : float
-            inverse temperature (1/T) at which the probability is to be calculated.
+            Configuration of spins for which probability is to be calculated.
+        beta : float, optional
+            Inverse temperature (1/T) at which the probability is to be calculated. Defaults to 1.0.
 
         Returns
         -------
-            float corresponding to the un-normalised boltzmann probability of the given state.
+        float
+            Un-normalised Boltzmann probability of the given state.
         """
 
         E = self.get_energy(state)
@@ -478,12 +495,12 @@ class EnergyModel:
         ----------
         E : float
             Energy for which the Boltzmann factor is to be calculated.
-        beta : float
-            Inverse temperature (1/T) at which the probability is to be calculated.
+        beta : float, optional
+            Inverse temperature (1/T) at which the probability is to be calculated. Defaults to 1.0.
 
         Returns
         -------
-        float:
+        float
             The un-normalized Boltzmann probability for the given energy.
         """
         return np.exp(-1 * beta * E, dtype=np.longdouble)
