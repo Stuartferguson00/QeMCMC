@@ -1,11 +1,8 @@
 from collections import defaultdict
 import itertools
 import math
-from typing import List
-
 import dimod
 import numpy as np
-
 from qemcmc.utils.helpers import get_random_state, np_to_dimod
 
 
@@ -170,7 +167,7 @@ class EnergyModel:
         return init_states
 
 
-    def calculate_energy(self, state, couplings: List[dimod.BinaryPolynomial], cost_function_signs):
+    def calculate_energy(self, state, couplings: list[dimod.BinaryPolynomial], cost_function_signs):
         """
         Calculate the energy of a given state for an arbitrary-order Ising/binary model.
 

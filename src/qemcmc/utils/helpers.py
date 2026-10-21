@@ -1,7 +1,9 @@
 from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass
+import itertools
 
+import dimod
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -318,9 +320,6 @@ def validate_subgroups(subgroups, subgroup_probs, n_spins):
         if not np.isclose(sum(subgroup_probs), 1.0):
             raise ValueError("subgroup_probs must sum to 1")
 
-import itertools
-import dimod
-import numpy as np
 
 def np_to_dimod(J_arr: np.ndarray, vartype=dimod.SPIN) -> dimod.BinaryPolynomial:
     """
