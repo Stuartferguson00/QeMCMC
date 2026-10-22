@@ -1,7 +1,7 @@
-from .circuits import CircuitMaker
+from .circuits import QuenchCircuitMaker
 from .coarse_grain import CoarseGraining
 from .model import ConstraintModel, EnergyModel, ModelMaker
-from .sampler import ClassicalProposal, Proposal, QeProposal
+from .sampler import ClassicalProposal, Proposal, QuenchProposal, AdiabaticProposal
 from .spectralgap import SpectralGap
 from .utils import (
     MCMCChain,
@@ -12,7 +12,7 @@ from .utils import (
 )
 
 __all__ = [
-    "CircuitMaker",
+    "QuenchCircuitMaker",
     "ClassicalProposal",
     "CoarseGraining",
     "ConstraintModel",
@@ -21,7 +21,8 @@ __all__ = [
     "MCMCState",
     "ModelMaker",
     "Proposal",
-    "QeProposal",
+    "QuenchProposal",
+    "AdiabaticProposal",
     "SpectralGap",
     "get_all_possible_states",
     "get_random_state",

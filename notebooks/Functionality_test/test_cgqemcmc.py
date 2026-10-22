@@ -9,7 +9,7 @@ from joblib import Parallel, delayed
 from qemcmc.coarse_grain import CoarseGraining
 from qemcmc.model import ModelMaker
 from qemcmc.sampler.classical_proposal import ClassicalProposal
-from qemcmc.sampler.qe_proposal import QeProposal
+from qemcmc.sampler.quenchproposal import QeProposal
 from qemcmc.sampler.runners import MCMCRunner
 from qemcmc.utils import plot_chains
 

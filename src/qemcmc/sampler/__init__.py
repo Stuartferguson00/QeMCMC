@@ -1,5 +1,6 @@
 from .classical_proposal import ClassicalProposal
 from .proposal import Proposal
-from .qe_proposal import QeProposal
+from .quenchproposal import QuenchProposal
+from .adiabaticproposal import AdiabaticProposal
 
-__all__ = ["ClassicalProposal", "Proposal", "QeProposal"]
+__all__ = ["ClassicalProposal", "Proposal", "QuenchProposal", "AdiabaticProposal"]
