@@ -22,11 +22,8 @@ class AdiabaticCircuitMaker(BaseCircuitMaker):
 
     
     
-    def __init__(self, model: EnergyModel):#, kappa:float | List[float] | Tuple[float, float] = 1.0, dt_overide: float | None = None):
+    def __init__(self, model: EnergyModel):
         super().__init__(model)
-
-        # self.kappa = kappa
-        # self.dt_overide = dt_overide
 
         self.method = "adiabatic_quantum"
 
@@ -204,72 +201,6 @@ class AdiabaticCircuitMaker(BaseCircuitMaker):
         return state_vector
         
 
-
-    # def get_state_vector(self, s_cg: str, weights: List[float], time: float, r: int, mix_weight: float) -> np.ndarray:
-    #     """
-        
-    #     """
-    #     raise NotImplementedError
-    #     local_couplings = self.model.normalised_couplings
-    #     if weights is None:
-    #         weights = np.ones(len(local_couplings))
-    #     num_wires = len(s_cg)
-    #     dev = self._get_device(num_wires)
-
-        
-
-    #     coeff_mixer = mix_weight
-    #     coeff_problem = weights
-
-    #     # coeff_problem = [coeff for i, coeff in enumerate(coeff_problem) if local_couplings[i].ndim > 0 and np.any(local_couplings[i] != 0)]
-    #     # local_couplings = [coupling for coupling in local_couplings if coupling.ndim > 0 and np.any(coupling != 0)]
-    #     if len(local_couplings) == 0:
-    #         # If there are no local couplings, just return the input state
-    #         print("no non-zero local couplings, skipping evolution and returning input state")
-    #         return s_cg
-
-    #     # H_total = qml.Hamiltonian(
-    #     #     [coeff_mixer] + list(np.ones(len(local_couplings))),
-    #     #     [self.get_mixer_hamiltonian(num_wires)] + [self.get_problem_hamiltonian(couplings=[local_couplings[i]], sign=coeff_problem[i]) for i in range(len(local_couplings))],
-    #     # )
-    #     H_m = self.get_mixer_hamiltonian(num_wires)
-    #     H_p = [self.get_problem_hamiltonian(couplings=[local_couplings[i]], sign=coeff_problem[i]) for i in range(len(local_couplings))]
-    #     if isinstance(self.kappa, (list, tuple)):
-    #         # choose kappa from range
-    #         kappa = float(np.random.uniform(self.kappa[0], self.kappa[1]))
-    #     elif isinstance(self.kappa, (int, float)):
-    #         kappa = float(self.kappa)
-    #     else:
-    #         kappa = float(self.kappa)
-
-    #     if self.dt_overide is not None:
-    #         dt = self.dt_overide
-    #         r = max(1, int(round((time + kappa) / dt)))
-
-    #     # set qnode to use our device with dynamically chosen wires
-    #     @qml.qnode(dev)
-    #     def quantum_evolution(input_string):
-    #         for i, bit in enumerate(input_string):
-    #             if bit == "1":
-    #                 qml.PauliX(i)
-    #         dt = (time + kappa) / r
-    #         for step in range(r):
-                
-    #             t_mid = (step + 0.5) * dt
-    #             # e.g. Linear adiabatic ramp
-    #             h = self.schedule_factor(t_mid, time, kappa)
-                
-    #             H_step = qml.Hamiltonian([h*coeff_mixer] + list(np.ones(len(local_couplings))), [H_m] + H_p)
-                
-    #             # Single Trotter slice of duration dt
-    #             qml.ApproxTimeEvolution(H_step, dt, 1)
-
-    #         return qml.state()
-            
-    #     state_vector = quantum_evolution(s_cg)
-    #     return state_vector
-        
-    
 
     def update(self, s: str, subgroup_choice: list[int], local_couplings: list, gamma: float, alpha: float, kappa: float, dt:float) -> str:
         """
