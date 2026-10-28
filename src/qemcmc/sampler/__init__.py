@@ -3,4 +3,13 @@ from .proposal import Proposal
 from .quenchproposal import QuenchProposal
 from .adiabaticproposal import AdiabaticProposal
 
-__all__ = ["ClassicalProposal", "Proposal", "QuenchProposal", "AdiabaticProposal"]
+# Backward compatibility alias
+QeProposal = QuenchProposal
+
+__all__ = [
+    "ClassicalProposal",
+    "Proposal",
+    "QuenchProposal",
+    "AdiabaticProposal",
+    "QeProposal",
+]

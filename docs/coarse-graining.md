@@ -30,11 +30,16 @@ At each MCMC step a subgroup is sampled according to `subgroup_probs` (uniformly
 
 ## Using it in a proposal
 
-Pass the object to `QeProposal` via `coarse_graining`; the circuit for each subgroup is built
-automatically.
+Pass the coarse-graining object to either `QuenchProposal` or `AdiabaticProposal` via `coarse_graining`; the circuit for each subgroup is built automatically.
 
 ```python
-from qemcmc.sampler import QeProposal
+from qemcmc.sampler import QuenchProposal, AdiabaticProposal
 
-proposal = QeProposal(model, gamma=(0.3, 0.6), time=(1, 10), coarse_graining=cg)
+# With QuenchProposal (quench approach)
+proposal = QuenchProposal(model, gamma=(0.3, 0.6), time=(1, 10), coarse_graining=cg)
+
+# Or with AdiabaticProposal (adiabatic dressing approach)
+proposal = AdiabaticProposal(model, gamma=2.0, alpha=2.0, kappa=3.0, coarse_graining=cg)
 ```
+
+See [notebooks/Basics/2_coarse_graining.ipynb](https://github.com/Stuartferguson00/QeMCMC/blob/main/notebooks/Basics/2_coarse_graining.ipynb) for a quench coarse-graining tutorial and [notebooks/adiabatic/2_Adiabatic_coarse_graining.ipynb](https://github.com/Stuartferguson00/QeMCMC/blob/main/notebooks/adiabatic/2_Adiabatic_coarse_graining.ipynb) for an adiabatic coarse-graining tutorial.

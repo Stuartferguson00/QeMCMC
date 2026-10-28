@@ -1,7 +1,7 @@
 # Quick Start
 
 A full run in three steps: define an energy model, build a quantum proposal, and sample a
-Markov chain. See [notebooks/Basics/basic_QeMCMC.ipynb](https://github.com/Stuartferguson00/QeMCMC/blob/main/notebooks/Basics/basic_QeMCMC.ipynb)
+Markov chain. See [notebooks/Basics/1_basic_QeMCMC.ipynb](https://github.com/Stuartferguson00/QeMCMC/blob/main/notebooks/Basics/1_basic_QeMCMC.ipynb)
 for a worked example.
 
 ## 1. Initialise an energy model
@@ -31,15 +31,19 @@ cg = CoarseGraining(
 )
 ```
 
-See [Coarse Graining](coarse-graining.md) for the full details.
+See [Coarse Graining](coarse-graining.md) for full details.
 
 ## 3. Create and run QeMCMC
 
-`QeProposal` generates proposals via Trotterised quantum time evolution; `MCMCRunner` drives
-the chain using the Metropolis acceptance test at the chosen temperature.
+QeMCMC provides two quantum proposal mechanisms:
+
+- **`QuenchProposal`**: Evolves under a static transverse-field Hamiltonian (quench approach).
+- **`AdiabaticProposal`**: Evolves under a time-dependent Hamiltonian with an adiabatic ramp and plateau. See [Adiabatic Approach](adiabatic.md).
+
+`MCMCRunner` drives the chain using the Metropolis acceptance test at the chosen temperature.
 
 ```python
-from qemcmc.sampler import QeProposal
+from qemcmc.sampler import QuenchProposal, AdiabaticProposal
 from qemcmc.sampler.runners import MCMCRunner
 
 steps = 300   # length of the Markov chain
@@ -47,15 +51,25 @@ temp = 0.1    # temperature of the system
 
 runner = MCMCRunner(model, temp)
 
-quantum_proposal = QeProposal(
+# Option A: Quench proposal (static Hamiltonian evolution)
+quench_proposal = QuenchProposal(
     model,
     gamma=(0.3, 0.6),   # relative strength of the mixer Hamiltonian
     time=(1, 10),       # Hamiltonian simulation time
     # coarse_graining=cg,   # uncomment to use the subgroups from step 2
 )
 
-chain = runner.run(quantum_proposal, steps, name="QeMCMC", verbose=True)
+# Option B: Adiabatic proposal (time-dependent adiabatic dressing)
+adiabatic_proposal = AdiabaticProposal(
+    model,
+    gamma=2.0,          # mixer weight
+    alpha=2.0,          # adiabatic ramp duration
+    kappa=3.0,          # plateau duration
+    delta_t=0.3,        # Trotter step size
+    # coarse_graining=cg,
+)
+
+chain = runner.run(quench_proposal, steps, name="QeMCMC", verbose=True)
 ```
 
-`run` returns an `MCMCChain` holding the sampled states. `gamma` and `time` may be single
-floats or `(low, high)` ranges that are sampled per step.
+`run` returns an `MCMCChain` holding the sampled states.
