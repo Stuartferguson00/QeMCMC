@@ -81,6 +81,7 @@ nav:
       - Installation: getting-started.md
       - Quick Start: quickstart.md
       - Energy Models: energy-model.md
+      - Adiabatic Approach: adiabatic.md
       - Coarse Graining: coarse-graining.md
       - Constraints: constraints.md
   - API Reference: reference/

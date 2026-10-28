@@ -50,12 +50,12 @@ constraint, self (proposal unchanged), and Metropolis rejections. Pass
 `return_rejections=False` to get just the chain.
 
 ```python
-from qemcmc.sampler import QeProposal
+from qemcmc.sampler import QuenchProposal
 from qemcmc.sampler.runners import ConstrainedMCMCRunner
 
 runner = ConstrainedMCMCRunner(model, temp=0.1, reject_invalid=True)
 
-proposal = QeProposal(model, gamma=(0.2, 0.3), time=(5, 10))
+proposal = QuenchProposal(model, gamma=(0.2, 0.3), time=(5, 10))
 
 chain, n_constraint_rej, n_self_rej, n_mh_rej = runner.run(
     proposal, n_hops=200, name="QeMCMC", verbose=True

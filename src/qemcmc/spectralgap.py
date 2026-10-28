@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 from qemcmc.model.energy_model import EnergyModel
 from qemcmc.sampler import Proposal
-from qemcmc.sampler.qe_proposal import DEFAULT_DELTA_T
+from qemcmc.sampler.quenchproposal import DEFAULT_DELTA_T
 from qemcmc.sampler.runners import Runner
 
 
@@ -114,6 +114,26 @@ class SpectralGap(Runner):
 
         return Q
 
+
+    
+    def find_proposal_matrix_adiabatic(self):
+        """
+        Function to find the proposal matrix for a given QeMCMCChain object.
+
+        Returns:
+            Q (np.ndarray): The Q matrix for quantum proposal
+        """
+        final_coupling_weights, g, alpha, kappa= self.proposal.sample_hyperparams()
+
+
+
+        Q = np.zeros((2**self.model.n_spins, 2**self.model.n_spins))
+        for i in range(2**self.model.n_spins):
+            Q[i, :] += abs(self.proposal.CM.get_state_vector(self.model.S[i], alpha, kappa, g, self.proposal.coupling_weights)) ** 2
+            # get_output_statevector(self.proposal.model.S[i])
+
+        return Q
+
     def find_proposal_matrix_brute_force(self, multiple=100):
         num_states = 2**self.model.n_spins
         possible_states = self.model.S
@@ -141,6 +161,8 @@ class SpectralGap(Runner):
             Q = self.find_proposal_matrix_uniform()
         elif self.proposal.method == "quantum":
             Q = self.find_proposal_matrix_quantum()
+        elif self.proposal.method == "adiabatic_quantum":
+            Q = self.find_proposal_matrix_adiabatic()
         else:
             raise ValueError("Method not recognised. Only 'local', 'uniform' or 'quantum' proposal methods are implimented in find_proposal_method.")
 

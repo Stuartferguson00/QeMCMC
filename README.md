@@ -10,14 +10,14 @@ This is a lightweight research package for **Quantum-enhanced Markov Chain Monte
 Link to GitHub repo: [https://github.com/Stuartferguson00/QeMCMC](https://github.com/Stuartferguson00/QeMCMC)
 
 
-The implementation is inspired by the numerics in [_Layden et al's_ paper on QeMCMC](https://www.nature.com/articles/s41586-023-06095-4) and builds upon the foundations of the [pafloxy/quMCMC](https://github.com/pafloxy/quMCMC) repository.
+The implementation is inspired by the numerics in [_Layden et al's_ paper on QeMCMC](https://www.nature.com/articles/s41586-023-06095-4) and work on [Adiabatic dressing of quantum enhanced Markov chains](https://arxiv.org/abs/2603.28076), building upon the foundations of the [pafloxy/quMCMC](https://github.com/pafloxy/quMCMC) repository.
 
 ## Documentation
 Documentation and examples can be found [here](https://stuartferguson00.github.io/QeMCMC).
 
 ## Features
 - **Arbitrary Energy Models:** Define any classical Ising or QUBO-like model using a simple list of coupling tensors (example: 2D Ising `h`, `J` etc). A universal energy calculator handles arbitrary-order interactions
-- **Hamiltonian Evolution:** Build the corresponding **quantum Hamiltonian** based on the given couplings and run **Trotterised time evolution** with PennyLane's lightning qubit simulator
+- **Hamiltonian Evolution (Quench & Adiabatic):** Build the corresponding **quantum Hamiltonian** based on the given couplings and run **Trotterised time evolution** with PennyLane's lightning qubit simulator. Supports both sudden **quench** (`QuenchProposal`) and time-dependent **adiabatic dressing** (`AdiabaticProposal`) schedules
 - **Coarse Graining**: Optionally use local updates on chosen subgroups of spins to scale proposals
 - **Constraining**: Implementation of hard and soft constraints for a given model
 
@@ -58,6 +58,7 @@ For questions, suggestions, or collaboration, please feel free to contact the au
 -   [pafloxy/quMCMC](https://github.com/pafloxy/quMCMC) for the foundational code.
 -   [Quantum-enhanced Markov Chain Monte Carlo](https://www.nature.com/articles/s41586-023-06095-4) by _David Layden et al._
 -   [Quantum-enhanced MCMC for systems larger than your Quantum Computer](https://arxiv.org/abs/2405.04247) by _S. Ferguson and P. Wallden._
+-   [Adiabatic dressing of quantum enhanced Markov chains](https://arxiv.org/abs/2603.28076) by _W. Hsieh, A. Orfi and D. Sels._
 
 ---
 ![alt text](logo-qsl.jpeg)
